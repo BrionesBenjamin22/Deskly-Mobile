@@ -1,0 +1,16 @@
+# Backend
+backend/node_modules
+backend/dist
+backend/.env
+
+# Mobile
+mobile/node_modules
+mobile/.expo
+mobile/.env
+
+# General
+*.log
+coverage
+.DS_Store
+.vscode
+.idea
