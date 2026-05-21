@@ -41,7 +41,7 @@ pnpm prisma:migrate
 pnpm prisma:studio
 ```
 
-El cliente Prisma se genera en `backend/generated/prisma-client` y no debe editarse manualmente.
+El cliente Prisma se genera dentro de `@prisma/client` y no debe editarse manualmente.
 
 ## Capas
 
@@ -60,6 +60,29 @@ El cliente Prisma se genera en `backend/generated/prisma-client` y no debe edita
 - Documentar endpoints, payloads, reglas de negocio, estados y errores.
 - Implementar historial cuando el backend exponga eventos de cambios.
 - Usar soft delete cuando la entidad lo requiera.
+
+## Modulos implementados
+
+### Desks
+
+Gestiona escritorios y consulta disponibilidad por fecha y rango horario.
+
+Endpoints:
+
+```http
+POST /desks
+GET /desks?page=1&limit=9
+GET /desks/:id
+PATCH /desks/:id
+DELETE /desks/:id
+GET /desks/availability?date=YYYY-MM-DD&startTime=HH:mm&endTime=HH:mm
+```
+
+El borrado de escritorios es logico mediante `deleted_at`.
+
+Documentacion tecnica del modulo:
+
+- `src/modules/desks/README.md`
 
 ## Validacion
 
