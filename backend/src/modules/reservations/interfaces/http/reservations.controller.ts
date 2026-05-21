@@ -159,9 +159,9 @@ export class ReservationsController {
 
     if (error instanceof DeskUnavailableError) {
       throw new ConflictException({
-        message: error.message,
-        error:
-          'Lo sentimos, el escritorio ya no esta disponible. Seleccione otro horario o escritorio e intente nuevamente.',
+        error: 'Desk unavailable',
+        message:
+          'El escritorio ya no esta disponible. Seleccione otro escritorio.',
       });
     }
 

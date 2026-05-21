@@ -73,6 +73,7 @@ export class CreateReservationUseCase {
       reservationId: reservation.id,
       deskId: reservation.deskId,
       deskCode: reservation.deskCode ?? desk.code,
+      ...(reservation.deskName ? { deskName: reservation.deskName } : {}),
       date: reservation.date,
       startTime: reservation.startTime,
       endTime: reservation.endTime,
