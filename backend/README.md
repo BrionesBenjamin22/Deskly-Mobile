@@ -70,6 +70,10 @@ Gestiona escritorios y consulta disponibilidad por fecha y rango horario.
 Endpoints:
 
 ```http
+POST /desk-descriptions
+GET /desk-descriptions
+POST /amenities
+GET /amenities
 POST /desks
 GET /desks?page=1&limit=9
 GET /desks/:id
@@ -79,6 +83,7 @@ GET /desks/availability?date=YYYY-MM-DD&startTime=HH:mm&endTime=HH:mm
 ```
 
 El borrado de escritorios es logico mediante `deleted_at`.
+Los escritorios pueden asociarse a una descripcion reutilizable, una zona `A`, `B` o `C`, y amenities.
 
 ### Reservations
 

@@ -24,9 +24,9 @@ export class CreateDeskUseCase {
     const desk = await this.deskRepository.create({
       code: input.code,
       ...(input.name ? { name: input.name } : {}),
-      ...(input.locationDescription
-        ? { locationDescription: input.locationDescription }
-        : {}),
+      ...(input.descriptionId ? { descriptionId: input.descriptionId } : {}),
+      ...(input.zone ? { zone: input.zone } : {}),
+      ...(input.amenityIds ? { amenityIds: input.amenityIds } : {}),
       enabled: input.enabled ?? true,
     });
 

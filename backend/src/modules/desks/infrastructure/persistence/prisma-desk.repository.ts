@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ReservationStatus } from '@prisma/client';
+import { DeskZone, ReservationStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { Desk } from '../../domain/entities/desk.entity';
@@ -11,6 +11,27 @@ import {
   ListDesksResult,
   UpdateDeskParams,
 } from '../../domain/ports/desk-repository.port';
+
+const deskRelations = {
+  description: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      peopleCapacity: true,
+    },
+  },
+  amenities: {
+    include: {
+      amenity: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+};
 
 @Injectable()
 export class PrismaDeskRepository implements DeskRepositoryPort {
@@ -39,6 +60,7 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
       orderBy: {
         code: 'asc',
       },
+      include: deskRelations,
     });
 
     return desks.map((desk) => this.toDomain(desk));
@@ -54,6 +76,7 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
         orderBy: {
           code: 'asc',
         },
+        include: deskRelations,
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),
@@ -72,6 +95,7 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
         id,
         deletedAt: null,
       },
+      include: deskRelations,
     });
 
     return desk ? this.toDomain(desk) : null;
@@ -82,26 +106,53 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
       where: {
         code,
       },
+      include: deskRelations,
     });
 
     return desk ? this.toDomain(desk) : null;
   }
 
   async create(params: CreateDeskParams): Promise<Desk> {
+    const { amenityIds, ...data } = params;
     const desk = await this.prisma.desk.create({
-      data: params,
+      data: {
+        ...data,
+        ...(amenityIds
+          ? {
+              amenities: {
+                create: amenityIds.map((amenityId) => ({
+                  amenityId,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: deskRelations,
     });
 
     return this.toDomain(desk);
   }
 
   async update(params: UpdateDeskParams): Promise<Desk> {
-    const { id, ...data } = params;
+    const { id, amenityIds, ...data } = params;
     const desk = await this.prisma.desk.update({
       where: {
         id,
       },
-      data,
+      data: {
+        ...data,
+        ...(amenityIds
+          ? {
+              amenities: {
+                deleteMany: {},
+                create: amenityIds.map((amenityId) => ({
+                  amenityId,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: deskRelations,
     });
 
     return this.toDomain(desk);
@@ -131,7 +182,20 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
     id: string;
     code: string;
     name: string | null;
-    locationDescription: string | null;
+    descriptionId: string | null;
+    description: {
+      id: string;
+      name: string;
+      description: string | null;
+      peopleCapacity: number;
+    } | null;
+    zone: DeskZone | null;
+    amenities: {
+      amenity: {
+        id: string;
+        name: string;
+      };
+    }[];
     enabled: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -141,7 +205,10 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
       id: desk.id,
       code: desk.code,
       name: desk.name,
-      locationDescription: desk.locationDescription,
+      descriptionId: desk.descriptionId,
+      description: desk.description,
+      zone: desk.zone,
+      amenities: desk.amenities.map(({ amenity }) => amenity),
       enabled: desk.enabled,
       createdAt: desk.createdAt,
       updatedAt: desk.updatedAt,

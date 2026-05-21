@@ -1,11 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayUnique,
   IsBoolean,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
+
+enum DeskZoneDto {
+  A = 'A',
+  B = 'B',
+  C = 'C',
+}
 
 export class CreateDeskBodyDto {
   @ApiProperty({
@@ -26,16 +35,31 @@ export class CreateDeskBodyDto {
   @MaxLength(120, { message: 'El nombre no puede superar los 120 caracteres.' })
   name?: string;
 
+  @ApiPropertyOptional({ example: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc' })
+  @IsOptional()
+  @IsUUID('4', { message: 'La descripcion debe ser un UUID valido.' })
+  descriptionId?: string;
+
   @ApiPropertyOptional({
-    example: 'Sector principal',
-    description: 'Ubicacion o descripcion del sector.',
+    example: 'A',
+    enum: DeskZoneDto,
+    description: 'Zona de ubicacion del escritorio dentro de la oficina.',
   })
   @IsOptional()
-  @IsString({ message: 'La ubicacion debe ser texto.' })
-  @MaxLength(255, {
-    message: 'La ubicacion no puede superar los 255 caracteres.',
+  @IsEnum(DeskZoneDto, { message: 'La zona debe ser A, B o C.' })
+  zone?: DeskZoneDto;
+
+  @ApiPropertyOptional({
+    example: ['7a3deca2-0063-4e6c-b1ee-a95666b5efdc'],
+    description: 'Activos asociados al escritorio.',
   })
-  locationDescription?: string;
+  @IsOptional()
+  @IsUUID('4', {
+    each: true,
+    message: 'Cada amenity debe ser un UUID valido.',
+  })
+  @ArrayUnique({ message: 'Los amenities no pueden repetirse.' })
+  amenityIds?: string[];
 
   @ApiPropertyOptional({
     example: true,

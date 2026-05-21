@@ -7,6 +7,10 @@ Gestion de escritorios y consulta de disponibilidad para una fecha y franja hora
 ## Endpoints
 
 ```http
+POST /desk-descriptions
+GET /desk-descriptions
+POST /amenities
+GET /amenities
 POST /desks
 GET /desks?page=1&limit=9
 GET /desks/:id
@@ -23,7 +27,9 @@ Alta:
 {
   "code": "D-01",
   "name": "Escritorio 1",
-  "locationDescription": "Sector principal",
+  "descriptionId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
+  "zone": "A",
+  "amenityIds": ["6a3deca2-0063-4e6c-b1ee-a95666b5efdc"],
   "enabled": true
 }
 ```
@@ -33,7 +39,26 @@ Edicion:
 ```json
 {
   "name": "Escritorio actualizado",
+  "zone": "B",
   "enabled": false
+}
+```
+
+Descripcion reutilizable:
+
+```json
+{
+  "name": "Escritorio individual",
+  "description": "Escritorio con silla ergonomica",
+  "peopleCapacity": 1
+}
+```
+
+Amenity:
+
+```json
+{
+  "name": "Monitor"
 }
 ```
 
@@ -60,7 +85,8 @@ Disponibilidad:
       "id": "uuid",
       "code": "D-01",
       "name": "Escritorio 1",
-      "locationDescription": "Sector principal"
+      "zone": "A",
+      "amenities": []
     }
   ]
 }
@@ -80,6 +106,9 @@ Sin disponibilidad:
 - Los horarios son obligatorios y deben tener formato `HH:mm`.
 - El horario de fin debe ser posterior al horario de inicio.
 - El codigo del escritorio debe ser unico.
+- La descripcion del escritorio es reutilizable y define la cantidad de personas.
+- La zona del escritorio debe ser `A`, `B` o `C`.
+- Los amenities representan activos asociados al escritorio.
 - El borrado de escritorios es logico mediante `deleted_at`.
 - Los escritorios eliminados no aparecen en listados, detalle ni disponibilidad.
 - Solo se devuelven escritorios habilitados.
@@ -89,23 +118,28 @@ Sin disponibilidad:
 
 ## Arquitectura
 
-- `domain`: entidad `Desk`, value objects `ReservationDate` y `TimeSlot`, errores y puerto `DeskRepositoryPort`.
-- `application`: casos de uso CRUD y `GetAvailableDesksUseCase`.
-- `infrastructure`: adapter `PrismaDeskRepository`.
-- `interfaces`: controllers HTTP `DesksController` y `DeskAvailabilityController`.
+- `domain`: entidad `Desk`, catalogo de descripciones y amenities, value objects `ReservationDate` y `TimeSlot`, errores y puertos.
+- `application`: casos de uso CRUD, catalogo y `GetAvailableDesksUseCase`.
+- `infrastructure`: adapters `PrismaDeskRepository` y `PrismaDeskCatalogRepository`.
+- `interfaces`: controllers HTTP `DesksController`, `DeskCatalogController` y `DeskAvailabilityController`.
 
 ## Persistencia
 
 Tablas:
 
 - `desks`
+- `desk_descriptions`
+- `amenities`
+- `desk_amenities`
 - `reservations`
 
 Indices relevantes:
 
 - `desks.enabled, deleted_at`
+- `desks.description_id`
+- `desks.zone`
+- `desk_amenities.amenity_id`
 - `reservations.desk_id, date, status, start_time, end_time`
-- `reservations.member_id, date`
 
 ## Errores
 

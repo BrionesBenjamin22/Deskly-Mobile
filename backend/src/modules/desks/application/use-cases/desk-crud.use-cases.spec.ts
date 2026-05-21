@@ -12,7 +12,8 @@ const desk = new Desk({
   id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
   code: 'D-01',
   name: 'Escritorio 1',
-  locationDescription: 'Sector principal',
+  zone: 'A',
+  amenities: [{ id: '6a3deca2-0063-4e6c-b1ee-a95666b5efdc', name: 'Monitor' }],
   enabled: true,
   createdAt: new Date('2026-05-21T10:00:00.000Z'),
   updatedAt: new Date('2026-05-21T10:00:00.000Z'),
@@ -44,14 +45,16 @@ describe('Desk CRUD use cases', () => {
     const output = await new CreateDeskUseCase(repository).execute({
       code: 'D-01',
       name: 'Escritorio 1',
-      locationDescription: 'Sector principal',
+      zone: 'A',
+      amenityIds: ['6a3deca2-0063-4e6c-b1ee-a95666b5efdc'],
     });
 
     expect(output.code).toBe('D-01');
     expect(repository.create.mock.calls[0]?.[0]).toEqual({
       code: 'D-01',
       name: 'Escritorio 1',
-      locationDescription: 'Sector principal',
+      zone: 'A',
+      amenityIds: ['6a3deca2-0063-4e6c-b1ee-a95666b5efdc'],
       enabled: true,
     });
   });

@@ -1,4 +1,4 @@
-import { Desk } from '../entities/desk.entity';
+import { Desk, DeskZoneValue } from '../entities/desk.entity';
 
 export const DESK_REPOSITORY = Symbol('DESK_REPOSITORY');
 
@@ -21,7 +21,9 @@ export type ListDesksResult = {
 export type CreateDeskParams = {
   code: string;
   name?: string;
-  locationDescription?: string;
+  descriptionId?: string;
+  zone?: DeskZoneValue;
+  amenityIds?: string[];
   enabled: boolean;
 };
 
@@ -29,7 +31,9 @@ export type UpdateDeskParams = {
   id: string;
   code?: string;
   name?: string | null;
-  locationDescription?: string | null;
+  descriptionId?: string | null;
+  zone?: DeskZoneValue | null;
+  amenityIds?: string[];
   enabled?: boolean;
 };
 

@@ -1,8 +1,25 @@
+export type DeskZoneValue = 'A' | 'B' | 'C';
+
+export type DeskDescriptionProperties = {
+  id: string;
+  name: string;
+  description?: string | null;
+  peopleCapacity: number;
+};
+
+export type AmenityProperties = {
+  id: string;
+  name: string;
+};
+
 export type DeskProperties = {
   id: string;
   code: string;
   name?: string | null;
-  locationDescription?: string | null;
+  descriptionId?: string | null;
+  description?: DeskDescriptionProperties | null;
+  zone?: DeskZoneValue | null;
+  amenities?: AmenityProperties[];
   enabled: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -24,8 +41,20 @@ export class Desk {
     return this.properties.name;
   }
 
-  get locationDescription(): string | null | undefined {
-    return this.properties.locationDescription;
+  get descriptionId(): string | null | undefined {
+    return this.properties.descriptionId;
+  }
+
+  get description(): DeskDescriptionProperties | null | undefined {
+    return this.properties.description;
+  }
+
+  get zone(): DeskZoneValue | null | undefined {
+    return this.properties.zone;
+  }
+
+  get amenities(): AmenityProperties[] {
+    return this.properties.amenities ?? [];
   }
 
   get enabled(): boolean {

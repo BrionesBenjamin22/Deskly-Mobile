@@ -16,19 +16,64 @@ enum ReservationStatus {
   CANCELLED
 }
 
+enum DeskZone {
+  A
+  B
+  C
+}
+
 model Desk {
-  id                  String        @id @default(uuid()) @db.Uuid
-  code                String        @unique @db.VarChar(30)
-  name                String?       @db.VarChar(120)
-  locationDescription String?       @map("location_description") @db.VarChar(255)
-  enabled             Boolean       @default(true)
-  createdAt           DateTime      @default(now()) @map("created_at")
-  updatedAt           DateTime      @updatedAt @map("updated_at")
-  deletedAt           DateTime?     @map("deleted_at")
-  reservations        Reservation[]
+  id            String           @id @default(uuid()) @db.Uuid
+  code          String           @unique @db.VarChar(30)
+  name          String?          @db.VarChar(120)
+  descriptionId String?          @map("description_id") @db.Uuid
+  zone          DeskZone?
+  enabled       Boolean          @default(true)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  deletedAt     DateTime?        @map("deleted_at")
+  description   DeskDescription? @relation(fields: [descriptionId], references: [id], onDelete: Restrict)
+  amenities     DeskAmenity[]
+  reservations  Reservation[]
 
   @@index([enabled, deletedAt])
+  @@index([descriptionId])
+  @@index([zone])
   @@map("desks")
+}
+
+model DeskDescription {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @unique @db.VarChar(120)
+  description    String?  @db.VarChar(255)
+  peopleCapacity Int      @map("people_capacity")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  desks          Desk[]
+
+  @@map("desk_descriptions")
+}
+
+model Amenity {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String        @unique @db.VarChar(120)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  desks     DeskAmenity[]
+
+  @@map("amenities")
+}
+
+model DeskAmenity {
+  deskId    String   @map("desk_id") @db.Uuid
+  amenityId String   @map("amenity_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  desk      Desk     @relation(fields: [deskId], references: [id], onDelete: Cascade)
+  amenity   Amenity  @relation(fields: [amenityId], references: [id], onDelete: Restrict)
+
+  @@id([deskId, amenityId])
+  @@index([amenityId])
+  @@map("desk_amenities")
 }
 
 model Reservation {
