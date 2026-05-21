@@ -11,3 +11,40 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum ReservationStatus {
+  ACTIVE
+  CANCELLED
+}
+
+model Desk {
+  id                  String        @id @default(uuid()) @db.Uuid
+  code                String        @unique @db.VarChar(30)
+  name                String?       @db.VarChar(120)
+  locationDescription String?       @map("location_description") @db.VarChar(255)
+  enabled             Boolean       @default(true)
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  reservations        Reservation[]
+
+  @@index([enabled])
+  @@map("desks")
+}
+
+model Reservation {
+  id          String            @id @default(uuid()) @db.Uuid
+  deskId      String            @map("desk_id") @db.Uuid
+  memberId    String            @map("member_id") @db.Uuid
+  date        DateTime          @db.Date
+  startTime   DateTime          @map("start_time") @db.Time(0)
+  endTime     DateTime          @map("end_time") @db.Time(0)
+  status      ReservationStatus @default(ACTIVE)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  cancelledAt DateTime?         @map("cancelled_at")
+  desk        Desk              @relation(fields: [deskId], references: [id], onDelete: Restrict)
+
+  @@index([deskId, date, status, startTime, endTime])
+  @@index([memberId, date])
+  @@map("reservations")
+}
