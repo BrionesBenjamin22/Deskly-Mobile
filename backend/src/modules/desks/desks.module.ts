@@ -25,5 +25,6 @@ import { DesksController } from './interfaces/http/desks.controller';
       useClass: PrismaDeskRepository,
     },
   ],
+  exports: [DESK_REPOSITORY],
 })
 export class DesksModule {}

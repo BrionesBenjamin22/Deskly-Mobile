@@ -5,9 +5,16 @@ import { ConfigModule } from './config/config.module';
 import { CommonModule } from './common/common.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { DesksModule } from './modules/desks/desks.module';
+import { ReservationsModule } from './modules/reservations/reservations.module';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, CommonModule, DesksModule],
+  imports: [
+    ConfigModule,
+    DatabaseModule,
+    CommonModule,
+    DesksModule,
+    ReservationsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

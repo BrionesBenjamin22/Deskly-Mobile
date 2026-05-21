@@ -80,6 +80,27 @@ GET /desks/availability?date=YYYY-MM-DD&startTime=HH:mm&endTime=HH:mm
 
 El borrado de escritorios es logico mediante `deleted_at`.
 
+### Reservations
+
+Crea reservas activas sobre escritorios disponibles. En esta entrega no se contemplan usuarios ni relaciones con miembros.
+
+Endpoint:
+
+```http
+POST /reservations
+GET /reservations?page=1&limit=9&status=ACTIVE
+GET /reservations/:id
+PATCH /reservations/:id
+PATCH /reservations/:id/cancel
+DELETE /reservations/:id
+```
+
+La eliminacion de reservas es logica: se cancela la reserva y se conserva trazabilidad.
+
+Documentacion tecnica del modulo:
+
+- `src/modules/reservations/README.md`
+
 Documentacion tecnica del modulo:
 
 - `src/modules/desks/README.md`

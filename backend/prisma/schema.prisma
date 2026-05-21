@@ -34,7 +34,6 @@ model Desk {
 model Reservation {
   id          String            @id @default(uuid()) @db.Uuid
   deskId      String            @map("desk_id") @db.Uuid
-  memberId    String            @map("member_id") @db.Uuid
   date        DateTime          @db.Date
   startTime   DateTime          @map("start_time") @db.Time(0)
   endTime     DateTime          @map("end_time") @db.Time(0)
@@ -45,6 +44,5 @@ model Reservation {
   desk        Desk              @relation(fields: [deskId], references: [id], onDelete: Restrict)
 
   @@index([deskId, date, status, startTime, endTime])
-  @@index([memberId, date])
   @@map("reservations")
 }
