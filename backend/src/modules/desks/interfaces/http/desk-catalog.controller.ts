@@ -1,12 +1,41 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import {
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { CreateAmenityUseCase } from '../../application/use-cases/create-amenity.use-case';
 import { CreateDeskDescriptionUseCase } from '../../application/use-cases/create-desk-description.use-case';
+import { DeleteAmenityUseCase } from '../../application/use-cases/delete-amenity.use-case';
+import { DeleteDeskDescriptionUseCase } from '../../application/use-cases/delete-desk-description.use-case';
+import { GetAmenityByIdUseCase } from '../../application/use-cases/get-amenity-by-id.use-case';
+import { GetDeskDescriptionByIdUseCase } from '../../application/use-cases/get-desk-description-by-id.use-case';
 import { ListAmenitiesUseCase } from '../../application/use-cases/list-amenities.use-case';
 import { ListDeskDescriptionsUseCase } from '../../application/use-cases/list-desk-descriptions.use-case';
+import { UpdateAmenityUseCase } from '../../application/use-cases/update-amenity.use-case';
+import { UpdateDeskDescriptionUseCase } from '../../application/use-cases/update-desk-description.use-case';
+import { DeskCatalogItemInUseError } from '../../domain/errors/desk-catalog-item-in-use.error';
+import { DeskCatalogItemNotFoundError } from '../../domain/errors/desk-catalog-item-not-found.error';
 import { CreateAmenityBodyDto } from './dto/create-amenity-body.dto';
 import { CreateDeskDescriptionBodyDto } from './dto/create-desk-description-body.dto';
+import { UpdateAmenityBodyDto } from './dto/update-amenity-body.dto';
+import { UpdateDeskDescriptionBodyDto } from './dto/update-desk-description-body.dto';
 
 @ApiTags('Desk catalog')
 @Controller()
@@ -14,8 +43,14 @@ export class DeskCatalogController {
   constructor(
     private readonly createDeskDescriptionUseCase: CreateDeskDescriptionUseCase,
     private readonly listDeskDescriptionsUseCase: ListDeskDescriptionsUseCase,
+    private readonly getDeskDescriptionByIdUseCase: GetDeskDescriptionByIdUseCase,
+    private readonly updateDeskDescriptionUseCase: UpdateDeskDescriptionUseCase,
+    private readonly deleteDeskDescriptionUseCase: DeleteDeskDescriptionUseCase,
     private readonly createAmenityUseCase: CreateAmenityUseCase,
     private readonly listAmenitiesUseCase: ListAmenitiesUseCase,
+    private readonly getAmenityByIdUseCase: GetAmenityByIdUseCase,
+    private readonly updateAmenityUseCase: UpdateAmenityUseCase,
+    private readonly deleteAmenityUseCase: DeleteAmenityUseCase,
   ) {}
 
   @Get('desk-descriptions')
@@ -30,6 +65,46 @@ export class DeskCatalogController {
     return this.createDeskDescriptionUseCase.execute(body);
   }
 
+  @Get('desk-descriptions/:id')
+  @ApiOkResponse({ description: 'Detalle de descripcion reutilizable.' })
+  @ApiNotFoundResponse({ description: 'Descripcion no encontrada.' })
+  async getDescription(@Param('id', ParseUUIDPipe) id: string) {
+    try {
+      return await this.getDeskDescriptionByIdUseCase.execute(id);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  @Patch('desk-descriptions/:id')
+  @ApiOkResponse({ description: 'Descripcion actualizada correctamente.' })
+  @ApiNotFoundResponse({ description: 'Descripcion no encontrada.' })
+  async updateDescription(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateDeskDescriptionBodyDto,
+  ) {
+    try {
+      return await this.updateDeskDescriptionUseCase.execute({ id, ...body });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  @Delete('desk-descriptions/:id')
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: 'Descripcion eliminada correctamente.' })
+  @ApiNotFoundResponse({ description: 'Descripcion no encontrada.' })
+  @ApiConflictResponse({ description: 'Descripcion asociada a escritorios.' })
+  async deleteDescription(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    try {
+      await this.deleteDeskDescriptionUseCase.execute(id);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   @Get('amenities')
   @ApiOkResponse({ description: 'Listado de amenities.' })
   listAmenities() {
@@ -40,5 +115,63 @@ export class DeskCatalogController {
   @ApiCreatedResponse({ description: 'Amenity creado correctamente.' })
   createAmenity(@Body() body: CreateAmenityBodyDto) {
     return this.createAmenityUseCase.execute(body);
+  }
+
+  @Get('amenities/:id')
+  @ApiOkResponse({ description: 'Detalle de amenity.' })
+  @ApiNotFoundResponse({ description: 'Amenity no encontrado.' })
+  async getAmenity(@Param('id', ParseUUIDPipe) id: string) {
+    try {
+      return await this.getAmenityByIdUseCase.execute(id);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  @Patch('amenities/:id')
+  @ApiOkResponse({ description: 'Amenity actualizado correctamente.' })
+  @ApiNotFoundResponse({ description: 'Amenity no encontrado.' })
+  async updateAmenity(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateAmenityBodyDto,
+  ) {
+    try {
+      return await this.updateAmenityUseCase.execute({ id, ...body });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  @Delete('amenities/:id')
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: 'Amenity eliminado correctamente.' })
+  @ApiNotFoundResponse({ description: 'Amenity no encontrado.' })
+  @ApiConflictResponse({ description: 'Amenity asociado a escritorios.' })
+  async deleteAmenity(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    try {
+      await this.deleteAmenityUseCase.execute(id);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  private handleError(error: unknown): never {
+    if (error instanceof DeskCatalogItemNotFoundError) {
+      throw new NotFoundException({
+        message: error.message,
+        error:
+          'Lo sentimos, no pudimos recuperar la informacion del catalogo. Intente nuevamente.',
+      });
+    }
+
+    if (error instanceof DeskCatalogItemInUseError) {
+      throw new ConflictException({
+        message: error.message,
+        error:
+          'Lo sentimos, no pudimos eliminar el elemento porque esta asociado a uno o mas escritorios.',
+      });
+    }
+
+    throw error;
   }
 }

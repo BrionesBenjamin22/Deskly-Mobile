@@ -72,8 +72,14 @@ Endpoints:
 ```http
 POST /desk-descriptions
 GET /desk-descriptions
+GET /desk-descriptions/:id
+PATCH /desk-descriptions/:id
+DELETE /desk-descriptions/:id
 POST /amenities
 GET /amenities
+GET /amenities/:id
+PATCH /amenities/:id
+DELETE /amenities/:id
 POST /desks
 GET /desks?page=1&limit=9
 GET /desks/:id
