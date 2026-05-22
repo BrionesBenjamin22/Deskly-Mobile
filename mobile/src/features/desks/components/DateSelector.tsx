@@ -1,19 +1,64 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { spacing } from '../../../theme/spacing';
 import { DatePill } from './DatePill';
 
-const dates = [
-  { id: '2026-05-04', weekday: 'lun', day: '4', month: 'may' },
-  { id: '2026-05-05', weekday: 'mar', day: '5', month: 'may' },
-  { id: '2026-05-06', weekday: 'mie', day: '6', month: 'may' },
-  { id: '2026-05-07', weekday: 'jue', day: '7', month: 'may' },
-  { id: '2026-05-08', weekday: 'vie', day: '8', month: 'may' },
+export type DeskDateOption = {
+  id: string;
+  weekday: string;
+  day: string;
+  month: string;
+};
+
+const weekdays = ['dom', 'lun', 'mar', 'mi\u00e9', 'jue', 'vie', 's\u00e1b'];
+const months = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
 ];
 
-export function DateSelector() {
-  const [selectedDate, setSelectedDate] = useState(dates[0].id);
+function toDateId(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+export function getDeskDateOptions(baseDate = new Date()): DeskDateOption[] {
+  return Array.from({ length: 4 }, (_, index) => {
+    const date = new Date(baseDate);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(baseDate.getDate() + index);
+
+    return {
+      id: toDateId(date),
+      weekday: weekdays[date.getDay()],
+      day: String(date.getDate()),
+      month: months[date.getMonth()],
+    };
+  });
+}
+
+export const deskDateOptions = getDeskDateOptions();
+
+type DateSelectorProps = {
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
+};
+
+export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) {
+  const dates = useMemo(() => getDeskDateOptions(), []);
 
   return (
     <ScrollView
@@ -28,7 +73,7 @@ export function DateSelector() {
           day={date.day}
           month={date.month}
           selected={selectedDate === date.id}
-          onPress={() => setSelectedDate(date.id)}
+          onPress={() => onSelectDate(date.id)}
         />
       ))}
     </ScrollView>

@@ -1,3 +1,12 @@
+import { useEffect, useRef } from 'react';
+import {
+  Animated,
+  Easing,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from 'react-native';
 import {
   Building2,
   Calendar,
@@ -16,7 +25,6 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react-native';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { colors } from '../../theme/colors';
 
@@ -71,6 +79,36 @@ export function Icon({
   style,
 }: IconProps) {
   const LucideIconComponent = icons[name];
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const isLoading = name === 'loader';
+
+  useEffect(() => {
+    if (!isLoading) {
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [isLoading, spinValue]);
+
+  const rotate = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const content = (
+    <LucideIconComponent color={color} size={size} strokeWidth={strokeWidth} />
+  );
 
   return (
     <View
@@ -78,7 +116,11 @@ export function Icon({
       importantForAccessibility="no"
       style={[styles.icon, { height: size, width: size }, style]}
     >
-      <LucideIconComponent color={color} size={size} strokeWidth={strokeWidth} />
+      {isLoading ? (
+        <Animated.View style={{ transform: [{ rotate }] }}>{content}</Animated.View>
+      ) : (
+        content
+      )}
     </View>
   );
 }

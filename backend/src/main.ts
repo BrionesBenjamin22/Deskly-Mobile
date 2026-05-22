@@ -1,16 +1,60 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from './app.module';
+import { HttpExceptionLoggingFilter } from './common/filters/http-exception-logging.filter';
+
+function getAllowedOrigins() {
+  const configuredOrigins = process.env.FRONTEND_URL?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (configuredOrigins?.length) {
+    return configuredOrigins;
+  }
+
+  return [
+    'http://localhost:5173',
+    'http://localhost:8081',
+    'http://localhost:8082',
+  ];
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('HTTP');
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+    origin: getAllowedOrigins(),
     credentials: true,
   });
+
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    const startedAt = Date.now();
+    const requestLabel = `${request.method} ${request.originalUrl}`;
+
+    logger.log(`--> ${requestLabel}`);
+
+    response.on('finish', () => {
+      const duration = Date.now() - startedAt;
+      const status = response.statusCode;
+      const message = `<-- ${requestLabel} ${status} ${duration}ms`;
+
+      if (status >= 500) {
+        logger.error(message);
+      } else if (status >= 400) {
+        logger.warn(message);
+      } else {
+        logger.log(message);
+      }
+    });
+
+    next();
+  });
+
+  app.useGlobalFilters(new HttpExceptionLoggingFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -35,9 +79,10 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(`Server running on http://localhost:${port}`);
+  console.log(`Expo Go can connect using http://<YOUR_LAN_IP>:${port}`);
 }
 
 void bootstrap();

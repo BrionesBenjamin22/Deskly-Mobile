@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState } from 'react';
+import { PropsWithChildren } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
@@ -7,18 +7,16 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
+import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
 import { ReservationEmptyState } from '../components/ReservationEmptyState';
 import { ReservationList } from '../components/ReservationList';
-import {
-  mockActiveReservations,
-  mockReservationHistory,
-} from '../data/mockReservations';
-import { Reservation } from '../types/reservation.types';
+import { useReservations } from '../hooks/useReservations';
 
 type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
 
 type MyReservationsScreenProps = {
   onPressDesks?: () => void;
+  onPressSettings?: () => void;
 };
 
 const cancellationStatusContent: Record<
@@ -54,27 +52,23 @@ function Section({ title, children }: PropsWithChildren<{ title: string }>) {
   );
 }
 
-export function MyReservationsScreen({ onPressDesks }: MyReservationsScreenProps) {
-  const activeReservations = mockActiveReservations;
-  const reservationHistory = mockReservationHistory;
-  const [cancellationStatus, setCancellationStatus] =
-    useState<ReservationActionStatus>('idle');
+export function MyReservationsScreen({
+  onPressDesks,
+  onPressSettings,
+}: MyReservationsScreenProps) {
+  const {
+    actionStatus,
+    activeReservations,
+    clearActionStatus,
+    errorMessage,
+    handleCancelReservation,
+    isLoading,
+    reservationHistory,
+  } = useReservations();
   const hasAnyReservation =
     activeReservations.length > 0 || reservationHistory.length > 0;
-
-  const handleCancelReservation = (reservation: Reservation) => {
-    console.log('Cancelar reserva', reservation.id);
-    setCancellationStatus('loading');
-
-    setTimeout(() => {
-      setCancellationStatus('success');
-    }, 1200);
-  };
-
   const activeStatus =
-    cancellationStatus === 'idle'
-      ? null
-      : cancellationStatusContent[cancellationStatus];
+    actionStatus === 'idle' ? null : cancellationStatusContent[actionStatus];
 
   return (
     <ScreenContainer>
@@ -90,25 +84,45 @@ export function MyReservationsScreen({ onPressDesks }: MyReservationsScreenProps
             </AppText>
           </View>
 
-          {activeReservations.length > 0 ? (
-            <Section title="PRÓXIMAS">
-              <ReservationList
-                reservations={activeReservations}
-                onCancel={handleCancelReservation}
-              />
-            </Section>
-          ) : null}
+          {isLoading ? (
+            <DesksFeedbackCard
+              icon="loader"
+              title="Cargando reservas"
+              description="Estamos consultando tus reservas en Deskly."
+            />
+          ) : errorMessage ? (
+            <DesksFeedbackCard
+              icon="circleAlert"
+              title="Lo sentimos, no pudimos recuperar sus reservas"
+              description={errorMessage}
+            />
+          ) : (
+            <>
+              {activeReservations.length > 0 ? (
+                <Section title="PRÓXIMAS">
+                  <ReservationList
+                    reservations={activeReservations}
+                    onCancel={handleCancelReservation}
+                  />
+                </Section>
+              ) : null}
 
-          <Section title="HISTORIAL">
-            {hasAnyReservation ? (
-              <ReservationList reservations={reservationHistory} />
-            ) : (
-              <ReservationEmptyState />
-            )}
-          </Section>
+              <Section title="HISTORIAL">
+                {hasAnyReservation ? (
+                  <ReservationList reservations={reservationHistory} />
+                ) : (
+                  <ReservationEmptyState />
+                )}
+              </Section>
+            </>
+          )}
         </ScrollView>
 
-        <BottomTabBar activeTab="reservations" onPressDesks={onPressDesks} />
+        <BottomTabBar
+          activeTab="reservations"
+          onPressDesks={onPressDesks}
+          onPressSettings={onPressSettings}
+        />
       </View>
 
       {activeStatus ? (
@@ -118,9 +132,7 @@ export function MyReservationsScreen({ onPressDesks }: MyReservationsScreenProps
           title={activeStatus.title}
           description={activeStatus.description}
           onClose={
-            cancellationStatus === 'loading'
-              ? undefined
-              : () => setCancellationStatus('idle')
+            actionStatus === 'loading' ? undefined : () => clearActionStatus()
           }
         />
       ) : null}

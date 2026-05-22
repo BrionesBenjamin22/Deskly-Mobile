@@ -3,22 +3,23 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
-import { EmptyState } from '../../../components/ui/EmptyState';
 import { Icon } from '../../../components/ui/Icon';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { DateSelector } from '../components/DateSelector';
+import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
+import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
 import { DeskList } from '../components/DeskList';
 import { ReservationBottomSheet } from '../components/ReservationBottomSheet';
-import { mockDesks } from '../data/mockDesks';
+import { useAvailableDesks } from '../hooks/useAvailableDesks';
 import { Desk } from '../types/desk.types';
 
 type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
 
 type DesksScreenProps = {
   onPressReservations?: () => void;
+  onPressSettings?: () => void;
 };
 
 const reservationStatusContent: Record<
@@ -43,11 +44,21 @@ const reservationStatusContent: Record<
   },
 };
 
-export function DesksScreen({ onPressReservations }: DesksScreenProps) {
+export function DesksScreen({
+  onPressReservations,
+  onPressSettings,
+}: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
+  const [selectedDate, setSelectedDate] = useState(
+    () => getDeskDateOptions()[0].id,
+  );
   const [reservationStatus, setReservationStatus] =
     useState<ReservationUiStatus>('idle');
-  const desks = mockDesks;
+  const { desks, errorMessage, isLoading } = useAvailableDesks({
+    date: selectedDate,
+    startTime: '09:00',
+    endTime: '18:00',
+  });
   const availableCount = desks.filter(
     (desk) => desk.enabled && desk.status === 'available',
   ).length;
@@ -89,7 +100,7 @@ export function DesksScreen({ onPressReservations }: DesksScreenProps) {
         >
           <AppText variant="title">Escritorios Disponibles</AppText>
 
-          <DateSelector />
+          <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
 
           <Pressable
             accessibilityRole="button"
@@ -108,14 +119,34 @@ export function DesksScreen({ onPressReservations }: DesksScreenProps) {
             {availableCount} escritorios disponibles
           </AppText>
 
-          {desks.length > 0 ? (
+          {isLoading ? (
+            <DesksFeedbackCard
+              icon="loader"
+              title="Cargando escritorios"
+              description="Estamos consultando la disponibilidad para la fecha seleccionada."
+            />
+          ) : errorMessage ? (
+            <DesksFeedbackCard
+              icon="circleAlert"
+              title="Lo sentimos, no pudimos recuperar su información"
+              description={errorMessage}
+            />
+          ) : desks.length > 0 ? (
             <DeskList desks={desks} onReserve={handleOpenReservation} />
           ) : (
-            <EmptyState />
+            <DesksFeedbackCard
+              icon="search"
+              title="No hay escritorios disponibles para estos filtros"
+              description="Intentá con otra fecha u horario."
+            />
           )}
         </ScrollView>
 
-        <BottomTabBar activeTab="desks" onPressReservations={onPressReservations} />
+        <BottomTabBar
+          activeTab="desks"
+          onPressReservations={onPressReservations}
+          onPressSettings={onPressSettings}
+        />
       </View>
 
       <ReservationBottomSheet

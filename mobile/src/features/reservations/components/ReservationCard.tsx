@@ -31,7 +31,7 @@ export function ReservationCard({ reservation, onCancel }: ReservationCardProps)
           <View style={styles.metaRow}>
             <Icon name="mapPin" size={16} color={colors.primaryLight} />
             <AppText variant="caption" color={colors.blackOverlay}>
-              {reservation.zone} - {reservation.locationDescription}
+              Código {reservation.deskCode}
             </AppText>
           </View>
         </View>

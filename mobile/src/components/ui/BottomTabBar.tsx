@@ -5,20 +5,20 @@ import { spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
 
-type BottomTab = 'desks' | 'reservations' | 'profile';
+type BottomTab = 'desks' | 'reservations' | 'settings';
 
 export type BottomTabBarProps = {
   activeTab: BottomTab;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
-  onPressProfile?: () => void;
+  onPressSettings?: () => void;
   onPressLogout?: () => void;
 };
 
 const tabs: { key: BottomTab | 'logout'; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
-  { key: 'profile', label: 'Perfil', icon: 'user' },
+  { key: 'settings', label: 'Configuración', icon: 'user' },
   { key: 'logout', label: 'Salir', icon: 'logout' },
 ];
 
@@ -26,13 +26,13 @@ export function BottomTabBar({
   activeTab,
   onPressDesks,
   onPressReservations,
-  onPressProfile,
+  onPressSettings,
   onPressLogout,
 }: BottomTabBarProps) {
   const handlers = {
     desks: onPressDesks,
     reservations: onPressReservations,
-    profile: onPressProfile,
+    settings: onPressSettings,
     logout: onPressLogout,
   };
 
