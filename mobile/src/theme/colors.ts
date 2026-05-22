@@ -10,3 +10,12 @@ export const colors = {
   accent: '#066A67',
   softMint: '#C2E1DF',
 };
+
+export const statusColors = {
+  success: '#16A34A',
+  successSoft: '#DCFCE7',
+  error: '#DC2626',
+  errorSoft: '#FEE2E2',
+  warning: '#F59E0B',
+  muted: '#D9D9D9',
+};

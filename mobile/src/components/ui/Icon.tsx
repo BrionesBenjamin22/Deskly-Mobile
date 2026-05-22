@@ -1,4 +1,22 @@
-import { StyleProp, StyleSheet, Text, TextStyle } from 'react-native';
+import {
+  Building2,
+  Calendar,
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  Clock,
+  LoaderCircle,
+  Home,
+  LogOut,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  User,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { colors } from '../../theme/colors';
 
@@ -6,8 +24,12 @@ export type IconName =
   | 'building'
   | 'calendar'
   | 'chevronRight'
+  | 'circleAlert'
+  | 'circleCheck'
   | 'clock'
   | 'filter'
+  | 'home'
+  | 'loader'
   | 'logout'
   | 'mapPin'
   | 'search'
@@ -19,44 +41,51 @@ type IconProps = {
   name: IconName;
   color?: string;
   size?: number;
-  style?: StyleProp<TextStyle>;
+  strokeWidth?: number;
+  style?: StyleProp<ViewStyle>;
 };
 
-const glyphs: Record<IconName, string> = {
-  building: '⌂',
-  calendar: '□',
-  chevronRight: '›',
-  clock: '◷',
-  filter: '≡',
-  logout: '↪',
-  mapPin: '⌖',
-  search: '⌕',
-  user: '○',
-  users: '◎',
-  x: '×',
+const icons: Record<IconName, LucideIcon> = {
+  building: Building2,
+  calendar: Calendar,
+  chevronRight: ChevronRight,
+  circleAlert: CircleAlert,
+  circleCheck: CircleCheck,
+  clock: Clock,
+  filter: SlidersHorizontal,
+  home: Home,
+  loader: LoaderCircle,
+  logout: LogOut,
+  mapPin: MapPin,
+  search: Search,
+  user: User,
+  users: Users,
+  x: X,
 };
 
 export function Icon({
   name,
   color = colors.primary,
   size = 18,
+  strokeWidth = 2,
   style,
 }: IconProps) {
+  const LucideIconComponent = icons[name];
+
   return (
-    <Text
+    <View
       accessibilityElementsHidden
       importantForAccessibility="no"
-      style={[styles.icon, { color, fontSize: size, lineHeight: size + 2 }, style]}
+      style={[styles.icon, { height: size, width: size }, style]}
     >
-      {glyphs[name]}
-    </Text>
+      <LucideIconComponent color={color} size={size} strokeWidth={strokeWidth} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   icon: {
-    fontWeight: '700',
-    letterSpacing: 0,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

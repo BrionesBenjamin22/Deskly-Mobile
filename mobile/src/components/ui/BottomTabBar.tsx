@@ -16,7 +16,7 @@ export type BottomTabBarProps = {
 };
 
 const tabs: { key: BottomTab | 'logout'; label: string; icon: IconName }[] = [
-  { key: 'desks', label: 'Escritorios', icon: 'building' },
+  { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
   { key: 'profile', label: 'Perfil', icon: 'user' },
   { key: 'logout', label: 'Salir', icon: 'logout' },

@@ -21,7 +21,7 @@ export function DeskAmenities({
       {visibleAmenities.map((amenity) => (
         <Badge key={amenity.id} label={amenity.name} />
       ))}
-      {hiddenCount > 0 ? <Badge label={`+${hiddenCount} mas`} /> : null}
+      {hiddenCount > 0 ? <Badge label={`+${hiddenCount} más`} /> : null}
     </View>
   );
 }

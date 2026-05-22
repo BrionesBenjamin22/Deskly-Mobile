@@ -1,21 +1,21 @@
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '../../theme/colors';
-import { radii, spacing } from '../../theme/spacing';
-import { AppText } from './AppText';
-import { Icon } from './Icon';
+import { AppText } from '../../../components/ui/AppText';
+import { Icon } from '../../../components/ui/Icon';
+import { colors } from '../../../theme/colors';
+import { radii, spacing } from '../../../theme/spacing';
 
-export function EmptyState() {
+export function ReservationEmptyState() {
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        <Icon name="search" size={28} color={colors.primary} />
+        <Icon name="calendar" size={28} color={colors.primary} />
       </View>
       <AppText variant="subtitle" style={styles.title}>
-        No hay escritorios disponibles para estos filtros
+        No tenés reservas todavía
       </AppText>
       <AppText variant="body" color={colors.blackOverlay} style={styles.copy}>
-        Intenta con otra fecha u horario
+        Explorá los escritorios disponibles y hacé tu primera reserva
       </AppText>
     </View>
   );
@@ -28,7 +28,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.lg,
     borderWidth: 1,
-    marginTop: spacing.lg,
     padding: spacing.xxl,
   },
   iconCircle: {

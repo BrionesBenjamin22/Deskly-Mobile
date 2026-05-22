@@ -6,6 +6,7 @@ import { BottomTabBar } from '../../../components/ui/BottomTabBar';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Icon } from '../../../components/ui/Icon';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
+import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { DateSelector } from '../components/DateSelector';
@@ -14,8 +15,38 @@ import { ReservationBottomSheet } from '../components/ReservationBottomSheet';
 import { mockDesks } from '../data/mockDesks';
 import { Desk } from '../types/desk.types';
 
-export function DesksScreen() {
+type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
+
+type DesksScreenProps = {
+  onPressReservations?: () => void;
+};
+
+const reservationStatusContent: Record<
+  Exclude<ReservationUiStatus, 'idle'>,
+  { type: StatusModalType; title: string; description: string }
+> = {
+  loading: {
+    type: 'loading',
+    title: 'Procesando reserva...',
+    description: 'Estamos confirmando tu reserva. Esto puede tomar unos segundos.',
+  },
+  success: {
+    type: 'success',
+    title: '¡Reserva confirmada!',
+    description: 'Tu escritorio ha sido reservado correctamente.',
+  },
+  error: {
+    type: 'error',
+    title: 'No pudimos confirmar tu reserva',
+    description:
+      'Hubo un problema al procesarla. Revisá tu conexión e intentá nuevamente.',
+  },
+};
+
+export function DesksScreen({ onPressReservations }: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
+  const [reservationStatus, setReservationStatus] =
+    useState<ReservationUiStatus>('idle');
   const desks = mockDesks;
   const availableCount = desks.filter(
     (desk) => desk.enabled && desk.status === 'available',
@@ -35,9 +66,19 @@ export function DesksScreen() {
     startTime: string;
     endTime: string;
   }) => {
-    console.log('Reserva mock confirmada', payload);
+    console.log('Reserva mock en proceso', payload);
     handleCloseReservation();
+    setReservationStatus('loading');
+
+    setTimeout(() => {
+      setReservationStatus('success');
+    }, 1200);
   };
+
+  const activeStatus =
+    reservationStatus === 'idle'
+      ? null
+      : reservationStatusContent[reservationStatus];
 
   return (
     <ScreenContainer>
@@ -74,7 +115,7 @@ export function DesksScreen() {
           )}
         </ScrollView>
 
-        <BottomTabBar activeTab="desks" />
+        <BottomTabBar activeTab="desks" onPressReservations={onPressReservations} />
       </View>
 
       <ReservationBottomSheet
@@ -83,6 +124,20 @@ export function DesksScreen() {
         onClose={handleCloseReservation}
         onConfirm={handleConfirmReservation}
       />
+
+      {activeStatus ? (
+        <StatusModal
+          visible
+          type={activeStatus.type}
+          title={activeStatus.title}
+          description={activeStatus.description}
+          onClose={
+            reservationStatus === 'loading'
+              ? undefined
+              : () => setReservationStatus('idle')
+          }
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
