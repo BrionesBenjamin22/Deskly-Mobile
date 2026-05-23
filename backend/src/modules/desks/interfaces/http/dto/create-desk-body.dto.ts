@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayUnique,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -56,6 +57,7 @@ export class CreateDeskBodyDto {
     description: 'Amenities asociados al escritorio.',
   })
   @IsOptional()
+  @IsArray({ message: 'Los amenities deben enviarse como una lista.' })
   @IsUUID('4', {
     each: true,
     message: 'Cada amenities debe ser un UUID valido.',

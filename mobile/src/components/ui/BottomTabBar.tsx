@@ -1,4 +1,5 @@
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
@@ -14,13 +15,10 @@ export type BottomTabBarProps = {
   onPressLogout?: () => void;
 };
 
-const tabs: { key: BottomTab | 'logout'; label: string; icon: IconName }[] = [
+const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
-  //{ key: 'settings', label: 'Configuración', icon: 'user' },
-  ...(Platform.OS === 'ios'
-    ? []
-    : [{ key: 'logout' as const, label: 'Salir', icon: 'logout' as const }]),
+  { key: 'settings', label: 'Configuracion', icon: 'user' },
 ];
 
 export function BottomTabBar({
@@ -28,13 +26,11 @@ export function BottomTabBar({
   onPressDesks,
   onPressReservations,
   onPressSettings,
-  onPressLogout,
 }: BottomTabBarProps) {
   const handlers = {
     desks: onPressDesks,
     reservations: onPressReservations,
     settings: onPressSettings,
-    logout: onPressLogout,
   };
 
   return (
@@ -75,8 +71,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     justifyContent: 'space-between',
-    minHeight: 72,
     marginHorizontal: -spacing.screenX,
+    minHeight: 72,
     paddingHorizontal: spacing.screenX,
     paddingVertical: spacing.sm,
   },
@@ -84,8 +80,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: spacing.xs,
-    minHeight: 48,
     justifyContent: 'center',
+    minHeight: 48,
   },
   pressed: {
     opacity: 0.75,

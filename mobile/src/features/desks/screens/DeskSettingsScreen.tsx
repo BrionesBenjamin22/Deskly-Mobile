@@ -29,6 +29,17 @@ type DeskFormState = {
   enabled: boolean;
 };
 
+type DeskFormErrors = {
+  name?: string;
+  peopleCapacity?: string;
+};
+
+type DeskFormTouched = Record<keyof DeskFormErrors, boolean>;
+
+type AmenityFormErrors = {
+  name?: string;
+};
+
 const emptyForm: DeskFormState = {
   name: '',
   peopleCapacity: '1',
@@ -36,7 +47,13 @@ const emptyForm: DeskFormState = {
   enabled: true,
 };
 
+const emptyDeskTouched: DeskFormTouched = {
+  name: false,
+  peopleCapacity: false,
+};
+
 const zones: DeskZone[] = ['A', 'B', 'C'];
+const MAX_NAME_LENGTH = 120;
 
 function getDeskName(desk: Desk) {
   return desk.name ?? `Escritorio ${desk.code}`;
@@ -95,6 +112,40 @@ function buildChangedPayload(form: DeskFormState, desk: Desk): DeskPayload {
   return payload;
 }
 
+function validateDeskForm(form: DeskFormState): DeskFormErrors {
+  const errors: DeskFormErrors = {};
+  const peopleCapacity = Number(form.peopleCapacity);
+
+  if (!form.name.trim()) {
+    errors.name = 'Ingrese el nombre del escritorio.';
+  } else if (form.name.trim().length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.`;
+  }
+
+  if (!form.peopleCapacity.trim()) {
+    errors.peopleCapacity = 'Ingrese la cantidad de personas.';
+  } else if (!Number.isInteger(peopleCapacity)) {
+    errors.peopleCapacity = 'La cantidad de personas debe ser un numero entero.';
+  } else if (peopleCapacity < 1) {
+    errors.peopleCapacity = 'La cantidad de personas debe ser mayor o igual a 1.';
+  }
+
+  return errors;
+}
+
+function validateAmenityForm(name: string): AmenityFormErrors {
+  const errors: AmenityFormErrors = {};
+  const normalizedName = name.trim();
+
+  if (!normalizedName) {
+    errors.name = 'Ingrese el nombre del amenities.';
+  } else if (normalizedName.length > MAX_NAME_LENGTH) {
+    errors.name = `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.`;
+  }
+
+  return errors;
+}
+
 type ChipProps = {
   label: string;
   selected: boolean;
@@ -147,45 +198,63 @@ export function DeskSettingsScreen({
     null,
   );
   const [form, setForm] = useState<DeskFormState>(emptyForm);
+  const [deskTouched, setDeskTouched] =
+    useState<DeskFormTouched>(emptyDeskTouched);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [amenityName, setAmenityName] = useState('');
+  const [amenityTouched, setAmenityTouched] = useState(false);
+  const [amenitySubmitAttempted, setAmenitySubmitAttempted] = useState(false);
   const formTitle = editingDesk ? 'Editar escritorio' : 'Nuevo escritorio';
   const amenityFormTitle = editingAmenity
     ? 'Editar amenities'
     : 'Nuevo amenities';
+  const deskFormErrors = useMemo(() => validateDeskForm(form), [form]);
+  const amenityFormErrors = useMemo(
+    () => validateAmenityForm(amenityName),
+    [amenityName],
+  );
 
   const canSubmit = useMemo(
-    () =>
-      form.name.trim().length > 0 &&
-      Number.isInteger(Number(form.peopleCapacity)) &&
-      Number(form.peopleCapacity) >= 1,
-    [form.name, form.peopleCapacity],
+    () => Object.keys(deskFormErrors).length === 0,
+    [deskFormErrors],
   );
   const canSubmitAmenity = useMemo(
-    () => amenityName.trim().length > 0,
-    [amenityName],
+    () => Object.keys(amenityFormErrors).length === 0,
+    [amenityFormErrors],
   );
 
   const handleEdit = (desk: Desk) => {
     setEditingDesk(desk);
     setForm(toFormState(desk));
+    setDeskTouched(emptyDeskTouched);
+    setSubmitAttempted(false);
   };
 
   const handleCancelEdit = () => {
     setEditingDesk(null);
     setForm(emptyForm);
+    setDeskTouched(emptyDeskTouched);
+    setSubmitAttempted(false);
   };
 
   const handleEditAmenity = (amenity: DeskAmenity) => {
     setEditingAmenity(amenity);
     setAmenityName(amenity.name);
+    setAmenityTouched(false);
+    setAmenitySubmitAttempted(false);
   };
 
   const handleCancelAmenityEdit = () => {
     setEditingAmenity(null);
     setAmenityName('');
+    setAmenityTouched(false);
+    setAmenitySubmitAttempted(false);
   };
 
   const handleSubmit = async () => {
+    setSubmitAttempted(true);
+    setDeskTouched({ name: true, peopleCapacity: true });
+
     if (!canSubmit) {
       return;
     }
@@ -207,6 +276,9 @@ export function DeskSettingsScreen({
   };
 
   const handleSubmitAmenity = async () => {
+    setAmenitySubmitAttempted(true);
+    setAmenityTouched(true);
+
     if (!canSubmitAmenity) {
       return;
     }
@@ -231,6 +303,14 @@ export function DeskSettingsScreen({
         : [...current.amenityIds, amenityId],
     }));
   };
+  const shouldShowNameError =
+    Boolean(deskFormErrors.name) && (deskTouched.name || submitAttempted);
+  const shouldShowPeopleCapacityError =
+    Boolean(deskFormErrors.peopleCapacity) &&
+    (deskTouched.peopleCapacity || submitAttempted);
+  const shouldShowAmenityError =
+    Boolean(amenityFormErrors.name) &&
+    (amenityTouched || amenitySubmitAttempted);
 
   return (
     <ScreenContainer>
@@ -263,22 +343,44 @@ export function DeskSettingsScreen({
             <Input
               label="Nombre"
               value={form.name}
-              onChangeText={(name) => setForm((current) => ({ ...current, name }))}
+              onChangeText={(name) => {
+                setDeskTouched((current) => ({ ...current, name: true }));
+                setForm((current) => ({ ...current, name }));
+              }}
               placeholder="Escritorio A2"
+              maxLength={MAX_NAME_LENGTH + 1}
+              style={shouldShowNameError ? styles.inputError : undefined}
             />
+            {shouldShowNameError ? (
+              <AppText variant="caption" color={statusColors.error} style={styles.fieldErrorText}>
+                {deskFormErrors.name}
+              </AppText>
+            ) : null}
 
             <Input
               label="Cantidad de personas"
               value={form.peopleCapacity}
-              onChangeText={(peopleCapacity) =>
+              onChangeText={(peopleCapacity) => {
+                setDeskTouched((current) => ({
+                  ...current,
+                  peopleCapacity: true,
+                }));
                 setForm((current) => ({
                   ...current,
                   peopleCapacity: peopleCapacity.replace(/\D/g, ''),
-                }))
-              }
+                }));
+              }}
               keyboardType="number-pad"
               placeholder="2"
+              style={
+                shouldShowPeopleCapacityError ? styles.inputError : undefined
+              }
             />
+            {shouldShowPeopleCapacityError ? (
+              <AppText variant="caption" color={statusColors.error} style={styles.fieldErrorText}>
+                {deskFormErrors.peopleCapacity}
+              </AppText>
+            ) : null}
 
             <View style={styles.fieldGroup}>
               <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
@@ -408,9 +510,19 @@ export function DeskSettingsScreen({
             <Input
               label="Nombre"
               value={amenityName}
-              onChangeText={setAmenityName}
+              onChangeText={(value) => {
+                setAmenityTouched(true);
+                setAmenityName(value);
+              }}
               placeholder="Monitor"
+              maxLength={MAX_NAME_LENGTH + 1}
+              style={shouldShowAmenityError ? styles.inputError : undefined}
             />
+            {shouldShowAmenityError ? (
+              <AppText variant="caption" color={statusColors.error} style={styles.fieldErrorText}>
+                {amenityFormErrors.name}
+              </AppText>
+            ) : null}
 
             <Button
               title={editingAmenity ? 'Guardar amenities' : 'Crear amenities'}
@@ -646,6 +758,13 @@ const styles = StyleSheet.create({
   },
   feedbackText: {
     fontWeight: '700',
+  },
+  inputError: {
+    borderColor: statusColors.error,
+  },
+  fieldErrorText: {
+    fontWeight: '700',
+    marginTop: -spacing.sm,
   },
   section: {
     gap: spacing.md,

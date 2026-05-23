@@ -45,12 +45,16 @@ export class ReservationServiceError extends Error {
 }
 
 function getErrorMessage(body: ApiErrorBody | null) {
-  if (body?.error) {
-    return body.error;
-  }
-
   if (Array.isArray(body?.message)) {
     return body.message.join(' ');
+  }
+
+  if (body?.message) {
+    return body.message;
+  }
+
+  if (body?.error) {
+    return body.error;
   }
 
   return 'Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.';

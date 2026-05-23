@@ -80,10 +80,10 @@ export function useDeskSettings() {
     try {
       if (deskId) {
         await updateDesk(deskId, payload);
-        setSuccessMessage('Escritorio actualizado correctamente.');
+        setSuccessMessage('Los cambios del escritorio se guardaron correctamente.');
       } else {
         await createDesk(payload);
-        setSuccessMessage('Escritorio creado correctamente.');
+        setSuccessMessage('El escritorio se creo correctamente.');
       }
 
       await loadSettings();
@@ -120,10 +120,10 @@ export function useDeskSettings() {
     try {
       if (amenityId) {
         await updateAmenity(amenityId, payload);
-        setSuccessMessage('Amenities actualizado correctamente.');
+        setSuccessMessage('Los cambios del amenity se guardaron correctamente.');
       } else {
         await createAmenity(payload);
-        setSuccessMessage('Amenities creado correctamente.');
+        setSuccessMessage('El amenity se creo correctamente.');
       }
 
       await loadSettings();

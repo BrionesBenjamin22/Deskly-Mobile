@@ -40,14 +40,14 @@ const reservationStatusContent: Record<
   },
   success: {
     type: 'success',
-    title: '¡Reserva confirmada!',
-    description: 'Tu escritorio ha sido reservado correctamente.',
+    title: 'Reserva confirmada',
+    description: 'Tu escritorio fue reservado correctamente.',
   },
   error: {
     type: 'error',
     title: 'No pudimos confirmar tu reserva',
     description:
-      'Hubo un problema al procesarla. Revisá tu conexión e intentá nuevamente.',
+      'Hubo un problema al procesarla. Revise su conexion e intente nuevamente.',
   },
 };
 
@@ -333,7 +333,7 @@ export function DesksScreen({
           ) : errorMessage ? (
             <DesksFeedbackCard
               icon="circleAlert"
-              title="Lo sentimos, no pudimos recuperar su información"
+              title="Lo sentimos, no pudimos recuperar su informacion"
               description={errorMessage}
             />
           ) : desks.length > 0 ? (
@@ -342,7 +342,7 @@ export function DesksScreen({
             <DesksFeedbackCard
               icon="search"
               title="No hay escritorios disponibles para estos filtros"
-              description="Intentá con otra fecha u horario."
+              description="Intente con otra fecha u horario."
             />
           )}
         </ScrollView>

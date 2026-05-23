@@ -52,6 +52,7 @@ type ApiErrorBody = {
 };
 
 const REQUEST_TIMEOUT_MS = 8000;
+const DESK_ZONES: DeskZone[] = ['A', 'B', 'C'];
 
 export class DeskServiceError extends Error {
   constructor(
@@ -64,16 +65,19 @@ export class DeskServiceError extends Error {
 }
 
 function getErrorMessage(body: ApiErrorBody | null) {
-  if (body?.error) {
-    return body.error;
-  }
-
   if (Array.isArray(body?.message)) {
     return body.message.join(' ');
   }
 
+  if (body?.message) {
+    return body.message;
+  }
+
+  if (body?.error) {
+    return body.error;
+  }
+
   return (
-    body?.message ??
     'Lo sentimos, no pudimos recuperar su informaci\u00f3n. Intente nuevamente.'
   );
 }
@@ -154,6 +158,57 @@ function sanitizeAmenityPayload(payload: AmenityPayload): AmenityPayload {
   };
 }
 
+function validateDeskPayloadTypes(payload: DeskPayload) {
+  if (payload.name !== undefined && typeof payload.name !== 'string') {
+    throw new DeskServiceError('El nombre del escritorio debe ser texto.', 'api');
+  }
+
+  if (
+    payload.peopleCapacity !== undefined &&
+    (!Number.isInteger(payload.peopleCapacity) || payload.peopleCapacity < 1)
+  ) {
+    throw new DeskServiceError(
+      'La cantidad de personas debe ser un numero entero mayor o igual a 1.',
+      'api',
+    );
+  }
+
+  if (
+    payload.descriptionId !== undefined &&
+    typeof payload.descriptionId !== 'string'
+  ) {
+    throw new DeskServiceError('El tipo de escritorio seleccionado no es valido.', 'api');
+  }
+
+  if (payload.zone !== undefined && !DESK_ZONES.includes(payload.zone)) {
+    throw new DeskServiceError('La zona debe ser A, B o C.', 'api');
+  }
+
+  if (
+    payload.amenityIds !== undefined &&
+    (!Array.isArray(payload.amenityIds) ||
+      payload.amenityIds.some((amenityId) => typeof amenityId !== 'string'))
+  ) {
+    throw new DeskServiceError(
+      'Los amenities seleccionados deben enviarse como una lista valida.',
+      'api',
+    );
+  }
+
+  if (payload.enabled !== undefined && typeof payload.enabled !== 'boolean') {
+    throw new DeskServiceError(
+      'El estado del escritorio debe ser verdadero o falso.',
+      'api',
+    );
+  }
+}
+
+function validateAmenityPayloadTypes(payload: AmenityPayload) {
+  if (payload.name !== undefined && typeof payload.name !== 'string') {
+    throw new DeskServiceError('El nombre del amenity debe ser texto.', 'api');
+  }
+}
+
 export async function getAvailableDesks({
   date,
   startTime,
@@ -187,6 +242,8 @@ export async function listDesks(page = 1, limit = 9) {
 }
 
 export function createDesk(payload: DeskPayload) {
+  validateDeskPayloadTypes(payload);
+
   return requestJson<Desk>('/desks', {
     method: 'POST',
     body: JSON.stringify(sanitizePayload(payload)),
@@ -194,6 +251,8 @@ export function createDesk(payload: DeskPayload) {
 }
 
 export function updateDesk(id: string, payload: DeskPayload) {
+  validateDeskPayloadTypes(payload);
+
   return requestJson<Desk>(`/desks/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(sanitizePayload(payload)),
@@ -215,6 +274,8 @@ export function listAmenities() {
 }
 
 export function createAmenity(payload: AmenityPayload) {
+  validateAmenityPayloadTypes(payload);
+
   return requestJson<DeskAmenity>('/amenities', {
     method: 'POST',
     body: JSON.stringify(sanitizeAmenityPayload(payload)),
@@ -222,6 +283,8 @@ export function createAmenity(payload: AmenityPayload) {
 }
 
 export function updateAmenity(id: string, payload: AmenityPayload) {
+  validateAmenityPayloadTypes(payload);
+
   return requestJson<DeskAmenity>(`/amenities/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(sanitizeAmenityPayload(payload)),

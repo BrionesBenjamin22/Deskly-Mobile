@@ -6,7 +6,7 @@ import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 import { IconButton } from '../../../components/ui/IconButton';
 import { Input } from '../../../components/ui/Input';
-import { colors } from '../../../theme/colors';
+import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { Desk } from '../types/desk.types';
 import { DeskSummaryCard } from './DeskSummaryCard';
@@ -27,6 +27,44 @@ type ReservationBottomSheetProps = {
   }) => void;
 };
 
+type ReservationFormErrors = {
+  startTime?: string;
+  endTime?: string;
+};
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(':').map(Number);
+
+  return hours * 60 + minutes;
+}
+
+function validateReservationForm(startTime: string, endTime: string) {
+  const errors: ReservationFormErrors = {};
+  const normalizedStartTime = startTime.trim();
+  const normalizedEndTime = endTime.trim();
+
+  if (!normalizedStartTime) {
+    errors.startTime = 'Ingrese el horario de inicio.';
+  } else if (!TIME_PATTERN.test(normalizedStartTime)) {
+    errors.startTime = 'Use el formato HH:mm, por ejemplo 09:00.';
+  }
+
+  if (!normalizedEndTime) {
+    errors.endTime = 'Ingrese el horario de fin.';
+  } else if (!TIME_PATTERN.test(normalizedEndTime)) {
+    errors.endTime = 'Use el formato HH:mm, por ejemplo 18:00.';
+  } else if (
+    !errors.startTime &&
+    timeToMinutes(normalizedEndTime) <= timeToMinutes(normalizedStartTime)
+  ) {
+    errors.endTime = 'El horario de fin debe ser posterior al inicio.';
+  }
+
+  return errors;
+}
+
 export function ReservationBottomSheet({
   visible,
   desk,
@@ -39,11 +77,13 @@ export function ReservationBottomSheet({
 }: ReservationBottomSheetProps) {
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
+  const [fieldErrors, setFieldErrors] = useState<ReservationFormErrors>({});
 
   useEffect(() => {
     if (visible) {
       setStartTime(initialStartTime);
       setEndTime(initialEndTime);
+      setFieldErrors({});
     }
   }, [initialEndTime, initialStartTime, visible]);
 
@@ -52,11 +92,18 @@ export function ReservationBottomSheet({
       return;
     }
 
+    const nextErrors = validateReservationForm(startTime, endTime);
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
     onConfirm({
       desk,
       date: selectedDate,
-      startTime,
-      endTime,
+      startTime: startTime.trim(),
+      endTime: endTime.trim(),
     });
   };
 
@@ -99,18 +146,47 @@ export function ReservationBottomSheet({
           </View>
 
           <View style={styles.inputsRow}>
-            <Input
-              label="Hora inicio"
-              value={startTime}
-              onChangeText={setStartTime}
-              placeholder="09:00"
-            />
-            <Input
-              label="Hora fin"
-              value={endTime}
-              onChangeText={setEndTime}
-              placeholder="18:00"
-            />
+            <View style={styles.inputGroup}>
+              <Input
+                label="Hora inicio"
+                value={startTime}
+                onChangeText={(value) => {
+                  setStartTime(value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    startTime: undefined,
+                  }));
+                }}
+                placeholder="09:00"
+                style={fieldErrors.startTime ? styles.inputError : undefined}
+              />
+              {fieldErrors.startTime ? (
+                <AppText variant="caption" color={statusColors.error} style={styles.errorText}>
+                  {fieldErrors.startTime}
+                </AppText>
+              ) : null}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Input
+                label="Hora fin"
+                value={endTime}
+                onChangeText={(value) => {
+                  setEndTime(value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    endTime: undefined,
+                  }));
+                }}
+                placeholder="18:00"
+                style={fieldErrors.endTime ? styles.inputError : undefined}
+              />
+              {fieldErrors.endTime ? (
+                <AppText variant="caption" color={statusColors.error} style={styles.errorText}>
+                  {fieldErrors.endTime}
+                </AppText>
+              ) : null}
+            </View>
           </View>
 
           <Button title="Confirmar Reserva" onPress={handleConfirm}>
@@ -175,5 +251,15 @@ const styles = StyleSheet.create({
   inputsRow: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  inputGroup: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  inputError: {
+    borderColor: statusColors.error,
+  },
+  errorText: {
+    fontWeight: '700',
   },
 });
