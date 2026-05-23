@@ -107,6 +107,29 @@ Sin disponibilidad:
 }
 ```
 
+Escritorio ocupado:
+
+```json
+{
+  "desks": [
+    {
+      "id": "uuid",
+      "code": "uuid-generado",
+      "name": "Escritorio 1",
+      "peopleCapacity": 2,
+      "amenities": [],
+      "status": "unavailable",
+      "reservedSlots": [
+        {
+          "startTime": "09:00",
+          "endTime": "13:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Reglas de negocio
 
 - La fecha es obligatoria y debe tener formato `YYYY-MM-DD`.
@@ -121,7 +144,7 @@ Sin disponibilidad:
 - El borrado de escritorios es logico mediante `deleted_at`.
 - Los escritorios eliminados no aparecen en listados, detalle ni disponibilidad.
 - Solo se devuelven escritorios habilitados.
-- Las reservas `ACTIVE` superpuestas bloquean disponibilidad.
+- Las reservas `ACTIVE` superpuestas marcan el escritorio como `unavailable` e informan la franja ocupada.
 - Las reservas `CANCELLED` no bloquean disponibilidad.
 - Los listados usan paginacion con 9 items por defecto.
 

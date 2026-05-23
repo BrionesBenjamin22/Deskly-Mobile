@@ -27,6 +27,7 @@ type DesksScreenProps = {
   onPressReservations?: () => void;
   onPressSettings?: () => void;
   onPressLogout?: () => void;
+  onReservationCreated?: () => void;
 };
 
 const reservationStatusContent: Record<
@@ -73,6 +74,12 @@ const timeOptions = [
   '19:00',
   '20:00',
 ];
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(':').map(Number);
+
+  return hours * 60 + minutes;
+}
 
 function getFriendlyReservationError(error: unknown) {
   if (error instanceof ReservationServiceError) {
@@ -182,6 +189,7 @@ export function DesksScreen({
   onPressReservations,
   onPressSettings,
   onPressLogout,
+  onReservationCreated,
 }: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDate, setSelectedDate] = useState(
@@ -197,15 +205,21 @@ export function DesksScreen({
   const [endTime, setEndTime] = useState('18:00');
   const [selectedZone, setSelectedZone] = useState<ZoneFilter>('all');
   const [openDropdown, setOpenDropdown] = useState<FilterDropdownId | null>(null);
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
   const { desks, errorMessage, isLoading } = useAvailableDesks({
     date: selectedDate,
     startTime,
     endTime,
+    refreshKey: availabilityRefreshKey,
     ...(selectedZone === 'all' ? {} : { zone: selectedZone }),
   });
   const availableCount = desks.filter(
     (desk) => desk.enabled && desk.status === 'available',
   ).length;
+  const startTimeOptions = timeOptions.slice(0, -1);
+  const endTimeOptions = timeOptions.filter(
+    (time) => timeToMinutes(time) > timeToMinutes(startTime),
+  );
 
   const handleOpenReservation = (desk: Desk) => {
     setSelectedDesk(desk);
@@ -232,6 +246,8 @@ export function DesksScreen({
         startTime: payload.startTime,
         endTime: payload.endTime,
       });
+      setAvailabilityRefreshKey((current) => current + 1);
+      onReservationCreated?.();
       setReservationStatus('success');
     } catch (error) {
       setReservationErrorMessage(getFriendlyReservationError(error));
@@ -249,6 +265,13 @@ export function DesksScreen({
     setOpenDropdown((current) => (current === id ? null : id));
   };
 
+  const handleClearFilters = () => {
+    setStartTime('09:00');
+    setEndTime('18:00');
+    setSelectedZone('all');
+    setOpenDropdown(null);
+  };
+
   return (
     <ScreenContainer>
       <View style={styles.layout}>
@@ -261,19 +284,32 @@ export function DesksScreen({
 
           <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              setOpenDropdown(null);
-              setShowAdvancedFilters((current) => !current);
-            }}
-            style={({ pressed }) => [styles.filters, pressed && styles.pressed]}
-          >
-            <AppText variant="body" color={colors.primary} style={styles.filtersText}>
-              Filtros avanzados
-            </AppText>
-            <Icon name="search" size={18} color={colors.primary} />
-          </Pressable>
+          <View style={styles.filtersHeader}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setOpenDropdown(null);
+                setShowAdvancedFilters((current) => !current);
+              }}
+              style={({ pressed }) => [styles.filters, pressed && styles.pressed]}
+            >
+              <AppText variant="body" color={colors.primary} style={styles.filtersText}>
+                Filtros avanzados
+              </AppText>
+              <Icon name="search" size={18} color={colors.primary} />
+            </Pressable>
+
+            {showAdvancedFilters ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Limpiar filtros"
+                onPress={handleClearFilters}
+                style={({ pressed }) => [styles.clearFilters, pressed && styles.pressed]}
+              >
+                <Icon name="x" size={18} color={colors.primary} />
+              </Pressable>
+            ) : null}
+          </View>
 
           {showAdvancedFilters ? (
             <View style={styles.filtersPanel}>
@@ -281,11 +317,17 @@ export function DesksScreen({
                 id="startTime"
                 label="Desde"
                 valueLabel={startTime}
-                options={timeOptions.map((time) => ({ label: time, value: time }))}
+                options={startTimeOptions.map((time) => ({ label: time, value: time }))}
                 openDropdown={openDropdown}
                 onToggle={handleToggleDropdown}
                 onSelect={(value) => {
                   setStartTime(value);
+                  if (timeToMinutes(endTime) <= timeToMinutes(value)) {
+                    const nextEndTime = timeOptions.find(
+                      (time) => timeToMinutes(time) > timeToMinutes(value),
+                    );
+                    setEndTime(nextEndTime ?? '20:00');
+                  }
                   setOpenDropdown(null);
                 }}
               />
@@ -294,7 +336,7 @@ export function DesksScreen({
                 id="endTime"
                 label="Hasta"
                 valueLabel={endTime}
-                options={timeOptions.map((time) => ({ label: time, value: time }))}
+                options={endTimeOptions.map((time) => ({ label: time, value: time }))}
                 openDropdown={openDropdown}
                 onToggle={handleToggleDropdown}
                 onSelect={(value) => {
@@ -315,6 +357,7 @@ export function DesksScreen({
                   setOpenDropdown(null);
                 }}
               />
+
             </View>
           ) : null}
 
@@ -337,7 +380,12 @@ export function DesksScreen({
               description={errorMessage}
             />
           ) : desks.length > 0 ? (
-            <DeskList desks={desks} onReserve={handleOpenReservation} />
+            <DeskList
+              desks={desks}
+              selectedEndTime={endTime}
+              selectedStartTime={startTime}
+              onReserve={handleOpenReservation}
+            />
           ) : (
             <DesksFeedbackCard
               icon="search"
@@ -362,6 +410,7 @@ export function DesksScreen({
         selectedDateLabel={selectedDateLabel}
         initialStartTime={startTime}
         initialEndTime={endTime}
+        timeOptions={timeOptions}
         onClose={handleCloseReservation}
         onConfirm={handleConfirmReservation}
       />
@@ -400,6 +449,12 @@ const styles = StyleSheet.create({
   scroll: {
     overflow: 'visible',
   },
+  filtersHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 40,
+  },
   filters: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -430,6 +485,16 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     padding: spacing.md,
     zIndex: 20,
+  },
+  clearFilters: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
   },
   dropdownField: {
     flex: 1,

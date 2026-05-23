@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { DeskServiceError, getAvailableDesks } from '../services/desks.service';
 import { Desk, DeskZone } from '../types/desk.types';
@@ -8,6 +8,7 @@ type UseAvailableDesksParams = {
   startTime: string;
   endTime: string;
   zone?: DeskZone;
+  refreshKey?: number;
 };
 
 function getFriendlyErrorMessage(error: unknown) {
@@ -23,12 +24,12 @@ export function useAvailableDesks({
   startTime,
   endTime,
   zone,
+  refreshKey = 0,
 }: UseAvailableDesksParams) {
   const [desks, setDesks] = useState<Desk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
+  const loadDesks = useCallback(() => {
     let isMounted = true;
 
     setIsLoading(true);
@@ -61,9 +62,12 @@ export function useAvailableDesks({
     };
   }, [date, endTime, startTime, zone]);
 
+  useEffect(() => loadDesks(), [loadDesks, refreshKey]);
+
   return {
     desks,
     errorMessage,
     isLoading,
+    refresh: loadDesks,
   };
 }

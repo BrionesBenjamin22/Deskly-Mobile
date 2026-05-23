@@ -46,7 +46,12 @@ La consulta de disponibilidad valida los filtros desde controles cerrados:
 
 - la fecha se selecciona desde opciones generadas por la aplicacion
 - los horarios de filtros avanzados se eligen desde opciones `HH:mm`
+- el filtro `Hasta` solo muestra horarios posteriores al valor elegido en `Desde`
 - la zona se limita a `A`, `B`, `C` o todas
+- los escritorios con reservas activas superpuestas se muestran como no disponibles
+- la tarjeta informa en rojo la reserva que cruza con la franja seleccionada, por ejemplo `Reservado de 09:00 a 13:00`
+- si no hay cruce, la tarjeta puede informar la proxima reserva posterior a la hora `Desde`
+- los filtros avanzados incluyen un boton de icono para limpiar la seleccion y volver a `Desde 09:00`, `Hasta 18:00` y todas las zonas
 
 La confirmacion de reserva valida el formulario antes de llamar al backend:
 
@@ -55,6 +60,7 @@ La confirmacion de reserva valida el formulario antes de llamar al backend:
 - `Hora fin` debe ser posterior a `Hora inicio`
 - cada error se muestra debajo del campo correspondiente y el campo queda resaltado
 - si existe un error de formulario, no se ejecuta la peticion
+- al confirmar una reserva se refresca la disponibilidad y se notifica a `Mis reservas` para actualizar el listado sin recargar la pagina
 
 ## Configuracion de escritorios
 

@@ -25,4 +25,8 @@ export interface Desk {
   amenities: DeskAmenity[];
   enabled: boolean;
   status: DeskStatus;
+  reservedSlots?: {
+    startTime: string;
+    endTime: string;
+  }[];
 }

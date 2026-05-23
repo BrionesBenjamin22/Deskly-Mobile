@@ -13,6 +13,11 @@ export type AvailableDeskOutput = {
   description?: DeskDescriptionProperties;
   zone?: DeskZoneValue;
   amenities: AmenityProperties[];
+  status: 'available' | 'unavailable';
+  reservedSlots: {
+    startTime: string;
+    endTime: string;
+  }[];
 };
 
 export type GetAvailableDesksOutput = {

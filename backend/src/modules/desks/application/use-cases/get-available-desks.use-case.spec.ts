@@ -16,17 +16,20 @@ describe('GetAvailableDesksUseCase', () => {
 
   it('returns available desks', async () => {
     repository.findAvailableByTimeSlot.mockResolvedValue([
-      new Desk({
-        id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
-        code: 'D-01',
-        name: 'Escritorio 1',
-        peopleCapacity: 2,
-        zone: 'A',
-        amenities: [
-          { id: '6a3deca2-0063-4e6c-b1ee-a95666b5efdc', name: 'Monitor' },
-        ],
-        enabled: true,
-      }),
+      {
+        desk: new Desk({
+          id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+          code: 'D-01',
+          name: 'Escritorio 1',
+          peopleCapacity: 2,
+          zone: 'A',
+          amenities: [
+            { id: '6a3deca2-0063-4e6c-b1ee-a95666b5efdc', name: 'Monitor' },
+          ],
+          enabled: true,
+        }),
+        reservedSlots: [],
+      },
     ]);
 
     const output = await useCase.execute({
@@ -49,6 +52,8 @@ describe('GetAvailableDesksUseCase', () => {
               name: 'Monitor',
             },
           ],
+          status: 'available',
+          reservedSlots: [],
         },
       ],
     });
@@ -80,5 +85,59 @@ describe('GetAvailableDesksUseCase', () => {
       }),
     ).rejects.toThrow(InvalidTimeRangeError);
     expect(repository.findAvailableByTimeSlot.mock.calls).toHaveLength(0);
+  });
+
+  it('returns unavailable desks with reserved slots', async () => {
+    repository.findAvailableByTimeSlot.mockResolvedValue([
+      {
+        desk: new Desk({
+          id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+          code: 'D-01',
+          name: 'Escritorio 1',
+          peopleCapacity: 2,
+          enabled: true,
+        }),
+        reservedSlots: [{ startTime: '09:00', endTime: '13:00' }],
+      },
+    ]);
+
+    const output = await useCase.execute({
+      date: '2026-06-01',
+      startTime: '09:00',
+      endTime: '13:00',
+    });
+
+    expect(output.desks[0]).toMatchObject({
+      id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+      status: 'unavailable',
+      reservedSlots: [{ startTime: '09:00', endTime: '13:00' }],
+    });
+  });
+
+  it('keeps desks available when reservations do not overlap the requested slot', async () => {
+    repository.findAvailableByTimeSlot.mockResolvedValue([
+      {
+        desk: new Desk({
+          id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+          code: 'D-01',
+          name: 'Escritorio 1',
+          peopleCapacity: 2,
+          enabled: true,
+        }),
+        reservedSlots: [{ startTime: '09:00', endTime: '10:00' }],
+      },
+    ]);
+
+    const output = await useCase.execute({
+      date: '2026-06-01',
+      startTime: '10:00',
+      endTime: '11:00',
+    });
+
+    expect(output.desks[0]).toMatchObject({
+      id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+      status: 'available',
+      reservedSlots: [{ startTime: '09:00', endTime: '10:00' }],
+    });
   });
 });

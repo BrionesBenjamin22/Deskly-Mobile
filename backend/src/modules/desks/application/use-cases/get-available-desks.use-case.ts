@@ -20,7 +20,7 @@ export class GetAvailableDesksUseCase {
     const reservationDate = ReservationDate.create(input.date);
     const timeSlot = TimeSlot.create(input.startTime, input.endTime);
 
-    const desks = await this.deskRepository.findAvailableByTimeSlot({
+    const deskAvailability = await this.deskRepository.findAvailableByTimeSlot({
       date: reservationDate.value,
       startTime: timeSlot.startTime,
       endTime: timeSlot.endTime,
@@ -28,16 +28,47 @@ export class GetAvailableDesksUseCase {
     });
 
     return {
-      desks: desks.map((desk) => ({
-        id: desk.id,
-        code: desk.code,
-        ...(desk.name ? { name: desk.name } : {}),
-        peopleCapacity: desk.peopleCapacity,
-        ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
-        ...(desk.description ? { description: desk.description } : {}),
-        ...(desk.zone ? { zone: desk.zone } : {}),
-        amenities: desk.amenities,
-      })),
+      desks: deskAvailability.map(({ desk, reservedSlots }) => {
+        const hasOverlap = reservedSlots.some((reservedSlot) =>
+          this.overlaps(
+            timeSlot.startTime,
+            timeSlot.endTime,
+            reservedSlot.startTime,
+            reservedSlot.endTime,
+          ),
+        );
+
+        return {
+          id: desk.id,
+          code: desk.code,
+          ...(desk.name ? { name: desk.name } : {}),
+          peopleCapacity: desk.peopleCapacity,
+          ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
+          ...(desk.description ? { description: desk.description } : {}),
+          ...(desk.zone ? { zone: desk.zone } : {}),
+          amenities: desk.amenities,
+          status: hasOverlap ? 'unavailable' : 'available',
+          reservedSlots,
+        };
+      }),
     };
+  }
+
+  private overlaps(
+    startTime: string,
+    endTime: string,
+    reservedStartTime: string,
+    reservedEndTime: string,
+  ) {
+    return (
+      this.toMinutes(startTime) < this.toMinutes(reservedEndTime) &&
+      this.toMinutes(endTime) > this.toMinutes(reservedStartTime)
+    );
+  }
+
+  private toMinutes(value: string) {
+    const [hours, minutes] = value.split(':').map(Number);
+
+    return hours * 60 + minutes;
   }
 }

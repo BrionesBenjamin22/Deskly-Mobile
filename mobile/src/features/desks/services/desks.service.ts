@@ -10,6 +10,11 @@ type AvailableDeskResponse = {
   description?: Desk['description'] | null;
   zone?: Desk['zone'] | null;
   amenities: Desk['amenities'];
+  status?: 'available' | 'unavailable';
+  reservedSlots?: {
+    startTime: string;
+    endTime: string;
+  }[];
 };
 
 type GetAvailableDesksResponse = {
@@ -136,7 +141,8 @@ function mapAvailableDesk(desk: AvailableDeskResponse): Desk {
     ...(desk.zone ? { zone: desk.zone } : {}),
     amenities: desk.amenities ?? [],
     enabled: true,
-    status: 'available',
+    status: desk.status ?? 'available',
+    reservedSlots: desk.reservedSlots ?? [],
   };
 }
 

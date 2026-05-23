@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 import { IconButton } from '../../../components/ui/IconButton';
-import { Input } from '../../../components/ui/Input';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { Desk } from '../types/desk.types';
@@ -18,6 +17,7 @@ type ReservationBottomSheetProps = {
   selectedDateLabel: string;
   initialStartTime: string;
   initialEndTime: string;
+  timeOptions: string[];
   onClose: () => void;
   onConfirm: (payload: {
     desk: Desk;
@@ -27,42 +27,43 @@ type ReservationBottomSheetProps = {
   }) => void;
 };
 
-type ReservationFormErrors = {
-  startTime?: string;
-  endTime?: string;
-};
-
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
-
 function timeToMinutes(value: string) {
   const [hours, minutes] = value.split(':').map(Number);
 
   return hours * 60 + minutes;
 }
 
-function validateReservationForm(startTime: string, endTime: string) {
-  const errors: ReservationFormErrors = {};
-  const normalizedStartTime = startTime.trim();
-  const normalizedEndTime = endTime.trim();
+function overlapsReservedSlot(
+  startTime: string,
+  endTime: string,
+  reservedSlots: NonNullable<Desk['reservedSlots']>,
+) {
+  return reservedSlots.some(
+    (reservedSlot) =>
+      timeToMinutes(startTime) < timeToMinutes(reservedSlot.endTime) &&
+      timeToMinutes(endTime) > timeToMinutes(reservedSlot.startTime),
+  );
+}
 
-  if (!normalizedStartTime) {
-    errors.startTime = 'Ingrese el horario de inicio.';
-  } else if (!TIME_PATTERN.test(normalizedStartTime)) {
-    errors.startTime = 'Use el formato HH:mm, por ejemplo 09:00.';
-  }
+function getEndOptions(
+  startTime: string,
+  timeOptions: string[],
+  reservedSlots: NonNullable<Desk['reservedSlots']>,
+) {
+  return timeOptions.filter(
+    (endTime) =>
+      timeToMinutes(endTime) > timeToMinutes(startTime) &&
+      !overlapsReservedSlot(startTime, endTime, reservedSlots),
+  );
+}
 
-  if (!normalizedEndTime) {
-    errors.endTime = 'Ingrese el horario de fin.';
-  } else if (!TIME_PATTERN.test(normalizedEndTime)) {
-    errors.endTime = 'Use el formato HH:mm, por ejemplo 18:00.';
-  } else if (
-    !errors.startTime &&
-    timeToMinutes(normalizedEndTime) <= timeToMinutes(normalizedStartTime)
-  ) {
-    errors.endTime = 'El horario de fin debe ser posterior al inicio.';
-  }
-
-  return errors;
+function getStartOptions(
+  timeOptions: string[],
+  reservedSlots: NonNullable<Desk['reservedSlots']>,
+) {
+  return timeOptions.filter((startTime) =>
+    getEndOptions(startTime, timeOptions, reservedSlots).length > 0,
+  );
 }
 
 export function ReservationBottomSheet({
@@ -72,38 +73,61 @@ export function ReservationBottomSheet({
   selectedDateLabel,
   initialStartTime,
   initialEndTime,
+  timeOptions,
   onClose,
   onConfirm,
 }: ReservationBottomSheetProps) {
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
-  const [fieldErrors, setFieldErrors] = useState<ReservationFormErrors>({});
+  const reservedSlots = useMemo(() => desk?.reservedSlots ?? [], [desk?.reservedSlots]);
+  const startOptions = useMemo(
+    () => getStartOptions(timeOptions, reservedSlots),
+    [reservedSlots, timeOptions],
+  );
+  const endOptions = useMemo(
+    () =>
+      startTime ? getEndOptions(startTime, timeOptions, reservedSlots) : [],
+    [reservedSlots, startTime, timeOptions],
+  );
 
   useEffect(() => {
     if (visible) {
-      setStartTime(initialStartTime);
-      setEndTime(initialEndTime);
-      setFieldErrors({});
+      const nextStartTime = startOptions.includes(initialStartTime)
+        ? initialStartTime
+        : startOptions[0] ?? '';
+      const nextEndOptions = nextStartTime
+        ? getEndOptions(nextStartTime, timeOptions, reservedSlots)
+        : [];
+      const nextEndTime = nextEndOptions.includes(initialEndTime)
+        ? initialEndTime
+        : nextEndOptions[0] ?? '';
+
+      setStartTime(nextStartTime);
+      setEndTime(nextEndTime);
     }
-  }, [initialEndTime, initialStartTime, visible]);
+  }, [
+    initialEndTime,
+    initialStartTime,
+    reservedSlots,
+    startOptions,
+    timeOptions,
+    visible,
+  ]);
 
   const handleConfirm = () => {
     if (!desk) {
       return;
     }
 
-    const nextErrors = validateReservationForm(startTime, endTime);
-    setFieldErrors(nextErrors);
-
-    if (Object.keys(nextErrors).length > 0) {
+    if (!startTime || !endTime) {
       return;
     }
 
     onConfirm({
       desk,
       date: selectedDate,
-      startTime: startTime.trim(),
-      endTime: endTime.trim(),
+      startTime,
+      endTime,
     });
   };
 
@@ -145,51 +169,79 @@ export function ReservationBottomSheet({
             </View>
           </View>
 
-          <View style={styles.inputsRow}>
-            <View style={styles.inputGroup}>
-              <Input
-                label="Hora inicio"
-                value={startTime}
-                onChangeText={(value) => {
-                  setStartTime(value);
-                  setFieldErrors((current) => ({
-                    ...current,
-                    startTime: undefined,
-                  }));
-                }}
-                placeholder="09:00"
-                style={fieldErrors.startTime ? styles.inputError : undefined}
-              />
-              {fieldErrors.startTime ? (
-                <AppText variant="caption" color={statusColors.error} style={styles.errorText}>
-                  {fieldErrors.startTime}
-                </AppText>
-              ) : null}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Input
-                label="Hora fin"
-                value={endTime}
-                onChangeText={(value) => {
-                  setEndTime(value);
-                  setFieldErrors((current) => ({
-                    ...current,
-                    endTime: undefined,
-                  }));
-                }}
-                placeholder="18:00"
-                style={fieldErrors.endTime ? styles.inputError : undefined}
-              />
-              {fieldErrors.endTime ? (
-                <AppText variant="caption" color={statusColors.error} style={styles.errorText}>
-                  {fieldErrors.endTime}
-                </AppText>
-              ) : null}
+          <View style={styles.optionGroup}>
+            <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+              Hora inicio
+            </AppText>
+            <View style={styles.optionList}>
+              {startOptions.map((option) => (
+                <Pressable
+                  key={option}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    const nextEndOptions = getEndOptions(
+                      option,
+                      timeOptions,
+                      reservedSlots,
+                    );
+                    setStartTime(option);
+                    setEndTime(nextEndOptions[0] ?? '');
+                  }}
+                  style={[
+                    styles.timeOption,
+                    startTime === option && styles.timeOptionSelected,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    color={startTime === option ? colors.white : colors.primary}
+                    style={styles.timeOptionText}
+                  >
+                    {option}
+                  </AppText>
+                </Pressable>
+              ))}
             </View>
           </View>
 
-          <Button title="Confirmar Reserva" onPress={handleConfirm}>
+          <View style={styles.optionGroup}>
+            <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+              Hora fin
+            </AppText>
+            <View style={styles.optionList}>
+              {endOptions.map((option) => (
+                <Pressable
+                  key={option}
+                  accessibilityRole="button"
+                  onPress={() => setEndTime(option)}
+                  style={[
+                    styles.timeOption,
+                    endTime === option && styles.timeOptionSelected,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    color={endTime === option ? colors.white : colors.primary}
+                    style={styles.timeOptionText}
+                  >
+                    {option}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {startOptions.length === 0 ? (
+            <AppText variant="caption" color={statusColors.error} style={styles.errorText}>
+              No hay horarios disponibles para este escritorio en la fecha seleccionada.
+            </AppText>
+          ) : null}
+
+          <Button
+            title="Confirmar Reserva"
+            disabled={!startTime || !endTime}
+            onPress={handleConfirm}
+          >
             <Icon name="chevronRight" size={18} color={colors.white} />
           </Button>
         </View>
@@ -248,16 +300,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: spacing.xs,
   },
-  inputsRow: {
+  optionGroup: {
+    gap: spacing.sm,
+  },
+  optionList: {
     flexDirection: 'row',
-    gap: spacing.md,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  inputGroup: {
-    flex: 1,
-    gap: spacing.xs,
+  timeOption: {
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
   },
-  inputError: {
-    borderColor: statusColors.error,
+  timeOptionSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  timeOptionText: {
+    fontWeight: '800',
   },
   errorText: {
     fontWeight: '700',

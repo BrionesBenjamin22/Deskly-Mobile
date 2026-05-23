@@ -59,6 +59,7 @@ export default function App() {
   const [mountedTabs, setMountedTabs] = useState<Set<AppTab>>(
     () => new Set(['desks']),
   );
+  const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
 
   const handleTabChange = (tab: AppTab) => {
     setMountedTabs((current) => {
@@ -86,6 +87,9 @@ export default function App() {
               onPressReservations={() => handleTabChange('reservations')}
               onPressSettings={() => handleTabChange('settings')}
               onPressLogout={handleLogout}
+              onReservationCreated={() =>
+                setReservationsRefreshKey((current) => current + 1)
+              }
             />
           </AnimatedTabScreen>
         ) : null}
@@ -93,6 +97,7 @@ export default function App() {
         {mountedTabs.has('reservations') ? (
           <AnimatedTabScreen isActive={activeTab === 'reservations'}>
             <MyReservationsScreen
+              refreshKey={reservationsRefreshKey}
               onPressDesks={() => handleTabChange('desks')}
               onPressSettings={() => handleTabChange('settings')}
               onPressLogout={handleLogout}

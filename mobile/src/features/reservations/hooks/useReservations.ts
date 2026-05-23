@@ -17,7 +17,7 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.';
 }
 
-export function useReservations() {
+export function useReservations(refreshKey = 0) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -42,7 +42,7 @@ export function useReservations() {
 
   useEffect(() => {
     void loadReservations();
-  }, [loadReservations]);
+  }, [loadReservations, refreshKey]);
 
   const activeReservations = useMemo(
     () => reservations.filter((reservation) => reservation.status === 'active'),

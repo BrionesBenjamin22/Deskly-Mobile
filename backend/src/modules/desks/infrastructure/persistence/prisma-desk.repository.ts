@@ -5,6 +5,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { Desk } from '../../domain/entities/desk.entity';
 import {
   CreateDeskParams,
+  DeskAvailabilityResult,
   DeskRepositoryPort,
   FindAvailableDesksParams,
   ListDesksParams,
@@ -39,32 +40,41 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
 
   async findAvailableByTimeSlot(
     params: FindAvailableDesksParams,
-  ): Promise<Desk[]> {
+  ): Promise<DeskAvailabilityResult[]> {
     const desks = await this.prisma.desk.findMany({
       where: {
         enabled: true,
         deletedAt: null,
         ...(params.zone ? { zone: params.zone } : {}),
-        reservations: {
-          none: {
-            date: this.toDate(params.date),
-            status: ReservationStatus.ACTIVE,
-            startTime: {
-              lt: this.toTime(params.endTime),
-            },
-            endTime: {
-              gt: this.toTime(params.startTime),
-            },
-          },
-        },
       },
       orderBy: {
         code: 'asc',
       },
-      include: deskRelations,
+      include: {
+        ...deskRelations,
+        reservations: {
+          where: {
+            date: this.toDate(params.date),
+            status: ReservationStatus.ACTIVE,
+          },
+          select: {
+            startTime: true,
+            endTime: true,
+          },
+          orderBy: {
+            startTime: 'asc',
+          },
+        },
+      },
     });
 
-    return desks.map((desk) => this.toDomain(desk));
+    return desks.map((desk) => ({
+      desk: this.toDomain(desk),
+      reservedSlots: desk.reservations.map((reservation) => ({
+        startTime: this.fromTime(reservation.startTime),
+        endTime: this.fromTime(reservation.endTime),
+      })),
+    }));
   }
 
   async list(params: ListDesksParams): Promise<ListDesksResult> {
@@ -168,6 +178,10 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
     return new Date(`1970-01-01T${value}:00.000Z`);
   }
 
+  private fromTime(value: Date): string {
+    return value.toISOString().slice(11, 16);
+  }
+
   private toDomain(desk: {
     id: string;
     code: string;
@@ -191,6 +205,10 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
+    reservations?: {
+      startTime: Date;
+      endTime: Date;
+    }[];
   }): Desk {
     return new Desk({
       id: desk.id,

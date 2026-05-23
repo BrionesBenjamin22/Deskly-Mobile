@@ -18,6 +18,7 @@ type MyReservationsScreenProps = {
   onPressDesks?: () => void;
   onPressSettings?: () => void;
   onPressLogout?: () => void;
+  refreshKey?: number;
 };
 
 const cancellationStatusContent: Record<
@@ -57,6 +58,7 @@ export function MyReservationsScreen({
   onPressDesks,
   onPressSettings,
   onPressLogout,
+  refreshKey = 0,
 }: MyReservationsScreenProps) {
   const {
     actionStatus,
@@ -66,7 +68,7 @@ export function MyReservationsScreen({
     handleCancelReservation,
     isLoading,
     reservationHistory,
-  } = useReservations();
+  } = useReservations(refreshKey);
   const hasAnyReservation =
     activeReservations.length > 0 || reservationHistory.length > 0;
   const activeStatus =

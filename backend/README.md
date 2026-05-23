@@ -91,7 +91,7 @@ GET /desks/availability?date=YYYY-MM-DD&startTime=HH:mm&endTime=HH:mm
 ```
 
 El borrado de escritorios es logico mediante `deleted_at`.
-Los escritorios pueden asociarse a una descripcion reutilizable, una zona `A`, `B` o `C`, y amenities.
+Los escritorios pueden asociarse a una descripcion reutilizable, una zona `A`, `B` o `C`, y amenities. La disponibilidad devuelve escritorios disponibles y ocupados; cuando existe una reserva activa superpuesta, el escritorio se informa como `unavailable` con la franja reservada.
 
 ### Reservations
 

@@ -9,6 +9,16 @@ export type FindAvailableDesksParams = {
   zone?: DeskZoneValue;
 };
 
+export type DeskReservedSlot = {
+  startTime: string;
+  endTime: string;
+};
+
+export type DeskAvailabilityResult = {
+  desk: Desk;
+  reservedSlots: DeskReservedSlot[];
+};
+
 export type ListDesksParams = {
   page: number;
   limit: number;
@@ -39,7 +49,9 @@ export type UpdateDeskParams = {
 };
 
 export interface DeskRepositoryPort {
-  findAvailableByTimeSlot(params: FindAvailableDesksParams): Promise<Desk[]>;
+  findAvailableByTimeSlot(
+    params: FindAvailableDesksParams,
+  ): Promise<DeskAvailabilityResult[]>;
   list(params: ListDesksParams): Promise<ListDesksResult>;
   findById(id: string): Promise<Desk | null>;
   create(params: CreateDeskParams): Promise<Desk>;
