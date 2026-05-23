@@ -54,6 +54,7 @@ const emptyDeskTouched: DeskFormTouched = {
 
 const zones: DeskZone[] = ['A', 'B', 'C'];
 const MAX_NAME_LENGTH = 120;
+const AMENITY_NAME_PATTERN = /^(?=.*[A-Za-z])[A-Za-z0-9 ']+$/;
 
 function getDeskName(desk: Desk) {
   return desk.name ?? `Escritorio ${desk.code}`;
@@ -138,7 +139,9 @@ function validateAmenityForm(name: string): AmenityFormErrors {
   const normalizedName = name.trim();
 
   if (!normalizedName) {
-    errors.name = 'Ingrese el nombre del amenities.';
+    errors.name = 'Ingrese el nombre del amenity.';
+  } else if (!AMENITY_NAME_PATTERN.test(normalizedName)) {
+    errors.name = 'Ingrese un nombre valido para el amenity.';
   } else if (normalizedName.length > MAX_NAME_LENGTH) {
     errors.name = `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.`;
   }

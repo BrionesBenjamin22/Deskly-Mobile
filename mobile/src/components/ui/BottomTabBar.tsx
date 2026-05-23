@@ -18,7 +18,8 @@ export type BottomTabBarProps = {
 const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
-  { key: 'settings', label: 'Configuracion', icon: 'user' },
+  // Configuracion existe como flujo interno, pero no se expone en la barra inferior por decision de producto.
+  // { key: 'settings', label: 'Configuracion', icon: 'user' },
 ];
 
 export function BottomTabBar({

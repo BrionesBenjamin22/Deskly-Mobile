@@ -75,6 +75,7 @@ Validaciones de formulario:
 - la cantidad de personas debe ser mayor o igual a 1
 - el nombre de amenity es obligatorio
 - el nombre de amenity debe ser texto
+- el nombre de amenity puede contener letras, numeros, espacios y apostrofe para pulgadas, pero debe incluir al menos una letra
 - el nombre de amenity no puede superar 120 caracteres
 - el tipo de escritorio seleccionado debe ser valido
 - la zona debe estar restringida a `A`, `B` o `C`
@@ -95,7 +96,7 @@ Mensajes de exito de alta y edicion:
 
 ## Navegacion inferior
 
-La barra inferior muestra accesos a escritorios, reservas y configuracion. La accion `Salir` no se muestra como boton directo por decision de producto.
+La barra inferior muestra accesos a escritorios y reservas. Las acciones `Configuracion` y `Salir` no se muestran como botones directos por decision de producto.
 
 ## Contrato mock
 

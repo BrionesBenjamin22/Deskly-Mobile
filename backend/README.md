@@ -134,6 +134,7 @@ Ejemplos de mensajes esperados:
 - `El horario de inicio debe tener formato HH:mm.`
 - `El horario de fin debe tener formato HH:mm.`
 - `La cantidad de personas debe ser mayor o igual a 1.`
+- `Ingrese un nombre valido para el amenity.`
 - `Los amenities deben enviarse como una lista.`
 - `Los amenities no pueden repetirse.`
 

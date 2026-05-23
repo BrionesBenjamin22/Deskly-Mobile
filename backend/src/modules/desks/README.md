@@ -147,6 +147,7 @@ Descripciones reutilizables:
 Amenities:
 
 - `name`: texto obligatorio, maximo 120 caracteres.
+- `name`: puede contener letras, numeros, espacios y apostrofe para pulgadas, pero debe incluir al menos una letra.
 
 Disponibilidad:
 

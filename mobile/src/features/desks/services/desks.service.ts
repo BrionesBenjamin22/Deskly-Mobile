@@ -53,6 +53,7 @@ type ApiErrorBody = {
 
 const REQUEST_TIMEOUT_MS = 8000;
 const DESK_ZONES: DeskZone[] = ['A', 'B', 'C'];
+const AMENITY_NAME_PATTERN = /^(?=.*[A-Za-z])[A-Za-z0-9 ']+$/;
 
 export class DeskServiceError extends Error {
   constructor(
@@ -206,6 +207,17 @@ function validateDeskPayloadTypes(payload: DeskPayload) {
 function validateAmenityPayloadTypes(payload: AmenityPayload) {
   if (payload.name !== undefined && typeof payload.name !== 'string') {
     throw new DeskServiceError('El nombre del amenity debe ser texto.', 'api');
+  }
+
+  if (
+    payload.name !== undefined &&
+    payload.name.trim() &&
+    !AMENITY_NAME_PATTERN.test(payload.name.trim())
+  ) {
+    throw new DeskServiceError(
+      'Ingrese un nombre valido para el amenity.',
+      'api',
+    );
   }
 }
 
