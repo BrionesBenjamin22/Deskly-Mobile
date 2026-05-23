@@ -28,6 +28,13 @@ type ListReservationsResponse = {
   };
 };
 
+export type CreateReservationPayload = {
+  deskId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+};
+
 const REQUEST_TIMEOUT_MS = 8000;
 
 export class ReservationServiceError extends Error {
@@ -143,6 +150,15 @@ export async function listReservations(page = 1, limit = 9) {
     reservations: response.reservations.map(mapReservation),
     pagination: response.pagination,
   };
+}
+
+export async function createReservation(payload: CreateReservationPayload) {
+  const response = await requestJson<ReservationResponse>('/reservations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return mapReservation(response);
 }
 
 export async function cancelReservation(id: string) {

@@ -1,5 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
@@ -18,8 +17,10 @@ export type BottomTabBarProps = {
 const tabs: { key: BottomTab | 'logout'; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
-  { key: 'settings', label: 'Configuración', icon: 'user' },
-  { key: 'logout', label: 'Salir', icon: 'logout' },
+  //{ key: 'settings', label: 'Configuración', icon: 'user' },
+  ...(Platform.OS === 'ios'
+    ? []
+    : [{ key: 'logout' as const, label: 'Salir', icon: 'logout' as const }]),
 ];
 
 export function BottomTabBar({

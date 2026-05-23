@@ -112,14 +112,14 @@ export class DeskCatalogController {
   }
 
   @Post('amenities')
-  @ApiCreatedResponse({ description: 'Amenity creado correctamente.' })
+  @ApiCreatedResponse({ description: 'Amenities creado correctamente.' })
   createAmenity(@Body() body: CreateAmenityBodyDto) {
     return this.createAmenityUseCase.execute(body);
   }
 
   @Get('amenities/:id')
-  @ApiOkResponse({ description: 'Detalle de amenity.' })
-  @ApiNotFoundResponse({ description: 'Amenity no encontrado.' })
+  @ApiOkResponse({ description: 'Detalle de amenities.' })
+  @ApiNotFoundResponse({ description: 'Amenities no encontrado.' })
   async getAmenity(@Param('id', ParseUUIDPipe) id: string) {
     try {
       return await this.getAmenityByIdUseCase.execute(id);
@@ -129,8 +129,8 @@ export class DeskCatalogController {
   }
 
   @Patch('amenities/:id')
-  @ApiOkResponse({ description: 'Amenity actualizado correctamente.' })
-  @ApiNotFoundResponse({ description: 'Amenity no encontrado.' })
+  @ApiOkResponse({ description: 'Amenities actualizado correctamente.' })
+  @ApiNotFoundResponse({ description: 'Amenities no encontrado.' })
   async updateAmenity(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateAmenityBodyDto,
@@ -144,9 +144,9 @@ export class DeskCatalogController {
 
   @Delete('amenities/:id')
   @HttpCode(204)
-  @ApiNoContentResponse({ description: 'Amenity eliminado correctamente.' })
-  @ApiNotFoundResponse({ description: 'Amenity no encontrado.' })
-  @ApiConflictResponse({ description: 'Amenity asociado a escritorios.' })
+  @ApiNoContentResponse({ description: 'Amenities eliminado correctamente.' })
+  @ApiNotFoundResponse({ description: 'Amenities no encontrado.' })
+  @ApiConflictResponse({ description: 'Amenities asociado a escritorios.' })
   async deleteAmenity(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     try {
       await this.deleteAmenityUseCase.execute(id);

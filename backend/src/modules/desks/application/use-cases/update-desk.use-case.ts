@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { DeskCodeAlreadyExistsError } from '../../domain/errors/desk-code-already-exists.error';
 import { DeskNotFoundError } from '../../domain/errors/desk-not-found.error';
 import { DESK_REPOSITORY } from '../../domain/ports/desk-repository.port';
 import type { DeskRepositoryPort } from '../../domain/ports/desk-repository.port';
@@ -20,14 +19,6 @@ export class UpdateDeskUseCase {
 
     if (!desk) {
       throw new DeskNotFoundError();
-    }
-
-    if (input.code && input.code !== desk.code) {
-      const existingDesk = await this.deskRepository.findByCode(input.code);
-
-      if (existingDesk) {
-        throw new DeskCodeAlreadyExistsError();
-      }
     }
 
     const updatedDesk = await this.deskRepository.update(input);

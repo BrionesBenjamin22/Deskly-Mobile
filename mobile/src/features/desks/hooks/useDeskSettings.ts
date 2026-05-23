@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  AmenityPayload,
+  createAmenity,
   createDesk,
+  deleteAmenity,
   deleteDesk,
   DeskPayload,
   DeskServiceError,
   listAmenities,
   listDeskDescriptions,
   listDesks,
+  updateAmenity,
   updateDesk,
 } from '../services/desks.service';
 import { Desk, DeskAmenity, DeskDescription } from '../types/desk.types';
@@ -28,6 +32,19 @@ export function useDeskSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!errorMessage && !successMessage) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+    }, 3000);
+
+    return () => clearTimeout(timeoutId);
+  }, [errorMessage, successMessage]);
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
@@ -70,8 +87,10 @@ export function useDeskSettings() {
       }
 
       await loadSettings();
+      return true;
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -93,15 +112,61 @@ export function useDeskSettings() {
     }
   };
 
+  const saveAmenity = async (payload: AmenityPayload, amenityId?: string) => {
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      if (amenityId) {
+        await updateAmenity(amenityId, payload);
+        setSuccessMessage('Amenities actualizado correctamente.');
+      } else {
+        await createAmenity(payload);
+        setSuccessMessage('Amenities creado correctamente.');
+      }
+
+      await loadSettings();
+      return true;
+    } catch (error) {
+      setErrorMessage(getFriendlyErrorMessage(error));
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const removeAmenity = async (amenityId: string) => {
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      await deleteAmenity(amenityId);
+      setSuccessMessage('Amenities eliminado correctamente.');
+      await loadSettings();
+    } catch (error) {
+      setErrorMessage(getFriendlyErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return {
     amenities,
+    clearFeedback: () => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+    },
     descriptions,
     desks,
     errorMessage,
     isLoading,
     isSaving,
     refresh: loadSettings,
+    removeAmenity,
     removeDesk,
+    saveAmenity,
     saveDesk,
     successMessage,
   };

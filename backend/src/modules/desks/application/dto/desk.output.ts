@@ -8,6 +8,7 @@ export type DeskOutput = {
   id: string;
   code: string;
   name?: string;
+  peopleCapacity: number;
   descriptionId?: string;
   description?: DeskDescriptionProperties;
   zone?: DeskZoneValue;

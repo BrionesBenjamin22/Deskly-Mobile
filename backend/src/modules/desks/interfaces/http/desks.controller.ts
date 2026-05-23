@@ -1,6 +1,5 @@
 import {
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
@@ -14,7 +13,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -27,7 +25,6 @@ import { DeleteDeskUseCase } from '../../application/use-cases/delete-desk.use-c
 import { GetDeskByIdUseCase } from '../../application/use-cases/get-desk-by-id.use-case';
 import { ListDesksUseCase } from '../../application/use-cases/list-desks.use-case';
 import { UpdateDeskUseCase } from '../../application/use-cases/update-desk.use-case';
-import { DeskCodeAlreadyExistsError } from '../../domain/errors/desk-code-already-exists.error';
 import { DeskNotFoundError } from '../../domain/errors/desk-not-found.error';
 import { CreateDeskBodyDto } from './dto/create-desk-body.dto';
 import { DeskResponseDto } from './dto/desk-response.dto';
@@ -51,7 +48,6 @@ export class DesksController {
     type: DeskResponseDto,
   })
   @ApiBadRequestResponse({ description: 'Datos invalidos.' })
-  @ApiConflictResponse({ description: 'Codigo de escritorio duplicado.' })
   async create(@Body() body: CreateDeskBodyDto) {
     try {
       return await this.createDeskUseCase.execute(body);
@@ -86,7 +82,6 @@ export class DesksController {
     type: DeskResponseDto,
   })
   @ApiBadRequestResponse({ description: 'Datos invalidos.' })
-  @ApiConflictResponse({ description: 'Codigo de escritorio duplicado.' })
   @ApiNotFoundResponse({ description: 'Escritorio no encontrado.' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -120,14 +115,6 @@ export class DesksController {
         message: error.message,
         error:
           'Lo sentimos, no pudimos recuperar la informacion del escritorio. Intente nuevamente.',
-      });
-    }
-
-    if (error instanceof DeskCodeAlreadyExistsError) {
-      throw new ConflictException({
-        message: error.message,
-        error:
-          'Lo sentimos, no pudimos guardar el escritorio. Revise el codigo e intente nuevamente.',
       });
     }
 

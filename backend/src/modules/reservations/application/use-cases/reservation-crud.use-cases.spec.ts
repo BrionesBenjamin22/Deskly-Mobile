@@ -14,6 +14,7 @@ const desk = new Desk({
   id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
   code: 'D-01',
   name: 'Escritorio 1',
+  peopleCapacity: 2,
   enabled: true,
 });
 
@@ -33,7 +34,6 @@ function createDeskRepositoryMock(): jest.Mocked<DeskRepositoryPort> {
     findAvailableByTimeSlot: jest.fn(),
     list: jest.fn(),
     findById: jest.fn(),
-    findByCode: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     softDelete: jest.fn(),

@@ -5,6 +5,7 @@ type AvailableDeskResponse = {
   id: string;
   code: string;
   name?: string | null;
+  peopleCapacity: number;
   descriptionId?: string | null;
   description?: Desk['description'] | null;
   zone?: Desk['zone'] | null;
@@ -29,15 +30,20 @@ export type GetAvailableDesksParams = {
   date: string;
   startTime: string;
   endTime: string;
+  zone?: DeskZone;
 };
 
 export type DeskPayload = {
-  code?: string;
   name?: string;
+  peopleCapacity?: number;
   descriptionId?: string;
   zone?: DeskZone;
   amenityIds?: string[];
   enabled?: boolean;
+};
+
+export type AmenityPayload = {
+  name?: string;
 };
 
 type ApiErrorBody = {
@@ -118,6 +124,7 @@ function mapAvailableDesk(desk: AvailableDeskResponse): Desk {
   return {
     id: desk.id,
     code: desk.code,
+    peopleCapacity: desk.peopleCapacity,
     ...(desk.name ? { name: desk.name } : {}),
     ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
     ...(desk.description ? { description: desk.description } : {}),
@@ -130,12 +137,20 @@ function mapAvailableDesk(desk: AvailableDeskResponse): Desk {
 
 function sanitizePayload(payload: DeskPayload): DeskPayload {
   return {
-    ...(payload.code?.trim() ? { code: payload.code.trim() } : {}),
     ...(payload.name?.trim() ? { name: payload.name.trim() } : {}),
+    ...(typeof payload.peopleCapacity === 'number' && payload.peopleCapacity >= 1
+      ? { peopleCapacity: payload.peopleCapacity }
+      : {}),
     ...(payload.descriptionId ? { descriptionId: payload.descriptionId } : {}),
     ...(payload.zone ? { zone: payload.zone } : {}),
-    ...(payload.amenityIds?.length ? { amenityIds: payload.amenityIds } : {}),
+    ...(payload.amenityIds ? { amenityIds: payload.amenityIds } : {}),
     ...(typeof payload.enabled === 'boolean' ? { enabled: payload.enabled } : {}),
+  };
+}
+
+function sanitizeAmenityPayload(payload: AmenityPayload): AmenityPayload {
+  return {
+    ...(payload.name?.trim() ? { name: payload.name.trim() } : {}),
   };
 }
 
@@ -143,12 +158,17 @@ export async function getAvailableDesks({
   date,
   startTime,
   endTime,
+  zone,
 }: GetAvailableDesksParams): Promise<Desk[]> {
   const params = new URLSearchParams({
     date,
     startTime,
     endTime,
   });
+
+  if (zone) {
+    params.set('zone', zone);
+  }
 
   const body = await requestJson<GetAvailableDesksResponse>(
     `/desks/availability?${params}`,
@@ -192,4 +212,24 @@ export function listDeskDescriptions() {
 
 export function listAmenities() {
   return requestJson<DeskAmenity[]>('/amenities');
+}
+
+export function createAmenity(payload: AmenityPayload) {
+  return requestJson<DeskAmenity>('/amenities', {
+    method: 'POST',
+    body: JSON.stringify(sanitizeAmenityPayload(payload)),
+  });
+}
+
+export function updateAmenity(id: string, payload: AmenityPayload) {
+  return requestJson<DeskAmenity>(`/amenities/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(sanitizeAmenityPayload(payload)),
+  });
+}
+
+export function deleteAmenity(id: string) {
+  return requestJson<void>(`/amenities/${id}`, {
+    method: 'DELETE',
+  });
 }

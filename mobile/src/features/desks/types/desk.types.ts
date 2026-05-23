@@ -18,6 +18,7 @@ export interface Desk {
   id: string;
   code: string;
   name?: string;
+  peopleCapacity: number;
   descriptionId?: string;
   description?: DeskDescription;
   zone?: DeskZone;

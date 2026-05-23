@@ -10,6 +10,12 @@ export class DeskResponseDto {
   @ApiPropertyOptional({ example: 'Escritorio 1' })
   name?: string;
 
+  @ApiProperty({
+    example: 2,
+    description: 'Cantidad de personas permitidas en el escritorio.',
+  })
+  peopleCapacity!: number;
+
   @ApiPropertyOptional({ example: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc' })
   descriptionId?: string;
 

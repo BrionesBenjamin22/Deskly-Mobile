@@ -24,6 +24,8 @@ Variables requeridas:
 - `DATABASE_URL`: cadena de conexion PostgreSQL usada por Prisma.
 - `JWT_SECRET`: secreto base para futuros modulos de autenticacion.
 
+`FRONTEND_URL` puede incluir uno o mas origenes separados por coma. En desarrollo, el backend tambien permite origenes locales comunes de Expo web y Vite, ademas de IPs privadas de red local.
+
 ## Prisma
 
 Archivos principales:

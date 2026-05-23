@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
 import { spacing } from '../../../theme/spacing';
 import { DatePill } from './DatePill';
@@ -35,8 +35,24 @@ function toDateId(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function getDeskDateOptions(baseDate = new Date()): DeskDateOption[] {
-  return Array.from({ length: 4 }, (_, index) => {
+function getVisibleDateCount(width: number) {
+  if (width >= 1024) {
+    return 10;
+  }
+
+  if (width >= 768) {
+    return 8;
+  }
+
+  if (width >= 480) {
+    return 6;
+  }
+
+  return 4;
+}
+
+export function getDeskDateOptions(baseDate = new Date(), count = 4): DeskDateOption[] {
+  return Array.from({ length: count }, (_, index) => {
     const date = new Date(baseDate);
     date.setHours(0, 0, 0, 0);
     date.setDate(baseDate.getDate() + index);
@@ -58,12 +74,18 @@ type DateSelectorProps = {
 };
 
 export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) {
-  const dates = useMemo(() => getDeskDateOptions(), []);
+  const { width } = useWindowDimensions();
+  const visibleDateCount = getVisibleDateCount(width);
+  const dates = useMemo(
+    () => getDeskDateOptions(new Date(), visibleDateCount),
+    [visibleDateCount],
+  );
 
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.container}
       contentContainerStyle={styles.content}
     >
       {dates.map((date) => (
@@ -81,6 +103,9 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
 }
 
 const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
   content: {
     gap: spacing.sm,
     paddingRight: spacing.screenX,

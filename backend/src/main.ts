@@ -11,15 +11,29 @@ function getAllowedOrigins() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  if (configuredOrigins?.length) {
-    return configuredOrigins;
-  }
-
   return [
+    ...(configuredOrigins ?? []),
     'http://localhost:5173',
     'http://localhost:8081',
     'http://localhost:8082',
+    'http://localhost:19006',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:8081',
+    'http://127.0.0.1:8082',
+    'http://127.0.0.1:19006',
   ];
+}
+
+function isLocalDevelopmentOrigin(origin: string) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(
+    origin,
+  );
+}
+
+function isPrivateNetworkDevelopmentOrigin(origin: string) {
+  return /^https?:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(
+    origin,
+  );
 }
 
 async function bootstrap() {
@@ -27,7 +41,26 @@ async function bootstrap() {
   const logger = new Logger('HTTP');
 
   app.enableCors({
-    origin: getAllowedOrigins(),
+    origin(origin, callback) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const allowedOrigins = getAllowedOrigins();
+
+      if (
+        allowedOrigins.includes(origin) ||
+        (process.env.NODE_ENV !== 'production' &&
+          (isLocalDevelopmentOrigin(origin) ||
+            isPrivateNetworkDevelopmentOrigin(origin)))
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
     credentials: true,
   });
 

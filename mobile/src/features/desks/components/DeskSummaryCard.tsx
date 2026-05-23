@@ -24,7 +24,7 @@ function getLocationText(desk: Desk) {
 }
 
 export function DeskSummaryCard({ desk }: DeskSummaryCardProps) {
-  const capacity = desk.description?.peopleCapacity ?? 1;
+  const capacity = desk.peopleCapacity;
   const peopleText = capacity === 1 ? 'persona' : 'personas';
 
   return (

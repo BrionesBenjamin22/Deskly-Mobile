@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, Matches } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, Matches } from 'class-validator';
+
+enum DeskZoneDto {
+  A = 'A',
+  B = 'B',
+  C = 'C',
+}
 
 export class GetAvailableDesksQueryDto {
   @ApiProperty({
@@ -31,4 +37,8 @@ export class GetAvailableDesksQueryDto {
     message: 'El horario de fin debe tener formato HH:mm.',
   })
   endTime!: string;
+
+  @IsOptional()
+  @IsEnum(DeskZoneDto, { message: 'La zona debe ser A, B o C.' })
+  zone?: DeskZoneDto;
 }

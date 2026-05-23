@@ -31,7 +31,6 @@ const statusLabels: Record<DeskStatus, string> = {
 };
 
 export function DeskCard({ desk, onReserve }: DeskCardProps) {
-  const capacity = desk.description?.peopleCapacity;
   const isAvailable = desk.enabled && desk.status === 'available';
 
   return (
@@ -49,7 +48,7 @@ export function DeskCard({ desk, onReserve }: DeskCardProps) {
         <View style={styles.capacity}>
           <Icon name="users" size={17} color={colors.primaryLight} />
           <AppText variant="caption" color={colors.primary} style={styles.capacityText}>
-            {capacity ?? '-'}
+            {desk.peopleCapacity}
           </AppText>
         </View>
       </View>

@@ -11,17 +11,18 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { useDeskSettings } from '../hooks/useDeskSettings';
-import { Desk, DeskZone } from '../types/desk.types';
+import { Desk, DeskAmenity, DeskZone } from '../types/desk.types';
 import { DeskPayload } from '../services/desks.service';
 
 type DeskSettingsScreenProps = {
   onPressDesks?: () => void;
   onPressReservations?: () => void;
+  onPressLogout?: () => void;
 };
 
 type DeskFormState = {
-  code: string;
   name: string;
+  peopleCapacity: string;
   descriptionId?: string;
   zone?: DeskZone;
   amenityIds: string[];
@@ -29,8 +30,8 @@ type DeskFormState = {
 };
 
 const emptyForm: DeskFormState = {
-  code: '',
   name: '',
+  peopleCapacity: '1',
   amenityIds: [],
   enabled: true,
 };
@@ -43,8 +44,8 @@ function getDeskName(desk: Desk) {
 
 function toFormState(desk: Desk): DeskFormState {
   return {
-    code: desk.code,
     name: desk.name ?? '',
+    peopleCapacity: String(desk.peopleCapacity),
     descriptionId: desk.descriptionId,
     zone: desk.zone,
     amenityIds: desk.amenities.map((amenity) => amenity.id),
@@ -54,8 +55,8 @@ function toFormState(desk: Desk): DeskFormState {
 
 function buildPayload(form: DeskFormState): DeskPayload {
   return {
-    code: form.code,
     name: form.name,
+    peopleCapacity: Number(form.peopleCapacity),
     descriptionId: form.descriptionId,
     zone: form.zone,
     amenityIds: form.amenityIds,
@@ -67,12 +68,12 @@ function buildChangedPayload(form: DeskFormState, desk: Desk): DeskPayload {
   const original = toFormState(desk);
   const payload: DeskPayload = {};
 
-  if (form.code !== original.code) {
-    payload.code = form.code;
-  }
-
   if (form.name !== original.name) {
     payload.name = form.name;
+  }
+
+  if (form.peopleCapacity !== original.peopleCapacity) {
+    payload.peopleCapacity = Number(form.peopleCapacity);
   }
 
   if (form.descriptionId !== original.descriptionId) {
@@ -125,23 +126,44 @@ function Chip({ label, selected, onPress }: ChipProps) {
 export function DeskSettingsScreen({
   onPressDesks,
   onPressReservations,
+  onPressLogout,
 }: DeskSettingsScreenProps) {
   const {
     amenities,
+    clearFeedback,
     descriptions,
     desks,
     errorMessage,
     isLoading,
     isSaving,
+    removeAmenity,
     removeDesk,
+    saveAmenity,
     saveDesk,
     successMessage,
   } = useDeskSettings();
   const [editingDesk, setEditingDesk] = useState<Desk | null>(null);
+  const [editingAmenity, setEditingAmenity] = useState<DeskAmenity | null>(
+    null,
+  );
   const [form, setForm] = useState<DeskFormState>(emptyForm);
+  const [amenityName, setAmenityName] = useState('');
   const formTitle = editingDesk ? 'Editar escritorio' : 'Nuevo escritorio';
+  const amenityFormTitle = editingAmenity
+    ? 'Editar amenities'
+    : 'Nuevo amenities';
 
-  const canSubmit = useMemo(() => form.code.trim().length > 0, [form.code]);
+  const canSubmit = useMemo(
+    () =>
+      form.name.trim().length > 0 &&
+      Number.isInteger(Number(form.peopleCapacity)) &&
+      Number(form.peopleCapacity) >= 1,
+    [form.name, form.peopleCapacity],
+  );
+  const canSubmitAmenity = useMemo(
+    () => amenityName.trim().length > 0,
+    [amenityName],
+  );
 
   const handleEdit = (desk: Desk) => {
     setEditingDesk(desk);
@@ -151,6 +173,16 @@ export function DeskSettingsScreen({
   const handleCancelEdit = () => {
     setEditingDesk(null);
     setForm(emptyForm);
+  };
+
+  const handleEditAmenity = (amenity: DeskAmenity) => {
+    setEditingAmenity(amenity);
+    setAmenityName(amenity.name);
+  };
+
+  const handleCancelAmenityEdit = () => {
+    setEditingAmenity(null);
+    setAmenityName('');
   };
 
   const handleSubmit = async () => {
@@ -167,8 +199,28 @@ export function DeskSettingsScreen({
       return;
     }
 
-    await saveDesk(payload, editingDesk?.id);
-    handleCancelEdit();
+    const saved = await saveDesk(payload, editingDesk?.id);
+
+    if (saved) {
+      handleCancelEdit();
+    }
+  };
+
+  const handleSubmitAmenity = async () => {
+    if (!canSubmitAmenity) {
+      return;
+    }
+
+    if (editingAmenity && amenityName.trim() === editingAmenity.name) {
+      handleCancelAmenityEdit();
+      return;
+    }
+
+    const saved = await saveAmenity({ name: amenityName }, editingAmenity?.id);
+
+    if (saved) {
+      handleCancelAmenityEdit();
+    }
   };
 
   const toggleAmenity = (amenityId: string) => {
@@ -209,17 +261,23 @@ export function DeskSettingsScreen({
             </View>
 
             <Input
-              label="Código"
-              value={form.code}
-              onChangeText={(code) => setForm((current) => ({ ...current, code }))}
-              placeholder="A2"
-            />
-
-            <Input
               label="Nombre"
               value={form.name}
               onChangeText={(name) => setForm((current) => ({ ...current, name }))}
               placeholder="Escritorio A2"
+            />
+
+            <Input
+              label="Cantidad de personas"
+              value={form.peopleCapacity}
+              onChangeText={(peopleCapacity) =>
+                setForm((current) => ({
+                  ...current,
+                  peopleCapacity: peopleCapacity.replace(/\D/g, ''),
+                }))
+              }
+              keyboardType="number-pad"
+              placeholder="2"
             />
 
             <View style={styles.fieldGroup}>
@@ -251,7 +309,7 @@ export function DeskSettingsScreen({
                 {descriptions.map((description) => (
                   <Chip
                     key={description.id}
-                    label={`${description.name} · ${description.peopleCapacity}`}
+                    label={description.name}
                     selected={form.descriptionId === description.id}
                     onPress={() =>
                       setForm((current) => ({
@@ -310,24 +368,119 @@ export function DeskSettingsScreen({
           </Card>
 
           {errorMessage ? (
-            <Card style={styles.errorCard}>
-              <AppText variant="body" color={statusColors.error} style={styles.feedbackText}>
-                {errorMessage}
-              </AppText>
-            </Card>
+            <Pressable accessibilityRole="button" onPress={clearFeedback}>
+              <Card style={styles.errorCard}>
+                <AppText variant="body" color={statusColors.error} style={styles.feedbackText}>
+                  {errorMessage}
+                </AppText>
+              </Card>
+            </Pressable>
           ) : null}
 
           {successMessage ? (
-            <Card style={styles.successCard}>
-              <AppText
-                variant="body"
-                color={statusColors.success}
-                style={styles.feedbackText}
-              >
-                {successMessage}
-              </AppText>
-            </Card>
+            <Pressable accessibilityRole="button" onPress={clearFeedback}>
+              <Card style={styles.successCard}>
+                <AppText
+                  variant="body"
+                  color={statusColors.success}
+                  style={styles.feedbackText}
+                >
+                  {successMessage}
+                </AppText>
+              </Card>
+            </Pressable>
           ) : null}
+
+          <Card style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <AppText variant="subtitle" color={colors.primary} style={styles.cardTitle}>
+                {amenityFormTitle}
+              </AppText>
+              {editingAmenity ? (
+                <Pressable accessibilityRole="button" onPress={handleCancelAmenityEdit}>
+                  <AppText variant="caption" color={colors.primary} style={styles.linkText}>
+                    Cancelar edición
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
+
+            <Input
+              label="Nombre"
+              value={amenityName}
+              onChangeText={setAmenityName}
+              placeholder="Monitor"
+            />
+
+            <Button
+              title={editingAmenity ? 'Guardar amenities' : 'Crear amenities'}
+              disabled={!canSubmitAmenity || isSaving}
+              onPress={handleSubmitAmenity}
+            />
+          </Card>
+
+          <View style={styles.section}>
+            <AppText variant="caption" color={colors.primaryLight} style={styles.sectionTitle}>
+              AMENITIES
+            </AppText>
+
+            {isLoading ? (
+              <Card style={styles.stateCard}>
+                <Icon name="loader" size={24} color={colors.primary} />
+                <AppText variant="body" color={colors.primaryLight}>
+                  Cargando amenities de la base de datos.
+                </AppText>
+              </Card>
+            ) : amenities.length > 0 ? (
+              <View style={styles.list}>
+                {amenities.map((amenity) => (
+                  <Card key={amenity.id} style={styles.amenityCard}>
+                    <View style={styles.deskHeader}>
+                      <View style={styles.deskInfo}>
+                        <AppText variant="subtitle" color={colors.primary} style={styles.cardTitle}>
+                          {amenity.name}
+                        </AppText>
+                      </View>
+                    </View>
+
+                    <View style={styles.actions}>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => handleEditAmenity(amenity)}
+                        style={({ pressed }) => [styles.ghostAction, pressed && styles.pressed]}
+                      >
+                        <AppText variant="caption" color={colors.primary} style={styles.linkText}>
+                          Editar
+                        </AppText>
+                      </Pressable>
+
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={isSaving}
+                        onPress={() => removeAmenity(amenity.id)}
+                        style={({ pressed }) => [styles.dangerAction, pressed && styles.pressed]}
+                      >
+                        <AppText
+                          variant="caption"
+                          color={statusColors.error}
+                          style={styles.linkText}
+                        >
+                          Eliminar
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            ) : (
+              <Card style={styles.stateCard}>
+                <Icon name="search" size={24} color={colors.primary} />
+                <AppText variant="body" color={colors.primaryLight} style={styles.emptyText}>
+                  No hay amenities cargados. Cree el primero desde este formulario.
+                </AppText>
+              </Card>
+            )}
+          </View>
 
           <View style={styles.section}>
             <AppText variant="caption" color={colors.primaryLight} style={styles.sectionTitle}>
@@ -367,7 +520,8 @@ export function DeskSettingsScreen({
                     </View>
 
                     <AppText variant="caption" color={colors.primaryLight}>
-                      {desk.description?.name ?? 'Sin tipo asignado'}
+                      {desk.description?.name ?? 'Sin tipo asignado'} · {desk.peopleCapacity}{' '}
+                      {desk.peopleCapacity === 1 ? 'persona' : 'personas'}
                     </AppText>
 
                     <View style={styles.actions}>
@@ -414,6 +568,7 @@ export function DeskSettingsScreen({
           activeTab="settings"
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
+          onPressLogout={onPressLogout}
         />
       </View>
     </ScreenContainer>
@@ -509,6 +664,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   deskCard: {
+    gap: spacing.md,
+  },
+  amenityCard: {
     gap: spacing.md,
   },
   deskHeader: {

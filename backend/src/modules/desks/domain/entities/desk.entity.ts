@@ -16,6 +16,7 @@ export type DeskProperties = {
   id: string;
   code: string;
   name?: string | null;
+  peopleCapacity: number;
   descriptionId?: string | null;
   description?: DeskDescriptionProperties | null;
   zone?: DeskZoneValue | null;
@@ -39,6 +40,10 @@ export class Desk {
 
   get name(): string | null | undefined {
     return this.properties.name;
+  }
+
+  get peopleCapacity(): number {
+    return this.properties.peopleCapacity;
   }
 
   get descriptionId(): string | null | undefined {

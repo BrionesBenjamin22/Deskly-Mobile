@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
 import { DeskServiceError, getAvailableDesks } from '../services/desks.service';
-import { Desk } from '../types/desk.types';
+import { Desk, DeskZone } from '../types/desk.types';
 
 type UseAvailableDesksParams = {
   date: string;
   startTime: string;
   endTime: string;
+  zone?: DeskZone;
 };
 
 function getFriendlyErrorMessage(error: unknown) {
@@ -21,6 +22,7 @@ export function useAvailableDesks({
   date,
   startTime,
   endTime,
+  zone,
 }: UseAvailableDesksParams) {
   const [desks, setDesks] = useState<Desk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +34,7 @@ export function useAvailableDesks({
     setIsLoading(true);
     setErrorMessage(null);
 
-    getAvailableDesks({ date, startTime, endTime })
+    getAvailableDesks({ date, startTime, endTime, zone })
       .then((availableDesks) => {
         if (!isMounted) {
           return;
@@ -57,7 +59,7 @@ export function useAvailableDesks({
     return () => {
       isMounted = false;
     };
-  }, [date, endTime, startTime]);
+  }, [date, endTime, startTime, zone]);
 
   return {
     desks,

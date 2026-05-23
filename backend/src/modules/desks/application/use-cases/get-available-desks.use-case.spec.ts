@@ -20,6 +20,7 @@ describe('GetAvailableDesksUseCase', () => {
         id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
         code: 'D-01',
         name: 'Escritorio 1',
+        peopleCapacity: 2,
         zone: 'A',
         amenities: [
           { id: '6a3deca2-0063-4e6c-b1ee-a95666b5efdc', name: 'Monitor' },
@@ -40,6 +41,7 @@ describe('GetAvailableDesksUseCase', () => {
           id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
           code: 'D-01',
           name: 'Escritorio 1',
+          peopleCapacity: 2,
           zone: 'A',
           amenities: [
             {

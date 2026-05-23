@@ -24,6 +24,7 @@ export class GetAvailableDesksUseCase {
       date: reservationDate.value,
       startTime: timeSlot.startTime,
       endTime: timeSlot.endTime,
+      ...(input.zone ? { zone: input.zone } : {}),
     });
 
     return {
@@ -31,6 +32,7 @@ export class GetAvailableDesksUseCase {
         id: desk.id,
         code: desk.code,
         ...(desk.name ? { name: desk.name } : {}),
+        peopleCapacity: desk.peopleCapacity,
         ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
         ...(desk.description ? { description: desk.description } : {}),
         ...(desk.zone ? { zone: desk.zone } : {}),

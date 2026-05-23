@@ -44,6 +44,7 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
       where: {
         enabled: true,
         deletedAt: null,
+        ...(params.zone ? { zone: params.zone } : {}),
         reservations: {
           none: {
             date: this.toDate(params.date),
@@ -94,17 +95,6 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
       where: {
         id,
         deletedAt: null,
-      },
-      include: deskRelations,
-    });
-
-    return desk ? this.toDomain(desk) : null;
-  }
-
-  async findByCode(code: string): Promise<Desk | null> {
-    const desk = await this.prisma.desk.findFirst({
-      where: {
-        code,
       },
       include: deskRelations,
     });
@@ -182,6 +172,7 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
     id: string;
     code: string;
     name: string | null;
+    peopleCapacity: number;
     descriptionId: string | null;
     description: {
       id: string;
@@ -205,6 +196,7 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
       id: desk.id,
       code: desk.code,
       name: desk.name,
+      peopleCapacity: desk.peopleCapacity,
       descriptionId: desk.descriptionId,
       description: desk.description,
       zone: desk.zone,

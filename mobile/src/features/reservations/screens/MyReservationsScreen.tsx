@@ -17,6 +17,7 @@ type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
 type MyReservationsScreenProps = {
   onPressDesks?: () => void;
   onPressSettings?: () => void;
+  onPressLogout?: () => void;
 };
 
 const cancellationStatusContent: Record<
@@ -55,6 +56,7 @@ function Section({ title, children }: PropsWithChildren<{ title: string }>) {
 export function MyReservationsScreen({
   onPressDesks,
   onPressSettings,
+  onPressLogout,
 }: MyReservationsScreenProps) {
   const {
     actionStatus,
@@ -122,6 +124,7 @@ export function MyReservationsScreen({
           activeTab="reservations"
           onPressDesks={onPressDesks}
           onPressSettings={onPressSettings}
+          onPressLogout={onPressLogout}
         />
       </View>
 

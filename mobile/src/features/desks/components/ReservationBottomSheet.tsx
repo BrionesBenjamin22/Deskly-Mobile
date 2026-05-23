@@ -14,11 +14,14 @@ import { DeskSummaryCard } from './DeskSummaryCard';
 type ReservationBottomSheetProps = {
   visible: boolean;
   desk?: Desk | null;
-  selectedDateLabel?: string;
+  selectedDate: string;
+  selectedDateLabel: string;
+  initialStartTime: string;
+  initialEndTime: string;
   onClose: () => void;
   onConfirm: (payload: {
     desk: Desk;
-    dateLabel: string;
+    date: string;
     startTime: string;
     endTime: string;
   }) => void;
@@ -27,19 +30,22 @@ type ReservationBottomSheetProps = {
 export function ReservationBottomSheet({
   visible,
   desk,
-  selectedDateLabel = 'jueves 7 de mayo',
+  selectedDate,
+  selectedDateLabel,
+  initialStartTime,
+  initialEndTime,
   onClose,
   onConfirm,
 }: ReservationBottomSheetProps) {
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('18:00');
+  const [startTime, setStartTime] = useState(initialStartTime);
+  const [endTime, setEndTime] = useState(initialEndTime);
 
   useEffect(() => {
     if (visible) {
-      setStartTime('09:00');
-      setEndTime('18:00');
+      setStartTime(initialStartTime);
+      setEndTime(initialEndTime);
     }
-  }, [visible]);
+  }, [initialEndTime, initialStartTime, visible]);
 
   const handleConfirm = () => {
     if (!desk) {
@@ -48,7 +54,7 @@ export function ReservationBottomSheet({
 
     onConfirm({
       desk,
-      dateLabel: selectedDateLabel,
+      date: selectedDate,
       startTime,
       endTime,
     });

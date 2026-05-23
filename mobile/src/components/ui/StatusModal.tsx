@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -51,7 +51,55 @@ export function StatusModal({
   onClose,
 }: StatusModalProps) {
   const spinValue = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [isMounted, setIsMounted] = useState(visible);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const config = statusConfig[type];
+
+  const requestClose = useCallback(() => {
+    if (!onClose || type === 'loading') {
+      return;
+    }
+
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        onClose();
+      }
+    });
+  }, [onClose, progress, type]);
+
+  useEffect(() => {
+    if (visible) {
+      setIsMounted(true);
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+      return undefined;
+    }
+
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setIsMounted(false);
+      }
+    });
+
+    return undefined;
+  }, [progress, visible]);
 
   useEffect(() => {
     if (!visible || type !== 'loading') {
@@ -73,22 +121,56 @@ export function StatusModal({
     return () => animation.stop();
   }, [spinValue, type, visible]);
 
+  useEffect(() => {
+    if (!visible || type === 'loading' || !onClose) {
+      return undefined;
+    }
+
+    closeTimeoutRef.current = setTimeout(() => {
+      requestClose();
+    }, 3000);
+
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
+  }, [onClose, requestClose, type, visible]);
+
   const rotation = spinValue.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable
-          accessibilityRole="button"
-          disabled={!onClose || type === 'loading'}
-          onPress={onClose}
-          style={styles.backdrop}
-        />
+  const panelTranslateY = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [28, 0],
+  });
 
-        <View style={styles.panel}>
+  if (!isMounted) {
+    return null;
+  }
+
+  return (
+    <Modal transparent visible={isMounted} animationType="none" onRequestClose={requestClose}>
+      <Pressable
+        accessibilityRole="button"
+        disabled={!onClose || type === 'loading'}
+        onPress={requestClose}
+        style={styles.overlay}
+      >
+        <Animated.View style={[styles.backdrop, { opacity: progress }]} />
+
+        <Animated.View
+          style={[
+            styles.panel,
+            {
+              opacity: progress,
+              transform: [{ translateY: panelTranslateY }],
+            },
+          ]}
+        >
           <View style={[styles.iconCircle, { backgroundColor: config.circleColor }]}>
             <Animated.View
               style={type === 'loading' ? { transform: [{ rotate: rotation }] } : undefined}
@@ -106,8 +188,8 @@ export function StatusModal({
               {description}
             </AppText>
           ) : null}
-        </View>
-      </View>
+        </Animated.View>
+      </Pressable>
     </Modal>
   );
 }

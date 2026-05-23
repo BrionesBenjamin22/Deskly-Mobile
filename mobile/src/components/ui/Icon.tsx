@@ -10,6 +10,7 @@ import {
 import {
   Building2,
   Calendar,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   CircleCheck,
@@ -31,6 +32,7 @@ import { colors } from '../../theme/colors';
 export type IconName =
   | 'building'
   | 'calendar'
+  | 'chevronDown'
   | 'chevronRight'
   | 'circleAlert'
   | 'circleCheck'
@@ -56,6 +58,7 @@ type IconProps = {
 const icons: Record<IconName, LucideIcon> = {
   building: Building2,
   calendar: Calendar,
+  chevronDown: ChevronDown,
   chevronRight: ChevronRight,
   circleAlert: CircleAlert,
   circleCheck: CircleCheck,

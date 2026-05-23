@@ -31,8 +31,8 @@ Alta:
 
 ```json
 {
-  "code": "D-01",
   "name": "Escritorio 1",
+  "peopleCapacity": 2,
   "descriptionId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
   "zone": "A",
   "amenityIds": ["6a3deca2-0063-4e6c-b1ee-a95666b5efdc"],
@@ -60,7 +60,7 @@ Descripcion reutilizable:
 }
 ```
 
-Amenity:
+Amenities:
 
 ```json
 {
@@ -89,8 +89,9 @@ Disponibilidad:
   "desks": [
     {
       "id": "uuid",
-      "code": "D-01",
+      "code": "uuid-generado",
       "name": "Escritorio 1",
+      "peopleCapacity": 2,
       "zone": "A",
       "amenities": []
     }
@@ -111,8 +112,10 @@ Sin disponibilidad:
 - La fecha es obligatoria y debe tener formato `YYYY-MM-DD`.
 - Los horarios son obligatorios y deben tener formato `HH:mm`.
 - El horario de fin debe ser posterior al horario de inicio.
-- El codigo del escritorio debe ser unico.
-- La descripcion del escritorio es reutilizable y define la cantidad de personas.
+- El codigo del escritorio se genera automaticamente como UUID al crear la entidad.
+- El usuario no informa ni edita el codigo desde los formularios.
+- La cantidad de personas es propia de cada escritorio mediante `peopleCapacity`.
+- La descripcion del escritorio es reutilizable y agrupa informacion descriptiva del tipo de escritorio.
 - La zona del escritorio debe ser `A`, `B` o `C`.
 - Los amenities representan activos asociados al escritorio.
 - El borrado de escritorios es logico mediante `deleted_at`.
@@ -151,7 +154,6 @@ Indices relevantes:
 
 - `400`: datos invalidos o rango horario invalido.
 - `404`: escritorio no encontrado.
-- `409`: codigo de escritorio duplicado.
 
 ## Validacion
 
