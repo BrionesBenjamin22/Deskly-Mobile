@@ -1,10 +1,10 @@
 # Backend Deskly
 
-Backend NestJS organizado con arquitectura hexagonal.
+Backend NestJS organizado con arquitectura hexagonal y persistencia PostgreSQL mediante Prisma.
 
 ## Objetivo actual
 
-El estado inicial del backend deja preparada la conexion con PostgreSQL mediante Prisma sin desarrollar entidades de negocio. Esta base permite empezar a crear modulos manteniendo separacion entre dominio, aplicacion, infraestructura e interfaces.
+El backend expone los contratos necesarios para consultar disponibilidad, gestionar escritorios, administrar catalogos asociados y operar reservas. La implementacion mantiene separacion entre dominio, aplicacion, infraestructura e interfaces para facilitar evolucion modular, trazabilidad y futura extraccion parcial de servicios.
 
 ## Variables de entorno
 
@@ -49,8 +49,8 @@ El cliente Prisma se genera dentro de `@prisma/client` y no debe editarse manual
 
 - `config`: carga y validacion de variables de entorno.
 - `common`: utilidades compartidas acotadas.
-- `domain`: reglas y modelos de negocio futuros, sin dependencias de Nest ni Prisma.
-- `application`: casos de uso futuros y puertos internos.
+- `domain`: reglas y modelos de negocio, errores y value objects, sin dependencias de Nest ni Prisma.
+- `application`: casos de uso y puertos internos.
 - `infrastructure`: adaptadores tecnicos como Prisma y servicios externos.
 - `interfaces`: controladores HTTP, presenters y contratos de entrada/salida.
 
@@ -110,15 +110,38 @@ DELETE /reservations/:id
 
 La eliminacion de reservas es logica: se cancela la reserva y se conserva trazabilidad.
 
-Documentacion tecnica del modulo:
-
-- `src/modules/reservations/README.md`
-
-Documentacion tecnica del modulo:
+Documentacion tecnica por modulo:
 
 - `src/modules/desks/README.md`
+- `src/modules/reservations/README.md`
 
 ## Validacion
+
+El backend usa `ValidationPipe` global con:
+
+- `whitelist`
+- `forbidNonWhitelisted`
+- `transform`
+- conversion implicita de tipos
+- bloqueo de valores desconocidos
+
+Los DTOs declaran mensajes especificos por campo. El frontend debe prevenir las validaciones previsibles antes de ejecutar la peticion; el backend conserva estas validaciones como barrera de seguridad y como contrato para integraciones externas.
+
+Ejemplos de mensajes esperados:
+
+- `El escritorio debe ser un UUID valido.`
+- `La fecha debe tener formato YYYY-MM-DD.`
+- `El horario de inicio debe tener formato HH:mm.`
+- `El horario de fin debe tener formato HH:mm.`
+- `La cantidad de personas debe ser mayor o igual a 1.`
+- `Los amenities deben enviarse como una lista.`
+- `Los amenities no pueden repetirse.`
+
+Los errores de reglas de negocio se devuelven con codigos HTTP representativos:
+
+- `400`: formato invalido, fecha invalida o rango horario invalido.
+- `404`: recurso inexistente o no disponible para la operacion solicitada.
+- `409`: conflicto de disponibilidad o estado.
 
 Comandos base:
 

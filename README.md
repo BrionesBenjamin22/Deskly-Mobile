@@ -45,7 +45,7 @@ pnpm prisma:generate
 pnpm start:dev
 ```
 
-El backend requiere `DATABASE_URL` para crear el cliente Prisma. Todavia no existen entidades de dominio; la base actual solo deja lista la conexion y la estructura para incorporar modulos.
+El backend requiere `DATABASE_URL` para crear el cliente Prisma. Actualmente incluye modulos de escritorios, catalogos de amenities y reservas, manteniendo dominio, casos de uso, repositorios y controladores separados por responsabilidad.
 
 ## Mobile
 
@@ -63,4 +63,8 @@ pnpm start
 - Las pantallas home deben paginar con 9 items.
 - Los historiales de cambios deben paginar con 3 items cuando exista endpoint.
 - Los formularios de edicion deben enviar solo diferencias reales.
+- Las validaciones previsibles deben resolverse en frontend con mensajes por campo antes de ejecutar la peticion.
+- El backend debe conservar validaciones de tipo y reglas de negocio como barrera de contrato.
+- Los mensajes de exito deben ser visibles, concretos y seguir el estilo institucional del sistema.
+- La accion de salir no debe mostrarse como boton directo en la barra inferior.
 - No ejecutar commits automaticamente; al finalizar un modulo se debe proponer el mensaje de commit.

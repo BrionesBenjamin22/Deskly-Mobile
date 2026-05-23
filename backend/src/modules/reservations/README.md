@@ -90,6 +90,35 @@ Cancelacion:
 - `DELETE /reservations/:id` no elimina fisicamente la reserva; ejecuta cancelacion logica.
 - Los listados usan paginacion con 9 items por defecto.
 
+## Validaciones de entrada
+
+Alta de reserva:
+
+- `deskId`: obligatorio y debe ser UUID v4.
+- `date`: obligatoria con formato `YYYY-MM-DD` y fecha real.
+- `startTime`: obligatorio con formato `HH:mm`.
+- `endTime`: obligatorio con formato `HH:mm`.
+- `endTime` debe ser posterior a `startTime`.
+
+Edicion de reserva:
+
+- todos los campos operativos son opcionales
+- si se informa `deskId`, debe ser UUID v4
+- si se informa `date`, debe cumplir formato `YYYY-MM-DD` y representar una fecha real
+- si se informan horarios, deben cumplir formato `HH:mm`
+- el rango final resultante debe ser valido
+- la reserva debe estar activa
+- el escritorio final debe existir y estar habilitado
+- no puede existir una reserva activa superpuesta para el mismo escritorio
+
+Listado:
+
+- `page`: entero mayor o igual a 1.
+- `limit`: entero entre 1 y 50.
+- `status`: opcional, restringido a `ACTIVE` o `CANCELLED`.
+
+Los errores previsibles de formulario deben mostrarse en frontend junto al campo y no deben disparar una peticion. El backend conserva las validaciones como barrera de seguridad, con mensajes especificos por campo para integraciones externas.
+
 ## Errores
 
 - `400`: datos invalidos o rango horario invalido.

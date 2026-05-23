@@ -125,6 +125,39 @@ Sin disponibilidad:
 - Las reservas `CANCELLED` no bloquean disponibilidad.
 - Los listados usan paginacion con 9 items por defecto.
 
+## Validaciones de entrada
+
+Las validaciones se aplican en DTOs HTTP y se mantienen tambien como reglas de dominio cuando corresponde.
+
+Escritorios:
+
+- `name`: texto opcional, maximo 120 caracteres.
+- `peopleCapacity`: entero opcional, minimo 1.
+- `descriptionId`: UUID v4 opcional.
+- `zone`: valor opcional restringido a `A`, `B` o `C`.
+- `amenityIds`: lista opcional, debe enviarse como array de UUID v4 y sin repetidos.
+- `enabled`: booleano opcional.
+
+Descripciones reutilizables:
+
+- `name`: texto obligatorio, maximo 120 caracteres.
+- `description`: texto opcional, maximo 255 caracteres.
+- `peopleCapacity`: entero obligatorio, minimo 1.
+
+Amenities:
+
+- `name`: texto obligatorio, maximo 120 caracteres.
+
+Disponibilidad:
+
+- `date`: obligatoria con formato `YYYY-MM-DD` y fecha real.
+- `startTime`: obligatorio con formato `HH:mm`.
+- `endTime`: obligatorio con formato `HH:mm`.
+- `endTime` debe ser posterior a `startTime`.
+- `zone`: opcional restringida a `A`, `B` o `C`.
+
+El frontend debe mostrar los errores previsibles junto al campo correspondiente y evitar la peticion cuando el formulario es invalido. El backend conserva las mismas reglas para proteger el contrato ante integraciones externas.
+
 ## Arquitectura
 
 - `domain`: entidad `Desk`, catalogo de descripciones y amenities, value objects `ReservationDate` y `TimeSlot`, errores y puertos.
@@ -152,8 +185,9 @@ Indices relevantes:
 
 ## Errores
 
-- `400`: datos invalidos o rango horario invalido.
-- `404`: escritorio no encontrado.
+- `400`: datos invalidos, fecha invalida o rango horario invalido.
+- `404`: escritorio o item de catalogo no encontrado.
+- `409`: item de catalogo en uso o conflicto de negocio.
 
 ## Validacion
 
