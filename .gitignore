@@ -3,6 +3,7 @@ backend/node_modules
 backend/dist
 backend/.env
 backend/generated
+.env
 
 # Mobile
 mobile/node_modules
