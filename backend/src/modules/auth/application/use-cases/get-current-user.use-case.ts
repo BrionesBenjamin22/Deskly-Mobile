@@ -6,7 +6,9 @@ import type { AuthRepositoryPort } from '../../domain/ports/auth-repository.port
 
 @Injectable()
 export class GetCurrentUserUseCase {
-  constructor(@Inject(AUTH_REPOSITORY) private readonly repository: AuthRepositoryPort) {}
+  constructor(
+    @Inject(AUTH_REPOSITORY) private readonly repository: AuthRepositoryPort,
+  ) {}
 
   async execute(userId: string) {
     const user = await this.repository.findById(userId);

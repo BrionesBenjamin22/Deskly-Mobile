@@ -25,9 +25,7 @@ function getAllowedOrigins() {
 }
 
 function isLocalDevelopmentOrigin(origin: string) {
-  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(
-    origin,
-  );
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
 }
 
 function isPrivateNetworkDevelopmentOrigin(origin: string) {

@@ -30,6 +30,7 @@ export type UpdateReservationParams = {
 };
 
 export interface ReservationRepositoryPort {
+  memberExists(memberId: string): Promise<boolean>;
   existsOverlappingReservation(
     params: OverlappingReservationParams,
   ): Promise<boolean>;

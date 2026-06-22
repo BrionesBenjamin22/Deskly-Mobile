@@ -3,6 +3,8 @@ export type ReservationStatusValue = 'ACTIVE' | 'CANCELLED';
 export type ReservationProperties = {
   id?: string;
   deskId: string;
+  memberId: string;
+  memberFullName?: string;
   deskCode?: string;
   deskName?: string | null;
   date: string;
@@ -23,6 +25,14 @@ export class Reservation {
 
   get deskId(): string {
     return this.properties.deskId;
+  }
+
+  get memberId(): string {
+    return this.properties.memberId;
+  }
+
+  get memberFullName(): string | undefined {
+    return this.properties.memberFullName;
   }
 
   get deskCode(): string | undefined {

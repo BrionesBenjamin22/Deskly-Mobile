@@ -33,6 +33,7 @@ import { GetReservationByIdUseCase } from '../../application/use-cases/get-reser
 import { ListReservationsUseCase } from '../../application/use-cases/list-reservations.use-case';
 import { UpdateReservationUseCase } from '../../application/use-cases/update-reservation.use-case';
 import { DeskUnavailableError } from '../../domain/errors/desk-unavailable.error';
+import { MemberNotFoundError } from '../../domain/errors/member-not-found.error';
 import { ReservationCannotBeCancelledError } from '../../domain/errors/reservation-cannot-be-cancelled.error';
 import { ReservationCannotBeUpdatedError } from '../../domain/errors/reservation-cannot-be-updated.error';
 import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
@@ -154,6 +155,14 @@ export class ReservationsController {
         message: error.message,
         error:
           'Lo sentimos, no pudimos recuperar la informacion de la reserva. Intente nuevamente.',
+      });
+    }
+
+    if (error instanceof MemberNotFoundError) {
+      throw new NotFoundException({
+        message: error.message,
+        error:
+          'Lo sentimos, no pudimos recuperar la informacion del miembro. Verifique el miembro e intente nuevamente.',
       });
     }
 

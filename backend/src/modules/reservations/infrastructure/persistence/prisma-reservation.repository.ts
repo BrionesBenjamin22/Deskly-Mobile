@@ -16,6 +16,14 @@ import {
 export class PrismaReservationRepository implements ReservationRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
+  async memberExists(memberId: string): Promise<boolean> {
+    return (
+      (await this.prisma.member.count({
+        where: { id: memberId, active: true, user: { active: true } },
+      })) > 0
+    );
+  }
+
   async existsOverlappingReservation(
     params: OverlappingReservationParams,
   ): Promise<boolean> {
@@ -63,6 +71,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
               name: true,
             },
           },
+          member: { select: { fullName: true } },
         },
         orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
         skip: (params.page - 1) * params.limit,
@@ -91,6 +100,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
             name: true,
           },
         },
+        member: { select: { fullName: true } },
       },
     });
 
@@ -119,6 +129,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
             name: true,
           },
         },
+        member: { select: { fullName: true } },
       },
     });
 
@@ -132,6 +143,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   private async createReservation(reservation: Reservation): Promise<{
     id: string;
     deskId: string;
+    memberId: string;
     date: Date;
     startTime: Date;
     endTime: Date;
@@ -143,11 +155,13 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       code: string;
       name: string | null;
     };
+    member: { fullName: string };
   }> {
     try {
       return await this.prisma.reservation.create({
         data: {
           deskId: reservation.deskId,
+          memberId: reservation.memberId,
           date: this.toDate(reservation.date),
           startTime: this.toTime(reservation.startTime),
           endTime: this.toTime(reservation.endTime),
@@ -160,6 +174,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
               name: true,
             },
           },
+          member: { select: { fullName: true } },
         },
       });
     } catch (error) {
@@ -177,6 +192,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   private async updateReservation(params: UpdateReservationParams): Promise<{
     id: string;
     deskId: string;
+    memberId: string;
     date: Date;
     startTime: Date;
     endTime: Date;
@@ -188,6 +204,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       code: string;
       name: string | null;
     };
+    member: { fullName: string };
   }> {
     try {
       return await this.prisma.reservation.update({
@@ -207,6 +224,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
               name: true,
             },
           },
+          member: { select: { fullName: true } },
         },
       });
     } catch (error) {
@@ -236,6 +254,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   private toDomain(reservation: {
     id: string;
     deskId: string;
+    memberId: string;
     date: Date;
     startTime: Date;
     endTime: Date;
@@ -247,10 +266,13 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       code: string;
       name: string | null;
     };
+    member: { fullName: string };
   }): Reservation {
     return new Reservation({
       id: reservation.id,
       deskId: reservation.deskId,
+      memberId: reservation.memberId,
+      memberFullName: reservation.member.fullName,
       deskCode: reservation.desk.code,
       deskName: reservation.desk.name,
       date: this.fromDate(reservation.date),

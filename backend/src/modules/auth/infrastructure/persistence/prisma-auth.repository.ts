@@ -3,8 +3,15 @@ import { Prisma, UserRole } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { User } from '../../domain/entities/user.entity';
-import { MemberDataRequiredError, UserAlreadyExistsError } from '../../domain/errors/auth.errors';
-import { AuthRepositoryPort, RegisterUserParams, RegisterUserResult } from '../../domain/ports/auth-repository.port';
+import {
+  MemberDataRequiredError,
+  UserAlreadyExistsError,
+} from '../../domain/errors/auth.errors';
+import {
+  AuthRepositoryPort,
+  RegisterUserParams,
+  RegisterUserResult,
+} from '../../domain/ports/auth-repository.port';
 
 const userWithMember = { member: true } as const;
 type PersistedUser = Prisma.UserGetPayload<{ include: typeof userWithMember }>;
@@ -20,7 +27,8 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
           await transaction.$executeRaw`SELECT pg_advisory_xact_lock(192837465)`;
           const isFirstUser = (await transaction.user.count()) === 0;
 
-          if (!isFirstUser && !params.member) throw new MemberDataRequiredError();
+          if (!isFirstUser && !params.member)
+            throw new MemberDataRequiredError();
 
           const user = await transaction.user.create({
             data: {
@@ -40,7 +48,10 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new UserAlreadyExistsError();
       }
       throw error;
@@ -63,9 +74,15 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
     return user ? this.toDomain(user) : null;
   }
 
-  async updateRole(params: { userId: string; role: UserRole; changedById: string }): Promise<User | null> {
+  async updateRole(params: {
+    userId: string;
+    role: UserRole;
+    changedById: string;
+  }): Promise<User | null> {
     return this.prisma.$transaction(async (transaction) => {
-      const current = await transaction.user.findUnique({ where: { id: params.userId } });
+      const current = await transaction.user.findUnique({
+        where: { id: params.userId },
+      });
       if (!current) return null;
 
       if (current.role !== params.role) {
@@ -99,8 +116,9 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
       member: user.member
         ? {
             id: user.member.id,
-            firstName: user.member.firstName,
-            lastName: user.member.lastName,
+            fullName: user.member.fullName,
+            dni: user.member.dni,
+            phone: user.member.phone,
             active: user.member.active,
           }
         : null,

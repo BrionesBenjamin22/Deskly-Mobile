@@ -11,14 +11,15 @@ export type RegisterInput = {
   email: string;
   username: string;
   password: string;
-  member?: { firstName: string; lastName: string };
+  member?: { fullName: string; dni: number; phone: number };
 };
 
 @Injectable()
 export class RegisterUseCase {
   constructor(
     @Inject(AUTH_REPOSITORY) private readonly repository: AuthRepositoryPort,
-    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasherPort,
+    @Inject(PASSWORD_HASHER)
+    private readonly passwordHasher: PasswordHasherPort,
   ) {}
 
   async execute(input: RegisterInput) {
@@ -28,7 +29,11 @@ export class RegisterUseCase {
       username: input.username.trim().toLowerCase(),
       passwordHash,
       member: input.member
-        ? { firstName: input.member.firstName.trim(), lastName: input.member.lastName.trim() }
+        ? {
+            fullName: input.member.fullName.trim(),
+            dni: input.member.dni,
+            phone: input.member.phone,
+          }
         : undefined,
     });
 

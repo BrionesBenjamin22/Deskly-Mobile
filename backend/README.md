@@ -16,13 +16,14 @@ PORT=3000
 FRONTEND_URL=http://localhost:5173
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/deskly?schema=public"
 JWT_SECRET=change_me_for_local_development
-JWT_EXPIRES_IN=1d
+JWT_EXPIRES_IN=1h
 ```
 
 Variables requeridas:
 
 - `DATABASE_URL`: cadena de conexion PostgreSQL usada por Prisma.
-- `JWT_SECRET`: secreto base para futuros modulos de autenticacion.
+- `JWT_SECRET`: secreto de firma para access tokens JWT; debe ser largo, aleatorio y privado.
+- `JWT_EXPIRES_IN`: duracion del access token. El valor predeterminado y maximo es `1h`.
 
 `FRONTEND_URL` puede incluir uno o mas origenes separados por coma. En desarrollo, el backend tambien permite origenes locales comunes de Expo web y Vite, ademas de IPs privadas de red local.
 
@@ -64,6 +65,21 @@ El cliente Prisma se genera dentro de `@prisma/client` y no debe editarse manual
 - Usar soft delete cuando la entidad lo requiera.
 
 ## Modulos implementados
+
+### Authentication
+
+Registra el primer usuario como `ADMIN` sin miembro y todos los posteriores como `MIEMBRO` con una entidad `Member`. Expone login con email o username, consulta del usuario autenticado y cambio de roles restringido a administradores. Las sesiones son JWT stateless, expiran como maximo en una hora y requieren un nuevo login.
+
+Endpoints:
+
+```http
+POST /auth/register
+POST /auth/login
+GET /auth/me
+PATCH /users/:id/role
+```
+
+Documentacion tecnica: `src/modules/auth/README.md`.
 
 ### Desks
 

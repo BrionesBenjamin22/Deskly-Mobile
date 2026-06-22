@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRoleValue } from '../../../domain/entities/user.entity';
 import { ROLES_KEY } from '../decorators/roles.decorator';
@@ -20,7 +25,8 @@ export class RolesGuard implements CanActivate {
 
     throw new ForbiddenException({
       message: 'No tiene permisos para realizar esta accion.',
-      error: 'Lo sentimos, solicite acceso a un administrador e intente nuevamente.',
+      error:
+        'Lo sentimos, solicite acceso a un administrador e intente nuevamente.',
     });
   }
 }

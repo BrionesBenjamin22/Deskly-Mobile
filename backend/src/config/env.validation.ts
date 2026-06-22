@@ -34,9 +34,7 @@ export function validateEnvironment(
     FRONTEND_URL: getString('FRONTEND_URL', 'http://localhost:5173'),
     DATABASE_URL: getString('DATABASE_URL'),
     JWT_SECRET: getString('JWT_SECRET'),
-    JWT_EXPIRES_IN: validateJwtExpiration(
-      getString('JWT_EXPIRES_IN', '1h'),
-    ),
+    JWT_EXPIRES_IN: validateJwtExpiration(getString('JWT_EXPIRES_IN', '1h')),
   };
 }
 
@@ -44,7 +42,9 @@ function validateJwtExpiration(value: string): string {
   const match = /^(\d+)(s|m|h)$/.exec(value);
 
   if (!match) {
-    throw new Error('JWT_EXPIRES_IN must use seconds, minutes or hours (for example: 1h)');
+    throw new Error(
+      'JWT_EXPIRES_IN must use seconds, minutes or hours (for example: 1h)',
+    );
   }
 
   const amount = Number(match[1]);
@@ -52,7 +52,9 @@ function validateJwtExpiration(value: string): string {
   const seconds = amount * (unit === 'h' ? 3600 : unit === 'm' ? 60 : 1);
 
   if (seconds <= 0 || seconds > 3600) {
-    throw new Error('JWT_EXPIRES_IN must be greater than 0 and no longer than 1 hour');
+    throw new Error(
+      'JWT_EXPIRES_IN must be greater than 0 and no longer than 1 hour',
+    );
   }
 
   return value;

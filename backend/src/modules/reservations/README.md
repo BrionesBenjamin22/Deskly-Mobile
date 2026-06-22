@@ -4,7 +4,7 @@
 
 Gestion de reservas sobre escritorios disponibles.
 
-En esta entrega no se contemplan usuarios ni relacion con miembros. La reserva se asocia solamente al escritorio, fecha, horario y estado.
+Cada reserva pertenece obligatoriamente a un miembro activo mediante `memberId`. Un miembro puede tener cero o muchas reservas. La respuesta incluye el identificador del miembro y su nombre completo cuando esta disponible.
 
 ## Endpoints
 
@@ -22,6 +22,7 @@ DELETE /reservations/:id
 ```json
 {
   "deskId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
+  "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
   "date": "2026-06-01",
   "startTime": "09:00",
   "endTime": "13:00"
@@ -34,6 +35,8 @@ DELETE /reservations/:id
 {
   "reservationId": "2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4",
   "deskId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
+  "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
+  "memberFullName": "Nombre Apellido",
   "deskCode": "D-01",
   "date": "2026-06-01",
   "startTime": "09:00",
@@ -50,6 +53,8 @@ Listado:
     {
       "reservationId": "2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4",
       "deskId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
+      "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
+      "memberFullName": "Nombre Apellido",
       "deskCode": "D-01",
       "deskName": "Escritorio 1",
       "date": "2026-06-01",
@@ -80,6 +85,7 @@ Cancelacion:
 ## Reglas de negocio
 
 - El escritorio debe existir, estar habilitado y no estar eliminado logicamente.
+- El miembro debe existir y tanto su cuenta como su perfil deben estar activos.
 - La fecha debe tener formato `YYYY-MM-DD`.
 - Los horarios deben tener formato `HH:mm`.
 - El horario de fin debe ser posterior al horario de inicio.
@@ -95,6 +101,7 @@ Cancelacion:
 Alta de reserva:
 
 - `deskId`: obligatorio y debe ser UUID v4.
+- `memberId`: obligatorio, debe ser UUID v4 y corresponder a un miembro activo.
 - `date`: obligatoria con formato `YYYY-MM-DD` y fecha real.
 - `startTime`: obligatorio con formato `HH:mm`.
 - `endTime`: obligatorio con formato `HH:mm`.
@@ -122,5 +129,5 @@ Los errores previsibles de formulario deben mostrarse en frontend junto al campo
 ## Errores
 
 - `400`: datos invalidos o rango horario invalido.
-- `404`: escritorio o reserva no encontrada.
+- `404`: miembro, escritorio o reserva no encontrada.
 - `409`: escritorio no disponible, reserva no editable o reserva no cancelable.

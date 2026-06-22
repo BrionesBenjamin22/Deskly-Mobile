@@ -1,16 +1,32 @@
 import { Type } from 'class-transformer';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Length,
+  Matches,
+  Max,
+  ValidateNested,
+} from 'class-validator';
 
 export class RegisterMemberBodyDto {
   @IsString()
   @IsNotEmpty()
   @Length(1, 100)
-  firstName!: string;
+  fullName!: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 100)
-  lastName!: string;
+  @IsInt()
+  @IsPositive()
+  @Max(2147483647)
+  dni!: number;
+
+  @IsInt()
+  @IsPositive()
+  @Max(2147483647)
+  phone!: number;
 }
 
 export class RegisterBodyDto {

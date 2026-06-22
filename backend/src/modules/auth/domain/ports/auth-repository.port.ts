@@ -6,7 +6,7 @@ export type RegisterUserParams = {
   email: string;
   username: string;
   passwordHash: string;
-  member?: { firstName: string; lastName: string };
+  member?: { fullName: string; dni: number; phone: number };
 };
 
 export type RegisterUserResult = {

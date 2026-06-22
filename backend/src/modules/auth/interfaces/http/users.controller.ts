@@ -19,7 +19,10 @@ import {
 } from '@nestjs/swagger';
 
 import { UpdateUserRoleUseCase } from '../../application/use-cases/update-user-role.use-case';
-import { SelfRoleChangeForbiddenError, UserNotFoundError } from '../../domain/errors/auth.errors';
+import {
+  SelfRoleChangeForbiddenError,
+  UserNotFoundError,
+} from '../../domain/errors/auth.errors';
 import type { AuthenticatedRequest } from './auth-request';
 import { Roles } from './decorators/roles.decorator';
 import { UpdateRoleBodyDto } from './dto/update-role-body.dto';
@@ -37,7 +40,9 @@ export class UsersController {
   @Roles('ADMIN')
   @ApiOkResponse({ description: 'Rol actualizado correctamente.' })
   @ApiUnauthorizedResponse({ description: 'Sesion invalida o expirada.' })
-  @ApiForbiddenResponse({ description: 'Solo un administrador puede cambiar roles.' })
+  @ApiForbiddenResponse({
+    description: 'Solo un administrador puede cambiar roles.',
+  })
   @ApiNotFoundResponse({ description: 'Usuario no encontrado.' })
   async updateRole(
     @Param('id', ParseUUIDPipe) id: string,

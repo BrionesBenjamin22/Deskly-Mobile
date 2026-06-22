@@ -7,6 +7,12 @@ export class ReservationResponseDto {
   @ApiProperty({ example: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc' })
   deskId!: string;
 
+  @ApiProperty({ example: '8ae2e38a-300c-4cc1-b6ba-cee270f163f7' })
+  memberId!: string;
+
+  @ApiProperty({ example: 'Nombre Apellido', required: false })
+  memberFullName?: string;
+
   @ApiProperty({ example: 'D-01' })
   deskCode!: string;
 
