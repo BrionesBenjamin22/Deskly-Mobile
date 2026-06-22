@@ -75,6 +75,7 @@ Endpoints:
 ```http
 POST /auth/register
 POST /auth/login
+GET /auth/registration-status
 GET /auth/me
 PATCH /users/:id/role
 ```

@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 
 function createRepository(): jest.Mocked<AuthRepositoryPort> {
   return {
+    hasUsers: jest.fn(),
     register: jest.fn(),
     findByIdentifier: jest.fn(),
     findById: jest.fn(),

@@ -50,6 +50,10 @@ Registra usuario afectado, administrador actor, rol anterior, rol nuevo y fecha.
 
 ## Endpoints
 
+### GET /auth/registration-status
+
+Endpoint publico y sin datos personales. Responde `{ "requiresMember": false }` cuando todavia no existe ningun usuario y `{ "requiresMember": true }` para todos los registros posteriores. El frontend usa esta informacion solo para renderizar los campos correspondientes; la transaccion de registro vuelve a validar la regla.
+
 ### POST /auth/register
 
 Primer usuario:

@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { BcryptPasswordHasherService } from './application/services/bcrypt-password-hasher.service';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
+import { GetRegistrationStatusUseCase } from './application/use-cases/get-registration-status.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { UpdateUserRoleUseCase } from './application/use-cases/update-user-role.use-case';
@@ -29,6 +30,7 @@ import { UsersController } from './interfaces/http/users.controller';
     RegisterUseCase,
     LoginUseCase,
     GetCurrentUserUseCase,
+    GetRegistrationStatusUseCase,
     UpdateUserRoleUseCase,
     JwtAuthGuard,
     RolesGuard,

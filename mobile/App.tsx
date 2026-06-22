@@ -1,11 +1,13 @@
 import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DeskSettingsScreen } from './src/features/desks/screens/DeskSettingsScreen';
 import { DesksScreen } from './src/features/desks/screens/DesksScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
+import { AuthScreen } from './src/features/auth/screens/AuthScreen';
+import { LoginResponse } from './src/features/auth/types/auth.types';
 
 type AppTab = 'desks' | 'reservations' | 'settings';
 
@@ -55,6 +57,7 @@ function AnimatedTabScreen({ children, isActive }: AnimatedTabScreenProps) {
 }
 
 export default function App() {
+  const [session, setSession] = useState<LoginResponse | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>('desks');
   const [mountedTabs, setMountedTabs] = useState<Set<AppTab>>(
     () => new Set(['desks']),
@@ -75,13 +78,17 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    BackHandler.exitApp();
+    setSession(null);
+    setActiveTab('desks');
+    setMountedTabs(new Set(['desks']));
   };
 
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
-        {mountedTabs.has('desks') ? (
+        {!session ? (
+          <AuthScreen onAuthenticated={setSession} />
+        ) : mountedTabs.has('desks') ? (
           <AnimatedTabScreen isActive={activeTab === 'desks'}>
             <DesksScreen
               onPressReservations={() => handleTabChange('reservations')}
@@ -94,7 +101,7 @@ export default function App() {
           </AnimatedTabScreen>
         ) : null}
 
-        {mountedTabs.has('reservations') ? (
+        {session && mountedTabs.has('reservations') ? (
           <AnimatedTabScreen isActive={activeTab === 'reservations'}>
             <MyReservationsScreen
               refreshKey={reservationsRefreshKey}
@@ -105,7 +112,7 @@ export default function App() {
           </AnimatedTabScreen>
         ) : null}
 
-        {mountedTabs.has('settings') ? (
+        {session && mountedTabs.has('settings') ? (
           <AnimatedTabScreen isActive={activeTab === 'settings'}>
             <DeskSettingsScreen
               onPressDesks={() => handleTabChange('desks')}

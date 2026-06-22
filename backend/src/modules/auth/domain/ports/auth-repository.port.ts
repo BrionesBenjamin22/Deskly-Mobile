@@ -15,6 +15,7 @@ export type RegisterUserResult = {
 };
 
 export interface AuthRepositoryPort {
+  hasUsers(): Promise<boolean>;
   register(params: RegisterUserParams): Promise<RegisterUserResult>;
   findByIdentifier(identifier: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;

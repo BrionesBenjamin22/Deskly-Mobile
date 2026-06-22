@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 
 import { GetCurrentUserUseCase } from '../../application/use-cases/get-current-user.use-case';
+import { GetRegistrationStatusUseCase } from '../../application/use-cases/get-registration-status.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import {
@@ -41,7 +42,16 @@ export class AuthController {
     private readonly registerUseCase: RegisterUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
+    private readonly getRegistrationStatusUseCase: GetRegistrationStatusUseCase,
   ) {}
+
+  @Get('registration-status')
+  @ApiOkResponse({
+    description: 'Indica si los proximos registros requieren datos de miembro.',
+  })
+  getRegistrationStatus() {
+    return this.getRegistrationStatusUseCase.execute();
+  }
 
   @Post('register')
   @ApiCreatedResponse({ description: 'Usuario registrado correctamente.' })

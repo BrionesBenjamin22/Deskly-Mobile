@@ -20,6 +20,10 @@ type PersistedUser = Prisma.UserGetPayload<{ include: typeof userWithMember }>;
 export class PrismaAuthRepository implements AuthRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
+  async hasUsers(): Promise<boolean> {
+    return (await this.prisma.user.count()) > 0;
+  }
+
   async register(params: RegisterUserParams): Promise<RegisterUserResult> {
     try {
       return await this.prisma.$transaction(
