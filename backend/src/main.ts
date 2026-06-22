@@ -106,6 +106,7 @@ async function bootstrap() {
     .setTitle('Deskly API')
     .setDescription('API para la gestion de espacios de coworking.')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);

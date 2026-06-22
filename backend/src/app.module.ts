@@ -6,6 +6,7 @@ import { CommonModule } from './common/common.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { DesksModule } from './modules/desks/desks.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
     CommonModule,
     DesksModule,
     ReservationsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -22,6 +22,58 @@ enum DeskZone {
   C
 }
 
+enum UserRole {
+  ADMIN
+  GESTOR
+  MIEMBRO
+}
+
+model User {
+  id             String              @id @default(uuid()) @db.Uuid
+  email          String              @unique @db.VarChar(255)
+  username       String              @unique @db.VarChar(60)
+  passwordHash   String              @map("password_hash") @db.VarChar(255)
+  role           UserRole            @default(MIEMBRO)
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  member         Member?
+  roleChanges    UserRoleHistory[]   @relation("RoleChangeTarget")
+  changedRoles   UserRoleHistory[]   @relation("RoleChangeActor")
+
+  @@index([active])
+  @@map("users")
+}
+
+model Member {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  firstName String   @map("first_name") @db.VarChar(100)
+  lastName  String   @map("last_name") @db.VarChar(100)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([active])
+  @@map("members")
+}
+
+model UserRoleHistory {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  changedById  String   @map("changed_by_id") @db.Uuid
+  previousRole UserRole @map("previous_role")
+  newRole      UserRole @map("new_role")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation("RoleChangeTarget", fields: [userId], references: [id], onDelete: Restrict)
+  changedBy    User     @relation("RoleChangeActor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([changedById])
+  @@map("user_role_history")
+}
+
 model Desk {
   id            String           @id @default(uuid()) @db.Uuid
   code          String           @unique @default(dbgenerated("gen_random_uuid()::text")) @db.VarChar(36)
