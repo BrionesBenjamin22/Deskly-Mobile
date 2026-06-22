@@ -14,6 +14,7 @@ const desk = new Desk({
   peopleCapacity: 2,
   enabled: true,
 });
+const memberId = '8ae2e38a-300c-4cc1-b6ba-cee270f163f7';
 
 function createDeskRepositoryMock(): jest.Mocked<DeskRepositoryPort> {
   return {
@@ -28,6 +29,7 @@ function createDeskRepositoryMock(): jest.Mocked<DeskRepositoryPort> {
 
 function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPort> {
   return {
+    memberExists: jest.fn(),
     existsOverlappingReservation: jest.fn(),
     save: jest.fn(),
     list: jest.fn(),
@@ -49,6 +51,7 @@ describe('CreateReservationUseCase', () => {
       deskRepository,
       reservationRepository,
     );
+    reservationRepository.memberExists.mockResolvedValue(true);
   });
 
   it('creates an active reservation when the desk is available', async () => {
@@ -58,6 +61,7 @@ describe('CreateReservationUseCase', () => {
       new Reservation({
         id: '2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4',
         deskId: desk.id,
+        memberId,
         deskCode: desk.code,
         date: '2026-06-01',
         startTime: '09:00',
@@ -68,6 +72,7 @@ describe('CreateReservationUseCase', () => {
 
     const output = await useCase.execute({
       deskId: desk.id,
+      memberId,
       date: '2026-06-01',
       startTime: '09:00',
       endTime: '13:00',
@@ -76,6 +81,7 @@ describe('CreateReservationUseCase', () => {
     expect(output).toEqual({
       reservationId: '2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4',
       deskId: desk.id,
+      memberId,
       deskCode: 'D-01',
       date: '2026-06-01',
       startTime: '09:00',
@@ -91,6 +97,7 @@ describe('CreateReservationUseCase', () => {
     await expect(
       useCase.execute({
         deskId: desk.id,
+        memberId,
         date: '2026-06-01',
         startTime: '09:00',
         endTime: '13:00',
@@ -104,6 +111,7 @@ describe('CreateReservationUseCase', () => {
     await expect(
       useCase.execute({
         deskId: desk.id,
+        memberId,
         date: '2026-06-01',
         startTime: '09:00',
         endTime: '13:00',
@@ -115,6 +123,7 @@ describe('CreateReservationUseCase', () => {
     await expect(
       useCase.execute({
         deskId: desk.id,
+        memberId,
         date: '2026-06-01',
         startTime: '13:00',
         endTime: '09:00',

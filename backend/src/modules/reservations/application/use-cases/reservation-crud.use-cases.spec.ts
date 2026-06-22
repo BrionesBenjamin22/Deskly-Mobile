@@ -17,10 +17,12 @@ const desk = new Desk({
   peopleCapacity: 2,
   enabled: true,
 });
+const memberId = '8ae2e38a-300c-4cc1-b6ba-cee270f163f7';
 
 const activeReservation = new Reservation({
   id: '2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4',
   deskId: desk.id,
+  memberId,
   deskCode: desk.code,
   deskName: desk.name,
   date: '2026-06-01',
@@ -42,6 +44,7 @@ function createDeskRepositoryMock(): jest.Mocked<DeskRepositoryPort> {
 
 function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPort> {
   return {
+    memberExists: jest.fn(),
     existsOverlappingReservation: jest.fn(),
     save: jest.fn(),
     list: jest.fn(),
@@ -129,6 +132,7 @@ describe('Reservation CRUD use cases', () => {
         ...activeReservation,
         id: activeReservation.id,
         deskId: activeReservation.deskId,
+        memberId: activeReservation.memberId,
         date: activeReservation.date,
         startTime: activeReservation.startTime,
         endTime: activeReservation.endTime,
@@ -154,6 +158,7 @@ describe('Reservation CRUD use cases', () => {
       new Reservation({
         id: activeReservation.id,
         deskId: activeReservation.deskId,
+        memberId: activeReservation.memberId,
         deskCode: activeReservation.deskCode,
         date: activeReservation.date,
         startTime: activeReservation.startTime,
@@ -179,6 +184,7 @@ describe('Reservation CRUD use cases', () => {
       new Reservation({
         id: activeReservation.id,
         deskId: activeReservation.deskId,
+        memberId: activeReservation.memberId,
         deskCode: activeReservation.deskCode,
         date: activeReservation.date,
         startTime: activeReservation.startTime,
