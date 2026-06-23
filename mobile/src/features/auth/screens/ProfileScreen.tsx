@@ -24,6 +24,7 @@ type ProfileScreenProps = {
   onPressLogout: () => void;
   onPressSwitchAccount: () => void;
   onPressUserManagement: () => void;
+  penaltiesRefreshKey?: number;
 };
 
 const roleLabels: Record<UserRole, string> = {
@@ -51,6 +52,7 @@ export function ProfileScreen({
   onPressLogout,
   onPressSwitchAccount,
   onPressUserManagement,
+  penaltiesRefreshKey = 0,
 }: ProfileScreenProps) {
   const [user, setUser] = useState<AuthUser | CurrentUserResponse['user']>(
     initialUser,
@@ -147,7 +149,12 @@ export function ProfileScreen({
             )}
           </Card>
 
-          {user.member ? <ProfilePenaltiesCard accessToken={accessToken} /> : null}
+          {user.member ? (
+            <ProfilePenaltiesCard
+              accessToken={accessToken}
+              refreshKey={penaltiesRefreshKey}
+            />
+          ) : null}
         </ScrollView>
 
         <BottomTabBar

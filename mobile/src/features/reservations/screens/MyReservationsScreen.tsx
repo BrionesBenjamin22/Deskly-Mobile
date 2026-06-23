@@ -19,12 +19,20 @@ import { useValidateArrival } from '../hooks/useValidateArrival';
 import { Reservation } from '../types/reservation.types';
 
 type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
-type StatusFilter = 'all' | 'active' | 'completed' | 'cancelled';
+type StatusFilter =
+  | 'all'
+  | 'pending'
+  | 'reserved'
+  | 'active'
+  | 'completed'
+  | 'cancelled';
 
 function getStatusLabel(status: StatusFilter): string {
   if (status === 'all') return 'reservas';
+  if (status === 'pending') return 'reservas pendientes';
+  if (status === 'reserved') return 'reservas reservadas';
   if (status === 'active') return 'reservas activas';
-  if (status === 'completed') return 'reservas completadas';
+  if (status === 'completed') return 'reservas finalizadas';
   return 'reservas canceladas';
 }
 
@@ -207,12 +215,22 @@ export function MyReservationsScreen({
               onPress={() => setSelectedFilter('all')}
             />
             <FilterChip
+              label="Pendientes"
+              selected={selectedFilter === 'pending'}
+              onPress={() => setSelectedFilter('pending')}
+            />
+            <FilterChip
+              label="Reservadas"
+              selected={selectedFilter === 'reserved'}
+              onPress={() => setSelectedFilter('reserved')}
+            />
+            <FilterChip
               label="Activas"
               selected={selectedFilter === 'active'}
               onPress={() => setSelectedFilter('active')}
             />
             <FilterChip
-              label="Completadas"
+              label="Finalizadas"
               selected={selectedFilter === 'completed'}
               onPress={() => setSelectedFilter('completed')}
             />
@@ -240,7 +258,7 @@ export function MyReservationsScreen({
               {filteredReservations.length > 0 ? (
                 <ReservationList
                   reservations={filteredReservations}
-                  onCancel={selectedFilter === 'all' || selectedFilter === 'active' ? handleCancelReservation : undefined}
+                  onCancel={handleCancelReservation}
                   onValidateArrival={
                     userRole === 'GESTOR'
                       ? (reservation) => void arrivalAction.submit(reservation.id)

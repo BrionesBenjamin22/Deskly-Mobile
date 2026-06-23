@@ -73,8 +73,12 @@ export default function App() {
   const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
   const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
   const [desksRefreshKey, setDesksRefreshKey] = useState(0);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
   const handleTabChange = (tab: AppTab) => {
+    if (tab === 'profile') {
+      setProfileRefreshKey((current) => current + 1);
+    }
     setMountedTabs((current) => {
       if (current.has(tab)) {
         return current;
@@ -160,9 +164,10 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
-              onReservationCancelled={() =>
-                setDesksRefreshKey((current) => current + 1)
-              }
+              onReservationCancelled={() => {
+                setDesksRefreshKey((current) => current + 1);
+                setProfileRefreshKey((current) => current + 1);
+              }}
             />
           </AnimatedTabScreen>
         ) : null}
@@ -206,6 +211,7 @@ export default function App() {
               accessToken={session.access_token}
               initialUser={session.user}
               userRole={session.user.role}
+              penaltiesRefreshKey={profileRefreshKey}
               onPressDesks={() => handleTabChange('desks')}
               onPressReservations={() => handleTabChange('reservations')}
               onPressProfile={() => handleTabChange('profile')}

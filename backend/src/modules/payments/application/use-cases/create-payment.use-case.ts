@@ -39,6 +39,10 @@ export class CreatePaymentUseCase {
       throw new Error('Payment was not persisted correctly.');
     }
 
+    await this.reservationRepository.markReservedAfterPayment(
+      input.reservationId,
+    );
+
     return {
       paymentId: payment.id,
       reservationId: payment.reservationId,

@@ -24,7 +24,10 @@ export class CancelReservationUseCase {
       throw new ReservationNotFoundError();
     }
 
-    if (reservation.status !== 'ACTIVE' || reservation.checkedInAt) {
+    if (
+      !['PENDING_PAYMENT', 'RESERVED'].includes(reservation.status) ||
+      reservation.checkedInAt
+    ) {
       throw new ReservationCannotBeCancelledError();
     }
 

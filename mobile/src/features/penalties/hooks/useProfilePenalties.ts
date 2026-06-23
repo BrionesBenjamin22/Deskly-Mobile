@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { listCurrentUserPenalties } from '../services/penalties.service';
 import { Penalty } from '../types/penalty.types';
 
-export function useProfilePenalties(accessToken: string) {
+export function useProfilePenalties(accessToken: string, refreshKey = 0) {
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +25,7 @@ export function useProfilePenalties(accessToken: string) {
     }
   }, [accessToken]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); }, [load, refreshKey]);
 
   return { penalties, total, isLoading, errorMessage, refresh: load };
 }

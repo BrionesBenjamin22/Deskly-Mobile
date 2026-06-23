@@ -28,8 +28,16 @@ export class ReservationResponseDto {
   @ApiProperty({ example: '13:00' })
   endTime!: string;
 
-  @ApiProperty({ example: 'ACTIVE', enum: ['ACTIVE', 'CANCELLED'] })
-  status!: 'ACTIVE' | 'CANCELLED';
+  @ApiProperty({
+    example: 'RESERVED',
+    enum: ['PENDING_PAYMENT', 'RESERVED', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
+  })
+  status!:
+    | 'PENDING_PAYMENT'
+    | 'RESERVED'
+    | 'ACTIVE'
+    | 'COMPLETED'
+    | 'CANCELLED';
 
   @ApiProperty({ example: '2026-05-21T10:00:00.000Z', required: false })
   createdAt?: string;

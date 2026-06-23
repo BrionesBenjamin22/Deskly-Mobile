@@ -1,4 +1,9 @@
-export type ReservationStatusValue = 'ACTIVE' | 'CANCELLED';
+export type ReservationStatusValue =
+  | 'PENDING_PAYMENT'
+  | 'RESERVED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export type ReservationProperties = {
   id?: string;

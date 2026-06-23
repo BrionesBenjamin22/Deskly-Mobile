@@ -36,7 +36,7 @@ describe('PenaltyRegistrationService', () => {
       memberId: '30000000-0000-4000-8000-000000000001',
       date: '2026-06-23',
       startTime: '10:00',
-      status: 'ACTIVE',
+      status: 'RESERVED',
       checkedInAt: null,
     });
     registerMock.mockResolvedValue(createPenalty('ABSENCE'));
@@ -65,7 +65,7 @@ describe('PenaltyRegistrationService', () => {
       memberId: '30000000-0000-4000-8000-000000000001',
       date: '2026-06-23',
       startTime: '10:00',
-      status: 'ACTIVE',
+      status: 'RESERVED',
       checkedInAt: null,
     });
     const service = new PenaltyRegistrationService(repository);

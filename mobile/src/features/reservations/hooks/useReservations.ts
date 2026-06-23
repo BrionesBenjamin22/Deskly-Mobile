@@ -41,14 +41,16 @@ export function useReservations(
         month: '2-digit',
         day: '2-digit',
       }).format(new Date());
-      const response = await listReservations(
-        accessToken,
-        1,
-        50,
-        managerView ? 'ACTIVE' : undefined,
-        managerView ? today : undefined,
-      );
-      setReservations(response.reservations);
+      if (managerView) {
+        const [reserved, active] = await Promise.all([
+          listReservations(accessToken, 1, 50, 'RESERVED', today),
+          listReservations(accessToken, 1, 50, 'ACTIVE', today),
+        ]);
+        setReservations([...reserved.reservations, ...active.reservations]);
+      } else {
+        const response = await listReservations(accessToken, 1, 50);
+        setReservations(response.reservations);
+      }
     } catch (error) {
       setReservations([]);
       setErrorMessage(getFriendlyErrorMessage(error));
@@ -62,12 +64,19 @@ export function useReservations(
   }, [loadReservations, refreshKey]);
 
   const activeReservations = useMemo(
-    () => reservations.filter((reservation) => reservation.status === 'active'),
+    () =>
+      reservations.filter((reservation) =>
+        ['pending', 'reserved', 'active'].includes(reservation.status),
+      ),
     [reservations],
   );
 
   const reservationHistory = useMemo(
-    () => reservations.filter((reservation) => reservation.status !== 'active'),
+    () =>
+      reservations.filter(
+        (reservation) =>
+          !['pending', 'reserved', 'active'].includes(reservation.status),
+      ),
     [reservations],
   );
 

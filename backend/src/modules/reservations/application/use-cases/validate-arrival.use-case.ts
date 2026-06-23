@@ -18,7 +18,7 @@ export class ValidateArrivalUseCase {
     const reservation = await this.repository.findById(id);
     if (!reservation) throw new ReservationNotFoundError();
     if (
-      reservation.status !== 'ACTIVE' ||
+      reservation.status !== 'RESERVED' ||
       reservation.date !== this.getBusinessDate(now)
     ) {
       throw new ReservationCannotCheckInError();

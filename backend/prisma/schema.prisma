@@ -12,7 +12,10 @@ datasource db {
 }
 
 enum ReservationStatus {
+  PENDING_PAYMENT
+  RESERVED
   ACTIVE
+  COMPLETED
   CANCELLED
 }
 
@@ -168,7 +171,7 @@ model Reservation {
   date        DateTime          @db.Date
   startTime   DateTime          @map("start_time") @db.Time(0)
   endTime     DateTime          @map("end_time") @db.Time(0)
-  status      ReservationStatus @default(ACTIVE)
+  status      ReservationStatus @default(PENDING_PAYMENT)
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
   cancelledAt DateTime?         @map("cancelled_at")

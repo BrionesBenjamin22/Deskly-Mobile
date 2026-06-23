@@ -7,7 +7,7 @@ export type PenaltyReservationContext = {
   memberId: string;
   date: string;
   startTime: string;
-  status: 'ACTIVE' | 'CANCELLED';
+  status: 'PENDING_PAYMENT' | 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   checkedInAt: Date | null;
 };
 

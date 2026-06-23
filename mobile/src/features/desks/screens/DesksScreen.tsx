@@ -284,11 +284,13 @@ export function DesksScreen({
     setReservationErrorMessage(reservationStatusContent.error.description);
 
     try {
-      const { reservations: allActive } = await listReservations(
-        accessToken,
-        1,
-        50,
-        'ACTIVE',
+      const reservationGroups = await Promise.all([
+        listReservations(accessToken, 1, 50, 'PENDING_PAYMENT'),
+        listReservations(accessToken, 1, 50, 'RESERVED'),
+        listReservations(accessToken, 1, 50, 'ACTIVE'),
+      ]);
+      const allActive = reservationGroups.flatMap(
+        (group) => group.reservations,
       );
 
       const conflict = allActive.find(

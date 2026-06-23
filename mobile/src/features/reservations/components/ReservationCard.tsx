@@ -21,9 +21,14 @@ export function ReservationCard({
   onValidateArrival,
   managerView = false,
 }: ReservationCardProps) {
-  const isActive = reservation.status === 'active';
-  const isMuted = reservation.status !== 'active';
+  const isCurrent = ['pending', 'reserved', 'active'].includes(
+    reservation.status,
+  );
+  const isMuted = !isCurrent;
   const isCheckedIn = Boolean(reservation.checkedInAt);
+  const canCancel = managerView
+    ? reservation.status === 'reserved'
+    : ['pending', 'reserved'].includes(reservation.status);
 
   return (
     <Card style={[styles.card, isMuted && styles.mutedCard]}>
@@ -71,14 +76,14 @@ export function ReservationCard({
         </View>
       ) : null}
 
-      {managerView && isCheckedIn ? (
+      {managerView && reservation.status === 'active' && isCheckedIn ? (
         <View style={styles.checkedInBanner}>
           <Icon name="circleCheck" size={16} color={statusColors.success} />
           <AppText variant="caption" color={statusColors.success} style={styles.checkedInText}>
             Llegada validada
           </AppText>
         </View>
-      ) : isActive ? (
+      ) : canCancel ? (
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"

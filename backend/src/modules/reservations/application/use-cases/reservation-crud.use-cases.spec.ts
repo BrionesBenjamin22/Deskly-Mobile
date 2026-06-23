@@ -29,7 +29,7 @@ const activeReservation = new Reservation({
   date: '2026-06-01',
   startTime: '09:00',
   endTime: '13:00',
-  status: 'ACTIVE',
+  status: 'RESERVED',
 });
 
 function createDeskRepositoryMock(): jest.Mocked<DeskRepositoryPort> {
@@ -54,6 +54,7 @@ function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPor
     update: jest.fn(),
     cancel: jest.fn(),
     validateArrival: jest.fn(),
+    markReservedAfterPayment: jest.fn(),
   };
 }
 
@@ -229,7 +230,7 @@ describe('Reservation CRUD use cases', () => {
       date: '2026-06-23',
       startTime: activeReservation.startTime,
       endTime: activeReservation.endTime,
-      status: 'ACTIVE',
+      status: 'RESERVED',
     });
     const checkedInReservation = new Reservation({
       id: activeReservation.id,

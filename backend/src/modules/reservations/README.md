@@ -10,7 +10,7 @@ Cada reserva pertenece obligatoriamente a un miembro activo. En el alta, `member
 
 ```http
 POST /reservations
-GET /reservations?page=1&limit=9&status=ACTIVE
+GET /reservations?page=1&limit=9&status=RESERVED
 GET /reservations/:id
 PATCH /reservations/:id
 PATCH /reservations/:id/cancel
@@ -42,7 +42,7 @@ El alta y el listado requieren JWT. Los miembros solo pueden crear reservas prop
   "date": "2026-06-01",
   "startTime": "09:00",
   "endTime": "13:00",
-  "status": "ACTIVE"
+  "status": "PENDING_PAYMENT"
 }
 ```
 
@@ -61,7 +61,7 @@ Listado:
       "date": "2026-06-01",
       "startTime": "09:00",
       "endTime": "13:00",
-      "status": "ACTIVE"
+      "status": "RESERVED"
     }
   ],
   "pagination": {
@@ -90,10 +90,13 @@ Cancelacion:
 - La fecha debe tener formato `YYYY-MM-DD`.
 - Los horarios deben tener formato `HH:mm`.
 - El horario de fin debe ser posterior al horario de inicio.
-- Las reservas `ACTIVE` superpuestas bloquean disponibilidad.
+- Las reservas `PENDING_PAYMENT`, `RESERVED` y `ACTIVE` superpuestas bloquean disponibilidad.
 - Las reservas `CANCELLED` no bloquean disponibilidad.
 - La base de datos impide superposiciones activas para el mismo escritorio mediante constraint GiST.
-- Solo se pueden editar o cancelar reservas activas.
+- Solo se pueden editar o cancelar reservas pendientes de pago o reservadas.
+- El ciclo es `PENDING_PAYMENT` -> `RESERVED` -> `ACTIVE` -> `COMPLETED`.
+- Un pago lleva la reserva pendiente a `RESERVED`; la llegada validada por el gestor la lleva a `ACTIVE`.
+- Las reservas `ACTIVE` pasan a `COMPLETED` al superar su horario de fin.
 - `DELETE /reservations/:id` no elimina fisicamente la reserva; ejecuta cancelacion logica.
 - Los listados usan paginacion con 9 items por defecto.
 
@@ -115,7 +118,7 @@ Edicion de reserva:
 - si se informa `date`, debe cumplir formato `YYYY-MM-DD` y representar una fecha real
 - si se informan horarios, deben cumplir formato `HH:mm`
 - el rango final resultante debe ser valido
-- la reserva debe estar activa
+- la reserva debe estar pendiente de pago o reservada
 - el escritorio final debe existir y estar habilitado
 - no puede existir una reserva activa superpuesta para el mismo escritorio
 
@@ -123,7 +126,7 @@ Listado:
 
 - `page`: entero mayor o igual a 1.
 - `limit`: entero entre 1 y 50.
-- `status`: opcional, restringido a `ACTIVE` o `CANCELLED`.
+- `status`: opcional, restringido a `PENDING_PAYMENT`, `RESERVED`, `ACTIVE`, `COMPLETED` o `CANCELLED`.
 
 Los errores previsibles de formulario deben mostrarse en frontend junto al campo y no deben disparar una peticion. El backend conserva las validaciones como barrera de seguridad, con mensajes especificos por campo para integraciones externas.
 

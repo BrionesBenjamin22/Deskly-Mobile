@@ -6,6 +6,13 @@ type ApiErrorBody = {
   message?: string | string[];
 };
 
+type ApiReservationStatus =
+  | 'PENDING_PAYMENT'
+  | 'RESERVED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
 type ReservationResponse = {
   reservationId: string;
   deskId: string;
@@ -15,7 +22,7 @@ type ReservationResponse = {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'ACTIVE' | 'CANCELLED';
+  status: ApiReservationStatus;
   cancelledAt?: string;
   checkedInAt?: string;
 };
@@ -114,19 +121,14 @@ function toDateLabel(dateValue: string) {
 }
 
 function getReservationStatus(reservation: ReservationResponse): ReservationStatus {
-  if (reservation.status === 'CANCELLED') {
-    return 'cancelled';
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const reservationDate = new Date(`${reservation.date}T00:00:00`);
-
-  if (!Number.isNaN(reservationDate.getTime()) && reservationDate < today) {
-    return 'completed';
-  }
-
-  return 'active';
+  const statusMap: Record<ApiReservationStatus, ReservationStatus> = {
+    PENDING_PAYMENT: 'pending',
+    RESERVED: 'reserved',
+    ACTIVE: 'active',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+  };
+  return statusMap[reservation.status];
 }
 
 function mapReservation(reservation: ReservationResponse): Reservation {
@@ -149,7 +151,7 @@ export async function listReservations(
   accessToken: string,
   page = 1,
   limit = 9,
-  status?: 'ACTIVE' | 'CANCELLED',
+  status?: ApiReservationStatus,
   date?: string,
 ) {
   const params = new URLSearchParams({

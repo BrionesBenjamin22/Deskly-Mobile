@@ -49,7 +49,7 @@ export class PrismaPenaltyRepository implements PenaltyRepositoryPort {
             const result = await transaction.reservation.updateMany({
               where: {
                 id: params.reservationId,
-                status: ReservationStatus.ACTIVE,
+                status: ReservationStatus.RESERVED,
                 checkedInAt: null,
               },
               data: {
@@ -126,7 +126,6 @@ export class PrismaPenaltyRepository implements PenaltyRepositoryPort {
       ...(params.memberId ? { memberId: params.memberId } : {}),
       ...(params.activeOnly
         ? {
-            level: InfractionLevel.PENALTY,
             activeUntil: { gt: new Date() },
           }
         : {}),

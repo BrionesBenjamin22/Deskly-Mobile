@@ -31,7 +31,7 @@ export class PenaltyRegistrationService {
   }): Promise<Penalty> {
     const now = input.now ?? new Date();
     const reservation = await this.getReservation(input.reservationId);
-    if (reservation.status !== 'ACTIVE')
+    if (reservation.status !== 'RESERVED')
       throw new ReservationNotActiveForAbsenceError();
     if (reservation.checkedInAt) throw new ReservationAlreadyCheckedInError();
     if (
