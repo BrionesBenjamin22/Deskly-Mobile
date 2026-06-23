@@ -1,5 +1,4 @@
 export type ReservationStatus =
-  | 'pending'
   | 'reserved'
   | 'active'
   | 'completed'

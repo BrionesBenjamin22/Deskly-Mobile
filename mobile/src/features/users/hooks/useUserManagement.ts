@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { UserRole } from '../../auth/types/auth.types';
-import { deactivateUser, listUsers, updateUserRole } from '../services/users.service';
+import {
+  deactivateUser,
+  listUsers,
+  restoreUserAccess,
+  updateUserRole,
+} from '../services/users.service';
 import { ManagedUser } from '../types/managed-user.types';
 
 export function useUserManagement(accessToken: string) {
@@ -39,6 +44,11 @@ export function useUserManagement(accessToken: string) {
     await load();
   };
 
+  const restoreAccess = async (userId: string) => {
+    await restoreUserAccess(accessToken, userId);
+    await load();
+  };
+
   return {
     users,
     page,
@@ -47,6 +57,7 @@ export function useUserManagement(accessToken: string) {
     errorMessage,
     changeRole,
     deactivate,
+    restoreAccess,
     previousPage: () => setPage((current) => Math.max(current - 1, 1)),
     nextPage: () => setPage((current) => Math.min(current + 1, totalPages)),
     applySearch: (value: string) => {

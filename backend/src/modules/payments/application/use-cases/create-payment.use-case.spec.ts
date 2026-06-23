@@ -14,7 +14,7 @@ import { Reservation } from '../../../reservations/domain/entities/reservation.e
 
 type PaymentRepositoryMock = jest.Mocked<Pick<PaymentRepositoryPort, 'save'>>;
 type ReservationRepositoryMock = jest.Mocked<
-  Pick<ReservationRepositoryPort, 'findById' | 'markReservedAfterPayment'>
+  Pick<ReservationRepositoryPort, 'findById'>
 >;
 
 describe('CreatePaymentUseCase', () => {
@@ -29,7 +29,6 @@ describe('CreatePaymentUseCase', () => {
 
     reservationRepositoryMock = {
       findById: jest.fn(),
-      markReservedAfterPayment: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

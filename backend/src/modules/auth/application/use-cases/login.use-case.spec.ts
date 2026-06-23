@@ -33,6 +33,9 @@ function createRepository(): jest.Mocked<AuthRepositoryPort> {
     findByIdentifier: jest.fn(),
     findById: jest.fn(),
     updateRole: jest.fn(),
+    listUsers: jest.fn(),
+    deactivate: jest.fn(),
+    restoreAccess: jest.fn(),
   };
 }
 
@@ -116,6 +119,26 @@ describe('LoginUseCase', () => {
         passwordHash: activeUser.passwordHash,
         role: activeUser.role,
         active: false,
+        member: activeUser.member,
+      }),
+    );
+    passwordHasher.compare.mockResolvedValue(true);
+
+    await expect(
+      useCase.execute({ identifier: 'member', password: 'Password123' }),
+    ).rejects.toBeInstanceOf(InactiveUserError);
+  });
+
+  it('rejects users blocked by active penalties', async () => {
+    repository.findByIdentifier.mockResolvedValue(
+      new User({
+        id: activeUser.id,
+        email: activeUser.email,
+        username: activeUser.username,
+        passwordHash: activeUser.passwordHash,
+        role: activeUser.role,
+        active: true,
+        blockedUntil: new Date('2099-01-01T00:00:00.000Z'),
         member: activeUser.member,
       }),
     );

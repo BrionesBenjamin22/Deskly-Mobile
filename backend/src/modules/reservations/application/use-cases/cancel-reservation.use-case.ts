@@ -24,10 +24,7 @@ export class CancelReservationUseCase {
       throw new ReservationNotFoundError();
     }
 
-    if (
-      !['PENDING_PAYMENT', 'RESERVED'].includes(reservation.status) ||
-      reservation.checkedInAt
-    ) {
+    if (reservation.status !== 'RESERVED' || reservation.checkedInAt) {
       throw new ReservationCannotBeCancelledError();
     }
 

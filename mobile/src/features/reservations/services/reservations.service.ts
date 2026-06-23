@@ -7,7 +7,6 @@ type ApiErrorBody = {
 };
 
 type ApiReservationStatus =
-  | 'PENDING_PAYMENT'
   | 'RESERVED'
   | 'ACTIVE'
   | 'COMPLETED'
@@ -122,7 +121,6 @@ function toDateLabel(dateValue: string) {
 
 function getReservationStatus(reservation: ReservationResponse): ReservationStatus {
   const statusMap: Record<ApiReservationStatus, ReservationStatus> = {
-    PENDING_PAYMENT: 'pending',
     RESERVED: 'reserved',
     ACTIVE: 'active',
     COMPLETED: 'completed',

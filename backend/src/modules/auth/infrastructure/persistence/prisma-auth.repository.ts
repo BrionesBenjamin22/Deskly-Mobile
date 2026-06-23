@@ -210,6 +210,38 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
     });
   }
 
+  async restoreAccess(params: {
+    userId: string;
+    changedById: string;
+  }): Promise<User | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.user.findUnique({
+        where: { id: params.userId },
+        include: { member: true },
+      });
+      if (!current) return null;
+
+      await transaction.userStatusHistory.create({
+        data: {
+          userId: params.userId,
+          changedById: params.changedById,
+          previousActive: current.active,
+          newActive: true,
+        },
+      });
+      const user = await transaction.user.update({
+        where: { id: params.userId },
+        data: {
+          active: true,
+          blockedUntil: null,
+          ...(current.member ? { member: { update: { active: true } } } : {}),
+        },
+        include: userWithMember,
+      });
+      return this.toDomain(user);
+    });
+  }
+
   private toDomain(user: PersistedUser): User {
     return new User({
       id: user.id,

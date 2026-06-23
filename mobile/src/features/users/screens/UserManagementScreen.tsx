@@ -34,6 +34,7 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
   const management = useUserManagement(props.accessToken);
   const [searchInput, setSearchInput] = useState('');
   const [userToDeactivate, setUserToDeactivate] = useState<ManagedUser | null>(null);
+  const [userToRestore, setUserToRestore] = useState<ManagedUser | null>(null);
   const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
 
   const handleSaveRole = async (user: ManagedUser, role: UserRole) => {
@@ -56,6 +57,19 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
       setFeedback({ type: 'success', title: 'Usuario desactivado', description: 'La baja logica se aplico correctamente.' });
     } catch (error) {
       setFeedback({ type: 'error', title: 'No pudimos desactivar el usuario', description: error instanceof Error ? error.message : 'Intente nuevamente.' });
+    }
+  };
+
+  const handleRestoreAccess = async () => {
+    if (!userToRestore) return;
+    const userId = userToRestore.id;
+    setUserToRestore(null);
+    setFeedback({ type: 'loading', title: 'Restaurando acceso...', description: 'Estamos habilitando nuevamente la cuenta.' });
+    try {
+      await management.restoreAccess(userId);
+      setFeedback({ type: 'success', title: 'Acceso restaurado', description: 'El usuario puede volver a iniciar sesion.' });
+    } catch (error) {
+      setFeedback({ type: 'error', title: 'No pudimos restaurar el acceso', description: error instanceof Error ? error.message : 'Intente nuevamente.' });
     }
   };
 
@@ -96,6 +110,7 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
                   isCurrentUser={user.id === props.currentUserId}
                   onSaveRole={(target, role) => void handleSaveRole(target, role)}
                   onDeactivate={setUserToDeactivate}
+                  onRestoreAccess={setUserToRestore}
                 />
               ))}
             </View>
@@ -130,6 +145,16 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
         destructive
         onConfirm={() => void handleDeactivate()}
         onCancel={() => setUserToDeactivate(null)}
+      />
+
+      <ConfirmModal
+        visible={userToRestore !== null}
+        title="Restaurar acceso"
+        description={userToRestore ? `La cuenta de ${userToRestore.member?.fullName ?? userToRestore.username} recuperara el acceso al sistema.` : undefined}
+        confirmLabel="Restaurar"
+        cancelLabel="Volver"
+        onConfirm={() => void handleRestoreAccess()}
+        onCancel={() => setUserToRestore(null)}
       />
 
       {feedback ? (

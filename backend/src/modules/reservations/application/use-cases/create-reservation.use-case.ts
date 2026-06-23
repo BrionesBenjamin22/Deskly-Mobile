@@ -67,7 +67,7 @@ export class CreateReservationUseCase {
         date: reservationDate.value,
         startTime: timeSlot.startTime,
         endTime: timeSlot.endTime,
-        status: 'PENDING_PAYMENT',
+        status: 'RESERVED',
       }),
     );
 
@@ -87,7 +87,7 @@ export class CreateReservationUseCase {
       date: reservation.date,
       startTime: reservation.startTime,
       endTime: reservation.endTime,
-      status: 'PENDING_PAYMENT',
+      status: 'RESERVED',
     };
   }
 }

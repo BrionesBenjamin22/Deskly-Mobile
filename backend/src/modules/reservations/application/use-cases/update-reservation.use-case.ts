@@ -34,7 +34,7 @@ export class UpdateReservationUseCase {
       throw new ReservationNotFoundError();
     }
 
-    if (!['PENDING_PAYMENT', 'RESERVED'].includes(currentReservation.status)) {
+    if (currentReservation.status !== 'RESERVED') {
       throw new ReservationCannotBeUpdatedError();
     }
 

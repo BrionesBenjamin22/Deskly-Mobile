@@ -10,6 +10,7 @@ import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { UpdateUserRoleUseCase } from './application/use-cases/update-user-role.use-case';
 import { ListUsersUseCase } from './application/use-cases/list-users.use-case';
 import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.use-case';
+import { RestoreUserAccessUseCase } from './application/use-cases/restore-user-access.use-case';
 import { AUTH_REPOSITORY } from './domain/ports/auth-repository.port';
 import { PASSWORD_HASHER } from './domain/ports/password-hasher.port';
 import { PrismaAuthRepository } from './infrastructure/persistence/prisma-auth.repository';
@@ -36,6 +37,7 @@ import { UsersController } from './interfaces/http/users.controller';
     UpdateUserRoleUseCase,
     ListUsersUseCase,
     DeactivateUserUseCase,
+    RestoreUserAccessUseCase,
     JwtAuthGuard,
     RolesGuard,
     { provide: AUTH_REPOSITORY, useClass: PrismaAuthRepository },

@@ -20,6 +20,12 @@ import {
   RegisterInfractionParams,
 } from '../../domain/ports/penalty-repository.port';
 
+export const ACTIVE_PENALTIES_TO_BLOCK = 3;
+
+export function shouldBlockAccount(activePenaltyCount: number): boolean {
+  return activePenaltyCount >= ACTIVE_PENALTIES_TO_BLOCK;
+}
+
 @Injectable()
 export class PrismaPenaltyRepository implements PenaltyRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
@@ -97,7 +103,7 @@ export class PrismaPenaltyRepository implements PenaltyRepositoryPort {
               orderBy: { activeUntil: 'asc' },
               select: { activeUntil: true },
             });
-            if (activePenalties.length >= 3) {
+            if (shouldBlockAccount(activePenalties.length)) {
               await transaction.user.updateMany({
                 where: { member: { id: params.memberId } },
                 data: { blockedUntil: activePenalties[0].activeUntil },

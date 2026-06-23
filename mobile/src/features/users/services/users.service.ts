@@ -63,3 +63,9 @@ export function deactivateUser(accessToken: string, userId: string) {
     method: 'DELETE',
   });
 }
+
+export function restoreUserAccess(accessToken: string, userId: string) {
+  return request<ManagedUserResponse>(accessToken, `/users/${userId}/access`, {
+    method: 'PATCH',
+  });
+}

@@ -285,7 +285,6 @@ export function DesksScreen({
 
     try {
       const reservationGroups = await Promise.all([
-        listReservations(accessToken, 1, 50, 'PENDING_PAYMENT'),
         listReservations(accessToken, 1, 50, 'RESERVED'),
         listReservations(accessToken, 1, 50, 'ACTIVE'),
       ]);

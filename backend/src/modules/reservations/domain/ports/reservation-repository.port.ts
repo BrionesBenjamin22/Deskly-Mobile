@@ -42,5 +42,4 @@ export interface ReservationRepositoryPort {
   update(params: UpdateReservationParams): Promise<Reservation>;
   cancel(id: string, cancelledAt: Date): Promise<Reservation>;
   validateArrival(id: string, checkedInAt: Date): Promise<Reservation | null>;
-  markReservedAfterPayment(id: string): Promise<Reservation | null>;
 }

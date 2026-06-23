@@ -21,7 +21,6 @@ import { Reservation } from '../types/reservation.types';
 type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
 type StatusFilter =
   | 'all'
-  | 'pending'
   | 'reserved'
   | 'active'
   | 'completed'
@@ -29,7 +28,6 @@ type StatusFilter =
 
 function getStatusLabel(status: StatusFilter): string {
   if (status === 'all') return 'reservas';
-  if (status === 'pending') return 'reservas pendientes';
   if (status === 'reserved') return 'reservas reservadas';
   if (status === 'active') return 'reservas activas';
   if (status === 'completed') return 'reservas finalizadas';
@@ -213,11 +211,6 @@ export function MyReservationsScreen({
               label="Todas"
               selected={selectedFilter === 'all'}
               onPress={() => setSelectedFilter('all')}
-            />
-            <FilterChip
-              label="Pendientes"
-              selected={selectedFilter === 'pending'}
-              onPress={() => setSelectedFilter('pending')}
             />
             <FilterChip
               label="Reservadas"

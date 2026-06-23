@@ -38,7 +38,6 @@ function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPor
     update: jest.fn(),
     cancel: jest.fn(),
     validateArrival: jest.fn(),
-    markReservedAfterPayment: jest.fn(),
   };
 }
 
@@ -69,7 +68,7 @@ describe('CreateReservationUseCase', () => {
         date: '2026-06-01',
         startTime: '09:00',
         endTime: '13:00',
-        status: 'PENDING_PAYMENT',
+        status: 'RESERVED',
       }),
     );
 
@@ -89,7 +88,7 @@ describe('CreateReservationUseCase', () => {
       date: '2026-06-01',
       startTime: '09:00',
       endTime: '13:00',
-      status: 'PENDING_PAYMENT',
+      status: 'RESERVED',
     });
   });
 

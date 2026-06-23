@@ -40,4 +40,8 @@ export interface AuthRepositoryPort {
     userId: string;
     changedById: string;
   }): Promise<User | null>;
+  restoreAccess(params: {
+    userId: string;
+    changedById: string;
+  }): Promise<User | null>;
 }

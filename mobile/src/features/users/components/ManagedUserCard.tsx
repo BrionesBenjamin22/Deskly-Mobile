@@ -22,6 +22,7 @@ type ManagedUserCardProps = {
   isCurrentUser: boolean;
   onSaveRole: (user: ManagedUser, role: UserRole) => void;
   onDeactivate: (user: ManagedUser) => void;
+  onRestoreAccess: (user: ManagedUser) => void;
 };
 
 export function ManagedUserCard({
@@ -29,11 +30,16 @@ export function ManagedUserCard({
   isCurrentUser,
   onSaveRole,
   onDeactivate,
+  onRestoreAccess,
 }: ManagedUserCardProps) {
   const [selectedRole, setSelectedRole] = useState(user.role);
 
   useEffect(() => setSelectedRole(user.role), [user.role]);
   const canEdit = user.active && !isCurrentUser;
+  const isBlocked = Boolean(
+    user.blockedUntil && new Date(user.blockedUntil).getTime() > Date.now(),
+  );
+  const needsAccessRestoration = !user.active || isBlocked;
 
   return (
     <Card style={[styles.card, !user.active && styles.inactiveCard]}>
@@ -46,13 +52,13 @@ export function ManagedUserCard({
             @{user.username} · {user.email}
           </AppText>
         </View>
-        <View style={[styles.status, user.active ? styles.active : styles.inactive]}>
+        <View style={[styles.status, user.active && !isBlocked ? styles.active : styles.inactive]}>
           <AppText
             variant="caption"
-            color={user.active ? statusColors.success : statusColors.error}
+            color={user.active && !isBlocked ? statusColors.success : statusColors.error}
             style={styles.statusText}
           >
-            {user.active ? 'Activo' : 'Inactivo'}
+            {isBlocked ? 'Bloqueado' : user.active ? 'Activo' : 'Inactivo'}
           </AppText>
         </View>
       </View>
@@ -88,16 +94,25 @@ export function ManagedUserCard({
           onPress={() => onSaveRole(user, selectedRole)}
           disabled={!canEdit || !hasRoleChanged(user.role, selectedRole)}
         />
-        <Pressable
-          accessibilityRole="button"
-          disabled={!canEdit}
-          onPress={() => onDeactivate(user)}
-          style={[styles.deactivateButton, !canEdit && styles.disabled]}
-        >
-          <AppText variant="caption" color={statusColors.error} style={styles.deactivateText}>
-            Desactivar usuario
-          </AppText>
-        </Pressable>
+        {needsAccessRestoration ? (
+          <Button
+            title="Restaurar acceso"
+            variant="ghost"
+            onPress={() => onRestoreAccess(user)}
+            disabled={isCurrentUser}
+          />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            disabled={!canEdit}
+            onPress={() => onDeactivate(user)}
+            style={[styles.deactivateButton, !canEdit && styles.disabled]}
+          >
+            <AppText variant="caption" color={statusColors.error} style={styles.deactivateText}>
+              Desactivar usuario
+            </AppText>
+          </Pressable>
+        )}
       </View>
     </Card>
   );

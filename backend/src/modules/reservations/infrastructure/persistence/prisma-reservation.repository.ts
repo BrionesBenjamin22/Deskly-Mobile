@@ -35,11 +35,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
         deskId: params.deskId,
         date: this.toDate(params.date),
         status: {
-          in: [
-            ReservationStatus.PENDING_PAYMENT,
-            ReservationStatus.RESERVED,
-            ReservationStatus.ACTIVE,
-          ],
+          in: [ReservationStatus.RESERVED, ReservationStatus.ACTIVE],
         },
         startTime: {
           lt: this.toTime(params.endTime),
@@ -161,14 +157,6 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     return this.findById(id);
   }
 
-  async markReservedAfterPayment(id: string): Promise<Reservation | null> {
-    await this.prisma.reservation.updateMany({
-      where: { id, status: ReservationStatus.PENDING_PAYMENT },
-      data: { status: ReservationStatus.RESERVED },
-    });
-    return this.findById(id);
-  }
-
   private toDate(value: string): Date {
     return new Date(`${value}T00:00:00.000Z`);
   }
@@ -199,7 +187,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
           date: this.toDate(reservation.date),
           startTime: this.toTime(reservation.startTime),
           endTime: this.toTime(reservation.endTime),
-          status: ReservationStatus.PENDING_PAYMENT,
+          status: ReservationStatus.RESERVED,
         },
         include: {
           desk: {

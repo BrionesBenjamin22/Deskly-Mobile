@@ -61,11 +61,7 @@ export class PenaltyRegistrationService {
     const start = this.getStartDate(reservation);
     const millisecondsBeforeStart =
       start.getTime() - input.cancelledAt.getTime();
-    if (
-      millisecondsBeforeStart < 0 ||
-      millisecondsBeforeStart > LATE_CANCELLATION_WINDOW_MS
-    )
-      return null;
+    if (millisecondsBeforeStart > LATE_CANCELLATION_WINDOW_MS) return null;
 
     return this.repository.register({
       reservationId: reservation.id,
@@ -73,7 +69,7 @@ export class PenaltyRegistrationService {
       registeredById: null,
       type: 'LATE_CANCELLATION',
       reason:
-        'Cancelacion realizada dentro de las 2 horas previas al inicio de la reserva.',
+        'Cancelacion realizada desde las 2 horas previas al inicio de la reserva.',
       registeredAt: input.cancelledAt,
       activeUntil: this.addOneMonth(input.cancelledAt),
       cancelReservation: false,

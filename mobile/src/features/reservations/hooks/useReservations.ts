@@ -66,7 +66,7 @@ export function useReservations(
   const activeReservations = useMemo(
     () =>
       reservations.filter((reservation) =>
-        ['pending', 'reserved', 'active'].includes(reservation.status),
+        ['reserved', 'active'].includes(reservation.status),
       ),
     [reservations],
   );
@@ -75,7 +75,7 @@ export function useReservations(
     () =>
       reservations.filter(
         (reservation) =>
-          !['pending', 'reserved', 'active'].includes(reservation.status),
+          !['reserved', 'active'].includes(reservation.status),
       ),
     [reservations],
   );

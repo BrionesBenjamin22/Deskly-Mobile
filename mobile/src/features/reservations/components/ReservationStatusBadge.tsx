@@ -14,12 +14,6 @@ const statusMap: Record<
   ReservationStatus,
   { label: string; backgroundColor: string; color: string; icon: IconName }
 > = {
-  pending: {
-    label: 'Pendiente',
-    backgroundColor: '#FFF7E6',
-    color: statusColors.warning,
-    icon: 'clock',
-  },
   reserved: {
     label: 'Reservada',
     backgroundColor: colors.softMint,

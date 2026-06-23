@@ -122,6 +122,10 @@ Requiere JWT y rol `ADMIN`. Aplica una baja logica sobre el usuario y su perfil 
 
 El cambio de rol tampoco puede degradar al ultimo administrador activo.
 
+### PATCH /users/:id/access
+
+Requiere JWT y rol `ADMIN`. Restaura una cuenta desactivada o bloqueada por penalizaciones: activa el usuario y su miembro, elimina `blockedUntil` y registra al administrador actor en `UserStatusHistory`.
+
 ## Sesion y JWT
 
 El token incluye `sub`, `email`, `username`, `role`, `active`, `iat` y `exp`. `JWT_EXPIRES_IN` acepta segundos, minutos u horas y no puede superar 3600 segundos. El valor recomendado y predeterminado es `1h`.

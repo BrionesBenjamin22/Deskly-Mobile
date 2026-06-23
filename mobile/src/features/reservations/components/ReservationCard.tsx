@@ -21,14 +21,14 @@ export function ReservationCard({
   onValidateArrival,
   managerView = false,
 }: ReservationCardProps) {
-  const isCurrent = ['pending', 'reserved', 'active'].includes(
+  const isCurrent = ['reserved', 'active'].includes(
     reservation.status,
   );
   const isMuted = !isCurrent;
   const isCheckedIn = Boolean(reservation.checkedInAt);
   const canCancel = managerView
     ? reservation.status === 'reserved'
-    : ['pending', 'reserved'].includes(reservation.status);
+    : reservation.status === 'reserved';
 
   return (
     <Card style={[styles.card, isMuted && styles.mutedCard]}>

@@ -12,6 +12,9 @@ function createRepository(): jest.Mocked<AuthRepositoryPort> {
     findByIdentifier: jest.fn(),
     findById: jest.fn(),
     updateRole: jest.fn(),
+    listUsers: jest.fn(),
+    deactivate: jest.fn(),
+    restoreAccess: jest.fn(),
   };
 }
 
@@ -77,6 +80,25 @@ describe('JwtAuthGuard', () => {
       passwordHash: 'hash',
       role: 'MIEMBRO',
       active: false,
+    });
+    jwtService.verifyAsync.mockResolvedValue({ sub: user.id });
+    repository.findById.mockResolvedValue(user);
+    const { context } = createContext('Bearer valid-token');
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('invalidates an existing session after the account is blocked', async () => {
+    const user = new User({
+      id: 'cc2fbfe5-e99e-41b4-909f-99bd8f8687f7',
+      email: 'member@deskly.test',
+      username: 'member',
+      passwordHash: 'hash',
+      role: 'MIEMBRO',
+      active: true,
+      blockedUntil: new Date('2099-01-01T00:00:00.000Z'),
     });
     jwtService.verifyAsync.mockResolvedValue({ sub: user.id });
     repository.findById.mockResolvedValue(user);

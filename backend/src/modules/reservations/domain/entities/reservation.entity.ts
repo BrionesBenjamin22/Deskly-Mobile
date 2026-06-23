@@ -1,5 +1,4 @@
 export type ReservationStatusValue =
-  | 'PENDING_PAYMENT'
   | 'RESERVED'
   | 'ACTIVE'
   | 'COMPLETED'

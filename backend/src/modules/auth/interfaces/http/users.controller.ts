@@ -24,6 +24,7 @@ import {
 import { UpdateUserRoleUseCase } from '../../application/use-cases/update-user-role.use-case';
 import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
 import { DeactivateUserUseCase } from '../../application/use-cases/deactivate-user.use-case';
+import { RestoreUserAccessUseCase } from '../../application/use-cases/restore-user-access.use-case';
 import {
   LastActiveAdminError,
   SelfDeactivationForbiddenError,
@@ -47,6 +48,7 @@ export class UsersController {
     private readonly updateUserRoleUseCase: UpdateUserRoleUseCase,
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly deactivateUserUseCase: DeactivateUserUseCase,
+    private readonly restoreUserAccessUseCase: RestoreUserAccessUseCase,
   ) {}
 
   @Get()
@@ -54,6 +56,29 @@ export class UsersController {
   @ApiOkResponse({ description: 'Listado paginado de usuarios.' })
   list(@Query() query: ListUsersQueryDto) {
     return this.listUsersUseCase.execute(query);
+  }
+
+  @Patch(':id/access')
+  @Roles('ADMIN')
+  @ApiOkResponse({ description: 'Acceso del usuario restaurado.' })
+  async restoreAccess(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    try {
+      return await this.restoreUserAccessUseCase.execute({
+        userId: id,
+        actorId: request.user.id,
+      });
+    } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        throw new NotFoundException({
+          message: 'Usuario no encontrado.',
+          error: 'Lo sentimos, verifique el usuario e intente nuevamente.',
+        });
+      }
+      throw error;
+    }
   }
 
   @Patch(':id/role')

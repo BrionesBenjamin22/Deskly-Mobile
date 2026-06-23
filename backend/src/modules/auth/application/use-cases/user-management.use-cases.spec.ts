@@ -3,6 +3,7 @@ import { SelfDeactivationForbiddenError } from '../../domain/errors/auth.errors'
 import type { AuthRepositoryPort } from '../../domain/ports/auth-repository.port';
 import { DeactivateUserUseCase } from './deactivate-user.use-case';
 import { ListUsersUseCase } from './list-users.use-case';
+import { RestoreUserAccessUseCase } from './restore-user-access.use-case';
 
 function createUser(active = true) {
   return new User({
@@ -31,6 +32,7 @@ function createRepository(): jest.Mocked<AuthRepositoryPort> {
     updateRole: jest.fn(),
     listUsers: jest.fn(),
     deactivate: jest.fn(),
+    restoreAccess: jest.fn(),
   };
 }
 
@@ -73,5 +75,23 @@ describe('User management use cases', () => {
 
     expect(result.user.active).toBe(false);
     expect(result.user.member?.active).toBe(false);
+  });
+
+  it('restores access to a blocked or inactive user', async () => {
+    const repository = createRepository();
+    const restoreAccessMock = jest.fn<AuthRepositoryPort['restoreAccess']>();
+    repository.restoreAccess = restoreAccessMock;
+    restoreAccessMock.mockResolvedValue(createUser(true));
+
+    const result = await new RestoreUserAccessUseCase(repository).execute({
+      userId: '10000000-0000-4000-8000-000000000001',
+      actorId: '30000000-0000-4000-8000-000000000001',
+    });
+
+    expect(restoreAccessMock).toHaveBeenCalledWith({
+      userId: '10000000-0000-4000-8000-000000000001',
+      changedById: '30000000-0000-4000-8000-000000000001',
+    });
+    expect(result.user.active).toBe(true);
   });
 });

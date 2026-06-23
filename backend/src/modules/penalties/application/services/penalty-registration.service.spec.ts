@@ -108,4 +108,51 @@ describe('PenaltyRegistrationService', () => {
       }),
     );
   });
+
+  it('registers a late cancellation made after the reservation started', async () => {
+    const repository = createRepository();
+    const registerMock = jest.fn<PenaltyRepositoryPort['register']>();
+    repository.register = registerMock;
+    repository.findReservation.mockResolvedValue({
+      id: '20000000-0000-4000-8000-000000000001',
+      memberId: '30000000-0000-4000-8000-000000000001',
+      date: '2026-06-23',
+      startTime: '19:00',
+      status: 'CANCELLED',
+      checkedInAt: null,
+    });
+    registerMock.mockResolvedValue(createPenalty('LATE_CANCELLATION'));
+    const service = new PenaltyRegistrationService(repository);
+
+    await service.registerLateCancellationIfApplicable({
+      reservationId: '20000000-0000-4000-8000-000000000001',
+      cancelledAt: new Date('2026-06-24T01:08:33.669Z'),
+    });
+
+    expect(registerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'LATE_CANCELLATION' }),
+    );
+  });
+
+  it('does not register a cancellation made more than two hours before the start', async () => {
+    const repository = createRepository();
+    const registerMock = jest.fn<PenaltyRepositoryPort['register']>();
+    repository.register = registerMock;
+    repository.findReservation.mockResolvedValue({
+      id: '20000000-0000-4000-8000-000000000001',
+      memberId: '30000000-0000-4000-8000-000000000001',
+      date: '2026-06-23',
+      startTime: '19:00',
+      status: 'CANCELLED',
+      checkedInAt: null,
+    });
+    const service = new PenaltyRegistrationService(repository);
+
+    await service.registerLateCancellationIfApplicable({
+      reservationId: '20000000-0000-4000-8000-000000000001',
+      cancelledAt: new Date('2026-06-23T19:59:59.000Z'),
+    });
+
+    expect(registerMock).not.toHaveBeenCalled();
+  });
 });

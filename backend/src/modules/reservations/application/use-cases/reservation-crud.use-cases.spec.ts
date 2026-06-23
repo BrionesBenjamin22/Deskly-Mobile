@@ -54,7 +54,6 @@ function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPor
     update: jest.fn(),
     cancel: jest.fn(),
     validateArrival: jest.fn(),
-    markReservedAfterPayment: jest.fn(),
   };
 }
 

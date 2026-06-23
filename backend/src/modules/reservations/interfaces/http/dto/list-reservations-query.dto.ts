@@ -27,18 +27,13 @@ export class ListReservationsQueryDto {
 
   @ApiPropertyOptional({
     example: 'RESERVED',
-    enum: ['PENDING_PAYMENT', 'RESERVED', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
+    enum: ['RESERVED', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
   })
   @IsOptional()
-  @IsIn(['PENDING_PAYMENT', 'RESERVED', 'ACTIVE', 'COMPLETED', 'CANCELLED'], {
+  @IsIn(['RESERVED', 'ACTIVE', 'COMPLETED', 'CANCELLED'], {
     message: 'El estado de la reserva no es valido.',
   })
-  status?:
-    | 'PENDING_PAYMENT'
-    | 'RESERVED'
-    | 'ACTIVE'
-    | 'COMPLETED'
-    | 'CANCELLED';
+  status?: 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
   @ApiPropertyOptional({ example: '2026-06-23' })
   @IsOptional()
