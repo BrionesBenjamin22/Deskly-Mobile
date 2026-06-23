@@ -106,7 +106,7 @@ export async function createPayment(payload: CreatePaymentPayload): Promise<Paym
     method: 'POST',
     body: JSON.stringify({
       ...payload,
-      date: `${payload.date}T00:00:00Z`,
+      date: payload.date,
     }),
   });
   return mapPayment(response);

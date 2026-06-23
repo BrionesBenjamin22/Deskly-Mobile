@@ -69,12 +69,12 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
-      ...init,
     });
   } catch (error) {
     const isTimeout =
