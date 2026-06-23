@@ -26,6 +26,7 @@ export type ListPenaltiesParams = {
   memberId?: string;
   page: number;
   limit: number;
+  activeOnly?: boolean;
 };
 export type ListPenaltiesResult = { penalties: Penalty[]; total: number };
 

@@ -65,6 +65,8 @@ export class ReservationsController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MIEMBRO')
   @ApiCreatedResponse({
     description: 'Reserva creada correctamente.',
     type: ReservationResponseDto,
@@ -72,18 +74,34 @@ export class ReservationsController {
   @ApiBadRequestResponse({ description: 'Datos invalidos.' })
   @ApiNotFoundResponse({ description: 'Escritorio no encontrado.' })
   @ApiConflictResponse({ description: 'Escritorio no disponible.' })
-  async create(@Body() body: CreateReservationBodyDto) {
+  async create(
+    @Body() body: CreateReservationBodyDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     try {
-      return await this.createReservationUseCase.execute(body);
+      if (!request.user.member) throw new MemberNotFoundError();
+      return await this.createReservationUseCase.execute({
+        ...body,
+        memberId: request.user.member.id,
+      });
     } catch (error) {
       this.handleError(error);
     }
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOkResponse({ description: 'Listado paginado de reservas.' })
-  async list(@Query() query: ListReservationsQueryDto) {
-    return this.listReservationsUseCase.execute(query);
+  async list(
+    @Query() query: ListReservationsQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.listReservationsUseCase.execute({
+      ...query,
+      ...(request.user.role === 'MIEMBRO' && request.user.member
+        ? { memberId: request.user.member.id }
+        : {}),
+    });
   }
 
   @Get(':id')

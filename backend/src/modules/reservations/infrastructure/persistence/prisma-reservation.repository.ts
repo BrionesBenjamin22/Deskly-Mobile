@@ -61,6 +61,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     const where = {
       ...(params.status ? { status: params.status } : {}),
       ...(params.date ? { date: this.toDate(params.date) } : {}),
+      ...(params.memberId ? { memberId: params.memberId } : {}),
     };
     const [reservations, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({

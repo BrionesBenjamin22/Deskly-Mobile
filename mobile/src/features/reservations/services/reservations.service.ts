@@ -146,6 +146,7 @@ function mapReservation(reservation: ReservationResponse): Reservation {
 }
 
 export async function listReservations(
+  accessToken: string,
   page = 1,
   limit = 9,
   status?: 'ACTIVE' | 'CANCELLED',
@@ -160,6 +161,7 @@ export async function listReservations(
 
   const response = await requestJson<ListReservationsResponse>(
     `/reservations?${params}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
   return {
@@ -179,9 +181,13 @@ export async function validateArrival(id: string, accessToken: string) {
   return mapReservation(response);
 }
 
-export async function createReservation(payload: CreateReservationPayload) {
+export async function createReservation(
+  accessToken: string,
+  payload: CreateReservationPayload,
+) {
   const response = await requestJson<ReservationResponse>('/reservations', {
     method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(payload),
   });
 

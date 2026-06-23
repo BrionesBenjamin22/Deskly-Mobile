@@ -4,7 +4,7 @@
 
 Gestion de reservas sobre escritorios disponibles.
 
-Cada reserva pertenece obligatoriamente a un miembro activo mediante `memberId`. Un miembro puede tener cero o muchas reservas. La respuesta incluye el identificador del miembro y su nombre completo cuando esta disponible.
+Cada reserva pertenece obligatoriamente a un miembro activo. En el alta, `memberId` se obtiene del JWT y no se acepta desde el cliente. Un miembro puede tener cero o muchas reservas. La respuesta incluye el identificador del miembro y su nombre completo cuando esta disponible.
 
 ## Endpoints
 
@@ -22,12 +22,13 @@ DELETE /reservations/:id
 ```json
 {
   "deskId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
-  "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
   "date": "2026-06-01",
   "startTime": "09:00",
   "endTime": "13:00"
 }
 ```
+
+El alta y el listado requieren JWT. Los miembros solo pueden crear reservas propias y solo reciben sus propias reservas; gestores y administradores conservan la consulta operativa global.
 
 ## Respuesta
 

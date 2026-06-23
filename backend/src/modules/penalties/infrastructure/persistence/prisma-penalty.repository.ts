@@ -122,7 +122,15 @@ export class PrismaPenaltyRepository implements PenaltyRepositoryPort {
   }
 
   async list(params: ListPenaltiesParams): Promise<ListPenaltiesResult> {
-    const where = params.memberId ? { memberId: params.memberId } : {};
+    const where: Prisma.PenaltyWhereInput = {
+      ...(params.memberId ? { memberId: params.memberId } : {}),
+      ...(params.activeOnly
+        ? {
+            level: InfractionLevel.PENALTY,
+            activeUntil: { gt: new Date() },
+          }
+        : {}),
+    };
     const [penalties, total] = await this.prisma.$transaction([
       this.prisma.penalty.findMany({
         where,

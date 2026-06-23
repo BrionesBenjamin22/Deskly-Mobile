@@ -5,4 +5,5 @@ export type ListReservationsInput = {
   limit?: number;
   status?: ReservationStatusValue;
   date?: string;
+  memberId?: string;
 };

@@ -1,5 +1,9 @@
 import { API_BASE_URL } from '../../../config/api';
-import { Penalty, RegisterAbsencePayload } from '../types/penalty.types';
+import {
+  Penalty,
+  PenaltyListResponse,
+  RegisterAbsencePayload,
+} from '../types/penalty.types';
 
 type ApiErrorBody = { error?: string; message?: string | string[] };
 
@@ -40,4 +44,34 @@ export async function registerAbsence(
   const body = (await response.json().catch(() => null)) as Penalty | ApiErrorBody | null;
   if (!response.ok) throw new PenaltyServiceError(getErrorMessage(body as ApiErrorBody | null));
   return body as Penalty;
+}
+
+export async function listCurrentUserPenalties(
+  accessToken: string,
+  page = 1,
+  limit = 3,
+): Promise<PenaltyListResponse> {
+  let response: Response;
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    response = await fetch(`${API_BASE_URL}/penalties/me?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    throw new PenaltyServiceError(
+      'Lo sentimos, no pudimos conectar con Deskly. Verifique su conexion e intente nuevamente.',
+    );
+  }
+
+  const body = (await response.json().catch(() => null)) as
+    | PenaltyListResponse
+    | ApiErrorBody
+    | null;
+  if (!response.ok) {
+    throw new PenaltyServiceError(getErrorMessage(body as ApiErrorBody | null));
+  }
+  return body as PenaltyListResponse;
 }

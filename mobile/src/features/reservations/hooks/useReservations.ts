@@ -42,6 +42,7 @@ export function useReservations(
         day: '2-digit',
       }).format(new Date());
       const response = await listReservations(
+        accessToken,
         1,
         50,
         managerView ? 'ACTIVE' : undefined,
@@ -54,7 +55,7 @@ export function useReservations(
     } finally {
       setIsLoading(false);
     }
-  }, [managerView]);
+  }, [accessToken, managerView]);
 
   useEffect(() => {
     void loadReservations();

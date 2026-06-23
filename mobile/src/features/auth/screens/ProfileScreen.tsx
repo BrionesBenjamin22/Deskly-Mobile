@@ -11,6 +11,7 @@ import { radii, spacing } from '../../../theme/spacing';
 import { ProfileDetailRow } from '../components/ProfileDetailRow';
 import { AuthServiceError, getCurrentUser } from '../services/auth.service';
 import { AuthUser, CurrentUserResponse, UserRole } from '../types/auth.types';
+import { ProfilePenaltiesCard } from '../../penalties/components/ProfilePenaltiesCard';
 
 type ProfileScreenProps = {
   accessToken: string;
@@ -145,6 +146,8 @@ export function ProfileScreen({
               </AppText>
             )}
           </Card>
+
+          {user.member ? <ProfilePenaltiesCard accessToken={accessToken} /> : null}
         </ScrollView>
 
         <BottomTabBar

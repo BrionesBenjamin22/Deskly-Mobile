@@ -10,7 +10,12 @@ export class ListPenaltiesUseCase {
     private readonly repository: PenaltyRepositoryPort,
   ) {}
 
-  async execute(input: { memberId?: string; page: number; limit: number }) {
+  async execute(input: {
+    memberId?: string;
+    page: number;
+    limit: number;
+    activeOnly?: boolean;
+  }) {
     const result = await this.repository.list(input);
     return {
       penalties: result.penalties.map((penalty) => ({

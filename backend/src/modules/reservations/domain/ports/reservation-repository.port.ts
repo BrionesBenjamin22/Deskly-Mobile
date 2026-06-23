@@ -15,6 +15,7 @@ export type ListReservationsParams = {
   limit: number;
   status?: 'ACTIVE' | 'CANCELLED';
   date?: string;
+  memberId?: string;
 };
 
 export type ListReservationsResult = {

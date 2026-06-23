@@ -4,7 +4,7 @@ import { listReservations } from '../../reservations/services/reservations.servi
 import { listPayments } from '../services/payments.service';
 import { ReservationPaymentSummary } from '../types/payment.types';
 
-export function usePayments(refreshKey = 0) {
+export function usePayments(accessToken: string, refreshKey = 0) {
   const [summaries, setSummaries] = useState<ReservationPaymentSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export function usePayments(refreshKey = 0) {
     try {
       const [paymentsResult, reservationsResult] = await Promise.all([
         listPayments(),
-        listReservations(1, 50),
+        listReservations(accessToken, 1, 50),
       ]);
 
       const reservationMap = new Map(
@@ -28,6 +28,7 @@ export function usePayments(refreshKey = 0) {
 
       for (const p of paymentsResult.payments) {
         const reservation = reservationMap.get(p.reservationId);
+        if (!reservation) continue;
         const existing = grouped.get(p.reservationId);
 
         if (existing) {
@@ -61,7 +62,7 @@ export function usePayments(refreshKey = 0) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     load();

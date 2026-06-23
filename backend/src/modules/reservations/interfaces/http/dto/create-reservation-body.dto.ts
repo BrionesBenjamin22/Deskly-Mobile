@@ -11,14 +11,6 @@ export class CreateReservationBodyDto {
   deskId!: string;
 
   @ApiProperty({
-    example: '8ae2e38a-300c-4cc1-b6ba-cee270f163f7',
-    description: 'Identificador UUID del miembro que realiza la reserva.',
-  })
-  @IsUUID('4', { message: 'El miembro debe ser un UUID valido.' })
-  @IsNotEmpty({ message: 'El miembro es obligatorio.' })
-  memberId!: string;
-
-  @ApiProperty({
     example: '2026-06-01',
     description: 'Fecha de reserva en formato YYYY-MM-DD.',
   })

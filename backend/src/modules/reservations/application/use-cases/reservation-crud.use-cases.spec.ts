@@ -85,6 +85,23 @@ describe('Reservation CRUD use cases', () => {
     expect(output.reservations[0]?.reservationId).toBe(activeReservation.id);
   });
 
+  it('scopes the reservation list to the authenticated member', async () => {
+    reservationRepository.list.mockResolvedValue({
+      reservations: [activeReservation],
+      total: 1,
+    });
+
+    await new ListReservationsUseCase(reservationRepository).execute({
+      memberId,
+    });
+
+    expect(reservationRepository.list.mock.calls[0]?.[0]).toEqual({
+      page: 1,
+      limit: 9,
+      memberId,
+    });
+  });
+
   it('gets a reservation by id', async () => {
     reservationRepository.findById.mockResolvedValue(activeReservation);
 

@@ -17,6 +17,7 @@ import { usePayments } from '../hooks/usePayments';
 import { ReservationPaymentSummary } from '../types/payment.types';
 
 type PaymentsScreenProps = {
+  accessToken: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressSettings?: () => void;
@@ -202,6 +203,7 @@ const paymentStatusContent: Record<
 };
 
 export function PaymentsScreen({
+  accessToken,
   onPressDesks,
   onPressReservations,
   onPressSettings,
@@ -213,7 +215,10 @@ export function PaymentsScreen({
   refreshKey = 0,
 }: PaymentsScreenProps) {
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
-  const { summaries, isLoading, errorMessage } = usePayments(refreshKey + localRefreshKey);
+  const { summaries, isLoading, errorMessage } = usePayments(
+    accessToken,
+    refreshKey + localRefreshKey,
+  );
   const [paymentStatus, setPaymentStatus] = useState<PaymentActionStatus>('idle');
   const [paymentErrorMessage, setPaymentErrorMessage] = useState(
     paymentStatusContent.error.description,

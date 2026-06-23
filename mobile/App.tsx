@@ -131,6 +131,7 @@ export default function App() {
         ) : mountedTabs.has('desks') ? (
           <AnimatedTabScreen isActive={activeTab === 'desks'}>
             <DesksScreen
+              accessToken={session.access_token}
               userRole={session.user.role}
               onPressReservations={() => handleTabChange('reservations')}
               onPressPayments={() => handleTabChange('payments')}
@@ -166,9 +167,10 @@ export default function App() {
           </AnimatedTabScreen>
         ) : null}
 
-        {mountedTabs.has('payments') ? (
+        {session && mountedTabs.has('payments') ? (
           <AnimatedTabScreen isActive={activeTab === 'payments'}>
             <PaymentsScreen
+              accessToken={session.access_token}
               userRole={session?.user.role}
               refreshKey={paymentsRefreshKey}
               onPressDesks={() => handleTabChange('desks')}

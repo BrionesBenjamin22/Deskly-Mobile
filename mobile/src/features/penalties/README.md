@@ -5,6 +5,7 @@
 - `PenaltyReasonModal`: solicita al gestor el motivo de una cancelacion por ausencia.
 - `useRegisterAbsence`: valida el motivo, ejecuta la operacion y expone feedback uniforme.
 - `penalties.service`: consume el endpoint protegido usando el token de la sesion.
+- `ProfilePenaltiesCard`: muestra la cantidad de penalizaciones activas y permite desplegar las 3 mas recientes desde el perfil.
 
 ## Flujo
 

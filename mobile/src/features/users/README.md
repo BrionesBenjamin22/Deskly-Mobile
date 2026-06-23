@@ -4,6 +4,8 @@
 
 Pantalla exclusiva para administradores que permite listar hasta 9 usuarios por pagina, buscar por nombre, usuario o email, modificar roles y aplicar bajas logicas.
 
+El listado presenta primero las cuentas activas y luego las inactivas.
+
 ## Componentes y servicios
 
 - `UserManagementScreen`: vista principal con busqueda, paginacion y feedback.

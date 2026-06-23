@@ -18,3 +18,13 @@ export type RegisterAbsencePayload = {
   reservationId: string;
   reason: string;
 };
+
+export type PenaltyListResponse = {
+  penalties: Penalty[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};

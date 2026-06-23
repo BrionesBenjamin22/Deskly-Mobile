@@ -114,7 +114,7 @@ Un administrador no puede modificar su propio rol. `GESTOR` y `MIEMBRO` reciben 
 
 ### GET /users
 
-Requiere JWT y rol `ADMIN`. Devuelve usuarios activos e inactivos con paginacion de 9 elementos por defecto. Admite `page`, `limit` y `search`; la busqueda contempla nombre, username y email.
+Requiere JWT y rol `ADMIN`. Devuelve usuarios activos primero y luego inactivos, ordenados por username dentro de cada grupo, con paginacion de 9 elementos por defecto. Admite `page`, `limit` y `search`; la busqueda contempla nombre, username y email.
 
 ### DELETE /users/:id
 

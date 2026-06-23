@@ -91,6 +91,32 @@ export class PenaltiesController {
     });
   }
 
+  @Get('me')
+  @ApiOkResponse({ description: 'Penalizaciones activas del usuario actual.' })
+  listMine(
+    @Query() query: ListPenaltiesQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const memberId = request.user.member?.id;
+    if (!memberId) {
+      return {
+        penalties: [],
+        pagination: {
+          page: query.page,
+          limit: query.limit,
+          total: 0,
+          totalPages: 0,
+        },
+      };
+    }
+    return this.listPenaltiesUseCase.execute({
+      memberId,
+      page: query.page,
+      limit: query.limit,
+      activeOnly: true,
+    });
+  }
+
   private handleError(error: unknown): never {
     if (error instanceof PenaltyReservationNotFoundError) {
       throw new NotFoundException({

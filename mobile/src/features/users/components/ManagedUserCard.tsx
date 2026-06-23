@@ -84,7 +84,7 @@ export function ManagedUserCard({
 
       <View style={styles.actions}>
         <Button
-          title="Guardar rol"
+          title="Guardar"
           onPress={() => onSaveRole(user, selectedRole)}
           disabled={!canEdit || !hasRoleChanged(user.role, selectedRole)}
         />

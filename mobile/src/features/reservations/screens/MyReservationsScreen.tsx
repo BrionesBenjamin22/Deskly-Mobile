@@ -176,6 +176,11 @@ export function MyReservationsScreen({
   const hasAnyReservation = allReservations.length > 0;
   const activeStatus =
     actionStatus === 'idle' ? null : cancellationStatusContent[actionStatus];
+  const isManagerEmpty =
+    userRole === 'GESTOR' &&
+    !isLoading &&
+    !errorMessage &&
+    filteredReservations.length === 0;
 
   return (
     <ScreenContainer>
@@ -184,7 +189,7 @@ export function MyReservationsScreen({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          <View style={styles.header}>
+          {!isManagerEmpty ? <View style={styles.header}>
             <AppText variant="title">
               {userRole === 'GESTOR' ? 'Reservas activas de hoy' : 'Mis Reservas'}
             </AppText>
@@ -193,7 +198,7 @@ export function MyReservationsScreen({
                 ? `${filteredReservations.length} reservas para gestionar`
                 : `${filteredReservations.length} ${getStatusLabel(selectedFilter)}`}
             </AppText>
-          </View>
+          </View> : null}
 
           {userRole !== 'GESTOR' ? <View style={styles.filtersContainer}>
             <FilterChip
@@ -244,7 +249,15 @@ export function MyReservationsScreen({
                   managerView={userRole === 'GESTOR'}
                 />
               ) : (
-                <ReservationEmptyState />
+                userRole === 'GESTOR' ? (
+                  <View style={styles.managerEmptyState}>
+                    <AppText variant="subtitle" color={colors.primaryLight}>
+                      No hay Reservas para hoy
+                    </AppText>
+                  </View>
+                ) : (
+                  <ReservationEmptyState />
+                )
               )}
             </>
           )}
@@ -388,5 +401,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: '900',
     letterSpacing: 0,
+  },
+  managerEmptyState: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 320,
   },
 });

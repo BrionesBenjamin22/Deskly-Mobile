@@ -28,6 +28,7 @@ type ZoneFilter = DeskZone | 'all';
 type FilterDropdownId = 'startTime' | 'endTime' | 'zone';
 
 type DesksScreenProps = {
+  accessToken: string;
   onPressReservations?: () => void;
   onPressPayments?: () => void;
   onPressProfile?: () => void;
@@ -207,6 +208,7 @@ function FilterDropdown<TValue extends string>({
 }
 
 export function DesksScreen({
+  accessToken,
   onPressReservations,
   onPressPayments,
   onPressProfile,
@@ -282,7 +284,12 @@ export function DesksScreen({
     setReservationErrorMessage(reservationStatusContent.error.description);
 
     try {
-      const { reservations: allActive } = await listReservations(1, 50, 'ACTIVE');
+      const { reservations: allActive } = await listReservations(
+        accessToken,
+        1,
+        50,
+        'ACTIVE',
+      );
 
       const conflict = allActive.find(
         (r) =>
@@ -298,7 +305,7 @@ export function DesksScreen({
         return;
       }
 
-      const reservation = await createReservation({
+      const reservation = await createReservation(accessToken, {
         deskId: payload.desk.id,
         date: payload.date,
         startTime: payload.startTime,

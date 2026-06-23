@@ -433,8 +433,8 @@ function RegisterForm({
       {requiresMember ? (
         <>
           <AuthField
-            label="Nombre y apellido"
-            placeholder="Nombre Apellido"
+            label="Nombre Completo"
+            placeholder="Nombre Completo"
             value={values.fullName}
             error={errors.fullName}
             autoCapitalize="words"
