@@ -17,7 +17,9 @@ import { DeskPayload } from '../services/desks.service';
 type DeskSettingsScreenProps = {
   onPressDesks?: () => void;
   onPressReservations?: () => void;
+  onPressPayments?: () => void;
   onPressLogout?: () => void;
+  onDeskCreated?: () => void;
 };
 
 type DeskFormState = {
@@ -180,7 +182,9 @@ function Chip({ label, selected, onPress }: ChipProps) {
 export function DeskSettingsScreen({
   onPressDesks,
   onPressReservations,
+  onPressPayments,
   onPressLogout,
+  onDeskCreated,
 }: DeskSettingsScreenProps) {
   const {
     amenities,
@@ -274,6 +278,9 @@ export function DeskSettingsScreen({
     const saved = await saveDesk(payload, editingDesk?.id);
 
     if (saved) {
+      if (!editingDesk) {
+        onDeskCreated?.();
+      }
       handleCancelEdit();
     }
   };
@@ -683,6 +690,7 @@ export function DeskSettingsScreen({
           activeTab="settings"
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
+          onPressPayments={onPressPayments}
           onPressLogout={onPressLogout}
         />
       </View>

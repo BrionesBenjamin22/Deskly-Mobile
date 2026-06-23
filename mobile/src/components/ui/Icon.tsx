@@ -15,6 +15,7 @@ import {
   CircleAlert,
   CircleCheck,
   Clock,
+  CreditCard,
   LoaderCircle,
   Home,
   LogOut,
@@ -23,6 +24,7 @@ import {
   SlidersHorizontal,
   User,
   Users,
+  Wallet,
   X,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -37,6 +39,7 @@ export type IconName =
   | 'circleAlert'
   | 'circleCheck'
   | 'clock'
+  | 'creditCard'
   | 'filter'
   | 'home'
   | 'loader'
@@ -45,6 +48,7 @@ export type IconName =
   | 'search'
   | 'user'
   | 'users'
+  | 'wallet'
   | 'x';
 
 type IconProps = {
@@ -63,6 +67,7 @@ const icons: Record<IconName, LucideIcon> = {
   circleAlert: CircleAlert,
   circleCheck: CircleCheck,
   clock: Clock,
+  creditCard: CreditCard,
   filter: SlidersHorizontal,
   home: Home,
   loader: LoaderCircle,
@@ -71,6 +76,7 @@ const icons: Record<IconName, LucideIcon> = {
   search: Search,
   user: User,
   users: Users,
+  wallet: Wallet,
   x: X,
 };
 

@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -25,6 +26,7 @@ import { DeleteDeskUseCase } from '../../application/use-cases/delete-desk.use-c
 import { GetDeskByIdUseCase } from '../../application/use-cases/get-desk-by-id.use-case';
 import { ListDesksUseCase } from '../../application/use-cases/list-desks.use-case';
 import { UpdateDeskUseCase } from '../../application/use-cases/update-desk.use-case';
+import { DeskNameAlreadyExistsError } from '../../domain/errors/desk-name-already-exists.error';
 import { DeskNotFoundError } from '../../domain/errors/desk-not-found.error';
 import { CreateDeskBodyDto } from './dto/create-desk-body.dto';
 import { DeskResponseDto } from './dto/desk-response.dto';
@@ -115,6 +117,13 @@ export class DesksController {
         message: error.message,
         error:
           'Lo sentimos, no pudimos recuperar la informacion del escritorio. Intente nuevamente.',
+      });
+    }
+
+    if (error instanceof DeskNameAlreadyExistsError) {
+      throw new ConflictException({
+        message: error.message,
+        error: 'Ya existe un escritorio con ese nombre.',
       });
     }
 

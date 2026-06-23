@@ -10,7 +10,7 @@ describe('GetAvailableDesksUseCase', () => {
   beforeEach(() => {
     repository = {
       findAvailableByTimeSlot: jest.fn(),
-    };
+    } as unknown as jest.Mocked<DeskRepositoryPort>;
     useCase = new GetAvailableDesksUseCase(repository);
   });
 

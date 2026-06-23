@@ -24,5 +24,6 @@ import { ReservationsController } from './interfaces/http/reservations.controlle
       useClass: PrismaReservationRepository,
     },
   ],
+  exports: [RESERVATION_REPOSITORY],
 })
 export class ReservationsModule {}

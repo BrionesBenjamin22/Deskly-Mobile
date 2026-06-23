@@ -5,6 +5,7 @@ export interface Reservation {
   deskId: string;
   deskCode: string;
   deskName: string;
+  date: string;
   dateLabel: string;
   startTime: string;
   endTime: string;

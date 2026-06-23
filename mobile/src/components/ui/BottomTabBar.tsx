@@ -5,12 +5,13 @@ import { spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
 
-type BottomTab = 'desks' | 'reservations' | 'settings';
+type BottomTab = 'desks' | 'reservations' | 'payments' | 'settings';
 
 export type BottomTabBarProps = {
   activeTab: BottomTab;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
+  onPressPayments?: () => void;
   onPressSettings?: () => void;
   onPressLogout?: () => void;
 };
@@ -18,7 +19,8 @@ export type BottomTabBarProps = {
 const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
-  // Configuracion existe como flujo interno, pero no se expone en la barra inferior por decision de producto.
+  { key: 'payments', label: 'Pagos', icon: 'wallet' },
+    // Configuracion existe como flujo interno, pero no se expone en la barra inferior por decision de producto.
   //{ key: 'settings', label: 'Configuracion', icon: 'user' },
 ];
 
@@ -26,11 +28,13 @@ export function BottomTabBar({
   activeTab,
   onPressDesks,
   onPressReservations,
+  onPressPayments,
   onPressSettings,
 }: BottomTabBarProps) {
   const handlers = {
     desks: onPressDesks,
     reservations: onPressReservations,
+    payments: onPressPayments,
     settings: onPressSettings,
   };
 

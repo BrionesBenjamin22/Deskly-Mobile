@@ -17,7 +17,7 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.';
 }
 
-export function useReservations(refreshKey = 0) {
+export function useReservations(refreshKey = 0, onCancelled?: () => void) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -30,7 +30,7 @@ export function useReservations(refreshKey = 0) {
     setErrorMessage(null);
 
     try {
-      const response = await listReservations(1, 9);
+      const response = await listReservations(1, 50);
       setReservations(response.reservations);
     } catch (error) {
       setReservations([]);
@@ -62,6 +62,7 @@ export function useReservations(refreshKey = 0) {
       await cancelReservation(reservation.id);
       await loadReservations();
       setActionStatus('success');
+      onCancelled?.();
     } catch {
       setActionStatus('error');
     } finally {

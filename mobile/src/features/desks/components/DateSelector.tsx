@@ -52,10 +52,12 @@ function getVisibleDateCount(width: number) {
 }
 
 export function getDeskDateOptions(baseDate = new Date(), count = 4): DeskDateOption[] {
+  const normalizedBase = new Date(baseDate);
+  normalizedBase.setHours(0, 0, 0, 0);
+
   return Array.from({ length: count }, (_, index) => {
-    const date = new Date(baseDate);
-    date.setHours(0, 0, 0, 0);
-    date.setDate(baseDate.getDate() + index);
+    const date = new Date(normalizedBase);
+    date.setDate(normalizedBase.getDate() + index);
 
     return {
       id: toDateId(date),

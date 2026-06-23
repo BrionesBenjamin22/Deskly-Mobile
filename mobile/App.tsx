@@ -5,9 +5,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DeskSettingsScreen } from './src/features/desks/screens/DeskSettingsScreen';
 import { DesksScreen } from './src/features/desks/screens/DesksScreen';
+import { PaymentsScreen } from './src/features/payments/screens/PaymentsScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
 
-type AppTab = 'desks' | 'reservations' | 'settings';
+type AppTab = 'desks' | 'reservations' | 'payments' | 'settings';
 
 type AnimatedTabScreenProps = PropsWithChildren<{
   isActive: boolean;
@@ -60,6 +61,8 @@ export default function App() {
     () => new Set(['desks']),
   );
   const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
+  const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
+  const [desksRefreshKey, setDesksRefreshKey] = useState(0);
 
   const handleTabChange = (tab: AppTab) => {
     setMountedTabs((current) => {
@@ -85,11 +88,14 @@ export default function App() {
           <AnimatedTabScreen isActive={activeTab === 'desks'}>
             <DesksScreen
               onPressReservations={() => handleTabChange('reservations')}
+              onPressPayments={() => handleTabChange('payments')}
               onPressSettings={() => handleTabChange('settings')}
               onPressLogout={handleLogout}
-              onReservationCreated={() =>
-                setReservationsRefreshKey((current) => current + 1)
-              }
+              externalRefreshKey={desksRefreshKey}
+              onReservationCreated={() => {
+                setReservationsRefreshKey((current) => current + 1);
+                setPaymentsRefreshKey((current) => current + 1);
+              }}
             />
           </AnimatedTabScreen>
         ) : null}
@@ -99,6 +105,22 @@ export default function App() {
             <MyReservationsScreen
               refreshKey={reservationsRefreshKey}
               onPressDesks={() => handleTabChange('desks')}
+              onPressPayments={() => handleTabChange('payments')}
+              onPressSettings={() => handleTabChange('settings')}
+              onPressLogout={handleLogout}
+              onReservationCancelled={() =>
+                setDesksRefreshKey((current) => current + 1)
+              }
+            />
+          </AnimatedTabScreen>
+        ) : null}
+
+        {mountedTabs.has('payments') ? (
+          <AnimatedTabScreen isActive={activeTab === 'payments'}>
+            <PaymentsScreen
+              refreshKey={paymentsRefreshKey}
+              onPressDesks={() => handleTabChange('desks')}
+              onPressReservations={() => handleTabChange('reservations')}
               onPressSettings={() => handleTabChange('settings')}
               onPressLogout={handleLogout}
             />
@@ -110,7 +132,9 @@ export default function App() {
             <DeskSettingsScreen
               onPressDesks={() => handleTabChange('desks')}
               onPressReservations={() => handleTabChange('reservations')}
+              onPressPayments={() => handleTabChange('payments')}
               onPressLogout={handleLogout}
+              onDeskCreated={() => setDesksRefreshKey((current) => current + 1)}
             />
           </AnimatedTabScreen>
         ) : null}
