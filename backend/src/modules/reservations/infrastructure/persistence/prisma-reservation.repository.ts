@@ -60,6 +60,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   async list(params: ListReservationsParams): Promise<ListReservationsResult> {
     const where = {
       ...(params.status ? { status: params.status } : {}),
+      ...(params.date ? { date: this.toDate(params.date) } : {}),
     };
     const [reservations, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({
@@ -136,6 +137,18 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     return this.toDomain(reservation);
   }
 
+  async validateArrival(
+    id: string,
+    checkedInAt: Date,
+  ): Promise<Reservation | null> {
+    const result = await this.prisma.reservation.updateMany({
+      where: { id, status: ReservationStatus.ACTIVE, checkedInAt: null },
+      data: { checkedInAt },
+    });
+    if (result.count !== 1) return this.findById(id);
+    return this.findById(id);
+  }
+
   private toDate(value: string): Date {
     return new Date(`${value}T00:00:00.000Z`);
   }
@@ -151,6 +164,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     createdAt: Date;
     updatedAt: Date;
     cancelledAt: Date | null;
+    checkedInAt: Date | null;
     desk: {
       code: string;
       name: string | null;
@@ -200,6 +214,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     createdAt: Date;
     updatedAt: Date;
     cancelledAt: Date | null;
+    checkedInAt: Date | null;
     desk: {
       code: string;
       name: string | null;
@@ -262,6 +277,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     createdAt: Date;
     updatedAt: Date;
     cancelledAt: Date | null;
+    checkedInAt: Date | null;
     desk: {
       code: string;
       name: string | null;
@@ -282,6 +298,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       createdAt: reservation.createdAt,
       updatedAt: reservation.updatedAt,
       cancelledAt: reservation.cancelledAt,
+      checkedInAt: reservation.checkedInAt,
     });
   }
 }

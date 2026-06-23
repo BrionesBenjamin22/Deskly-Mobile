@@ -37,6 +37,6 @@ import { UsersController } from './interfaces/http/users.controller';
     { provide: AUTH_REPOSITORY, useClass: PrismaAuthRepository },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasherService },
   ],
-  exports: [JwtAuthGuard, RolesGuard, AUTH_REPOSITORY],
+  exports: [JwtModule, JwtAuthGuard, RolesGuard, AUTH_REPOSITORY],
 })
 export class AuthModule {}

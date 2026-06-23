@@ -32,7 +32,11 @@ export class LoginUseCase {
       : false;
 
     if (!user || !validPassword) throw new InvalidCredentialsError();
-    if (!user.active || user.member?.active === false)
+    if (
+      !user.active ||
+      user.member?.active === false ||
+      (user.blockedUntil?.getTime() ?? 0) > Date.now()
+    )
       throw new InactiveUserError();
 
     const accessToken = await this.jwtService.signAsync(

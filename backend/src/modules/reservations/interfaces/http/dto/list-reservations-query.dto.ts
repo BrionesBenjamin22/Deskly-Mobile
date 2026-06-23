@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListReservationsQueryDto {
   @ApiPropertyOptional({ example: 1, default: 1 })
@@ -27,4 +34,9 @@ export class ListReservationsQueryDto {
     message: 'El estado debe ser ACTIVE o CANCELLED.',
   })
   status?: 'ACTIVE' | 'CANCELLED';
+
+  @ApiPropertyOptional({ example: '2026-06-23' })
+  @IsOptional()
+  @IsDateString({}, { message: 'La fecha debe tener formato ISO.' })
+  date?: string;
 }

@@ -15,6 +15,7 @@ import { AuthUser, CurrentUserResponse, UserRole } from '../types/auth.types';
 type ProfileScreenProps = {
   accessToken: string;
   initialUser: AuthUser;
+  userRole: UserRole;
   onPressDesks: () => void;
   onPressReservations: () => void;
   onPressPayments: () => void;
@@ -40,6 +41,7 @@ function getErrorMessage(error: unknown) {
 export function ProfileScreen({
   accessToken,
   initialUser,
+  userRole,
   onPressDesks,
   onPressReservations,
   onPressPayments,
@@ -145,6 +147,7 @@ export function ProfileScreen({
 
         <BottomTabBar
           activeTab="profile"
+          userRole={userRole}
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
           onPressPayments={onPressPayments}

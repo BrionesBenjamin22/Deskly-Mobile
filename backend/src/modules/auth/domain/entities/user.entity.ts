@@ -16,6 +16,7 @@ export type UserProps = {
   passwordHash: string;
   role: UserRoleValue;
   active: boolean;
+  blockedUntil?: Date | null;
   member?: MemberData | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -41,6 +42,9 @@ export class User {
   }
   get active(): boolean {
     return this.props.active;
+  }
+  get blockedUntil(): Date | null | undefined {
+    return this.props.blockedUntil;
   }
   get member(): MemberData | null | undefined {
     return this.props.member;

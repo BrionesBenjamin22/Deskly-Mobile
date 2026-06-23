@@ -5,6 +5,7 @@ import { colors } from '../../theme/colors';
 import { radii, spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
+import { UserRole } from '../../features/auth/types/auth.types';
 
 type BottomTab = 'desks' | 'reservations' | 'payments' | 'settings' | 'profile';
 
@@ -17,6 +18,7 @@ export type BottomTabBarProps = {
   onPressProfile?: () => void;
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
+  userRole?: UserRole;
 };
 
 const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
@@ -37,6 +39,7 @@ export function BottomTabBar({
   onPressSwitchAccount,
   onPressPayments,
   onPressSettings,
+  userRole,
 }: BottomTabBarProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const handlers = {
@@ -46,6 +49,10 @@ export function BottomTabBar({
     settings: onPressSettings,
     profile: onPressProfile,
   };
+  const visibleTabs =
+    userRole === 'GESTOR'
+      ? tabs.filter((tab) => tab.key === 'reservations' || tab.key === 'profile')
+      : tabs;
 
   const runProfileAction = (action?: () => void) => {
     setIsProfileMenuOpen(false);
@@ -74,7 +81,7 @@ export function BottomTabBar({
         </View>
       ) : null}
 
-      {tabs.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = tab.key === activeTab;
         const tint = isActive ? colors.primary : colors.primaryLight;
 
@@ -103,7 +110,9 @@ export function BottomTabBar({
               numberOfLines={1}
               style={isActive ? styles.activeLabel : undefined}
             >
-              {tab.label}
+              {userRole === 'GESTOR' && tab.key === 'reservations'
+                ? 'Reservas'
+                : tab.label}
             </AppText>
           </Pressable>
         );

@@ -33,7 +33,12 @@ export class JwtAuthGuard implements CanActivate {
       if (!payload.sub) throw this.unauthorized();
 
       const user = await this.repository.findById(payload.sub);
-      if (!user || !user.active || user.member?.active === false)
+      if (
+        !user ||
+        !user.active ||
+        user.member?.active === false ||
+        (user.blockedUntil?.getTime() ?? 0) > Date.now()
+      )
         throw this.unauthorized();
 
       request.user = toPublicUser(user);

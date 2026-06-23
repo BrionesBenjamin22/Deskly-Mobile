@@ -5,9 +5,11 @@ export interface Reservation {
   deskId: string;
   deskCode: string;
   deskName: string;
+  memberFullName?: string;
   date: string;
   dateLabel: string;
   startTime: string;
   endTime: string;
   status: ReservationStatus;
+  checkedInAt?: string;
 }

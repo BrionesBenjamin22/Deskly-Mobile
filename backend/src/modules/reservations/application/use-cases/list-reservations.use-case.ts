@@ -27,6 +27,7 @@ export class ListReservationsUseCase {
       page,
       limit,
       ...(input.status ? { status: input.status } : {}),
+      ...(input.date ? { date: input.date } : {}),
     });
 
     return {

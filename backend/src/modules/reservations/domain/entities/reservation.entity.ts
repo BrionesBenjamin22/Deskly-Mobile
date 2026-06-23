@@ -14,6 +14,7 @@ export type ReservationProperties = {
   createdAt?: Date;
   updatedAt?: Date;
   cancelledAt?: Date | null;
+  checkedInAt?: Date | null;
 };
 
 export class Reservation {
@@ -69,5 +70,9 @@ export class Reservation {
 
   get cancelledAt(): Date | null | undefined {
     return this.properties.cancelledAt;
+  }
+
+  get checkedInAt(): Date | null | undefined {
+    return this.properties.checkedInAt;
   }
 }

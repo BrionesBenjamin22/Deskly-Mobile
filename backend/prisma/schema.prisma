@@ -28,18 +28,30 @@ enum UserRole {
   MIEMBRO
 }
 
+enum PenaltyType {
+  ABSENCE
+  LATE_CANCELLATION
+}
+
+enum InfractionLevel {
+  WARNING
+  PENALTY
+}
+
 model User {
-  id           String            @id @default(uuid()) @db.Uuid
-  email        String            @unique @db.VarChar(255)
-  username     String            @unique @db.VarChar(60)
-  passwordHash String            @map("password_hash") @db.VarChar(255)
-  role         UserRole          @default(MIEMBRO)
-  active       Boolean           @default(true)
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
-  member       Member?
-  roleChanges  UserRoleHistory[] @relation("RoleChangeTarget")
-  changedRoles UserRoleHistory[] @relation("RoleChangeActor")
+  id                  String            @id @default(uuid()) @db.Uuid
+  email               String            @unique @db.VarChar(255)
+  username            String            @unique @db.VarChar(60)
+  passwordHash        String            @map("password_hash") @db.VarChar(255)
+  role                UserRole          @default(MIEMBRO)
+  active              Boolean           @default(true)
+  blockedUntil        DateTime?         @map("blocked_until")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  member              Member?
+  roleChanges         UserRoleHistory[] @relation("RoleChangeTarget")
+  changedRoles        UserRoleHistory[] @relation("RoleChangeActor")
+  registeredPenalties Penalty[]         @relation("PenaltyRegistrar")
 
   @@index([active])
   @@map("users")
@@ -56,6 +68,7 @@ model Member {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   reservations Reservation[]
+  penalties    Penalty[]
 
   @@index([active])
   @@map("members")
@@ -142,22 +155,44 @@ model Reservation {
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
   cancelledAt DateTime?         @map("cancelled_at")
+  checkedInAt  DateTime?         @map("checked_in_at")
   desk        Desk              @relation(fields: [deskId], references: [id], onDelete: Restrict)
   payments    Payment[]
   member      Member            @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  penalty     Penalty?
 
   @@index([deskId, date, status, startTime, endTime])
   @@index([memberId, date])
   @@map("reservations")
 }
 
+model Penalty {
+  id             String          @id @default(uuid()) @db.Uuid
+  reservationId  String          @unique @map("reservation_id") @db.Uuid
+  memberId       String          @map("member_id") @db.Uuid
+  registeredById String?         @map("registered_by_id") @db.Uuid
+  type           PenaltyType
+  level          InfractionLevel
+  reason         String          @db.VarChar(500)
+  registeredAt   DateTime        @default(now()) @map("registered_at")
+  activeUntil    DateTime        @map("active_until")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  reservation    Reservation     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  member         Member          @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  registeredBy   User?           @relation("PenaltyRegistrar", fields: [registeredById], references: [id], onDelete: Restrict)
+
+  @@index([memberId, activeUntil, level])
+  @@index([registeredById])
+  @@map("penalties")
+}
+
 model Payment {
-  id            String   @id @default(uuid()) @db.Uuid
-  reservationId String   @map("reservation_id") @db.Uuid
-  date          DateTime @map("payment_date") @db.Date
+  id            String      @id @default(uuid()) @db.Uuid
+  reservationId String      @map("reservation_id") @db.Uuid
+  date          DateTime    @map("payment_date") @db.Date
   amount        Float
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
   reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
 
   @@index([reservationId])

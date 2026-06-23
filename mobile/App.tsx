@@ -110,6 +110,13 @@ export default function App() {
   const handleAuthenticated = (nextSession: LoginResponse) => {
     setAuthFeedback(undefined);
     setSession(nextSession);
+    if (nextSession.user.role === 'GESTOR') {
+      setActiveTab('reservations');
+      setMountedTabs(new Set(['reservations']));
+    } else {
+      setActiveTab('desks');
+      setMountedTabs(new Set(['desks']));
+    }
   };
 
   return (
@@ -140,6 +147,8 @@ export default function App() {
         {session && mountedTabs.has('reservations') ? (
           <AnimatedTabScreen isActive={activeTab === 'reservations'}>
             <MyReservationsScreen
+              accessToken={session.access_token}
+              userRole={session.user.role}
               refreshKey={reservationsRefreshKey}
               onPressDesks={() => handleTabChange('desks')}
               onPressPayments={() => handleTabChange('payments')}
@@ -186,6 +195,7 @@ export default function App() {
             <ProfileScreen
               accessToken={session.access_token}
               initialUser={session.user}
+              userRole={session.user.role}
               onPressDesks={() => handleTabChange('desks')}
               onPressReservations={() => handleTabChange('reservations')}
               onPressProfile={() => handleTabChange('profile')}

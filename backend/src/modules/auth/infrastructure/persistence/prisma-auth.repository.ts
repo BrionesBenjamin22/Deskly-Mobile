@@ -124,6 +124,7 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
       passwordHash: user.passwordHash,
       role: user.role,
       active: user.active,
+      blockedUntil: user.blockedUntil,
       member: user.member
         ? {
             id: user.member.id,

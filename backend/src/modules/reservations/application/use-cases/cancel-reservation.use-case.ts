@@ -1,4 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+
+import { PenaltyRegistrationService } from '../../../penalties/application/services/penalty-registration.service';
 
 import { ReservationCannotBeCancelledError } from '../../domain/errors/reservation-cannot-be-cancelled.error';
 import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
@@ -11,6 +13,8 @@ export class CancelReservationUseCase {
   constructor(
     @Inject(RESERVATION_REPOSITORY)
     private readonly reservationRepository: ReservationRepositoryPort,
+    @Optional()
+    private readonly penaltyRegistrationService?: PenaltyRegistrationService,
   ) {}
 
   async execute(id: string): Promise<CancelReservationOutput> {
@@ -20,13 +24,21 @@ export class CancelReservationUseCase {
       throw new ReservationNotFoundError();
     }
 
-    if (reservation.status !== 'ACTIVE') {
+    if (reservation.status !== 'ACTIVE' || reservation.checkedInAt) {
       throw new ReservationCannotBeCancelledError();
     }
 
+    const cancelledAt = new Date();
     const cancelledReservation = await this.reservationRepository.cancel(
       id,
-      new Date(),
+      cancelledAt,
+    );
+
+    await this.penaltyRegistrationService?.registerLateCancellationIfApplicable(
+      {
+        reservationId: id,
+        cancelledAt,
+      },
     );
 
     if (!cancelledReservation.id || !cancelledReservation.cancelledAt) {

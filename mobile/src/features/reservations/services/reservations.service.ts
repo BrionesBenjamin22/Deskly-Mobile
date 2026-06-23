@@ -11,11 +11,13 @@ type ReservationResponse = {
   deskId: string;
   deskCode: string;
   deskName?: string;
+  memberFullName?: string;
   date: string;
   startTime: string;
   endTime: string;
   status: 'ACTIVE' | 'CANCELLED';
   cancelledAt?: string;
+  checkedInAt?: string;
 };
 
 type ListReservationsResponse = {
@@ -133,11 +135,13 @@ function mapReservation(reservation: ReservationResponse): Reservation {
     deskId: reservation.deskId,
     deskCode: reservation.deskCode,
     deskName: reservation.deskName ?? `Escritorio ${reservation.deskCode}`,
+    memberFullName: reservation.memberFullName,
     date: reservation.date,
     dateLabel: toDateLabel(reservation.date),
     startTime: reservation.startTime,
     endTime: reservation.endTime,
     status: getReservationStatus(reservation),
+    checkedInAt: reservation.checkedInAt,
   };
 }
 
@@ -145,11 +149,13 @@ export async function listReservations(
   page = 1,
   limit = 9,
   status?: 'ACTIVE' | 'CANCELLED',
+  date?: string,
 ) {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
     ...(status ? { status } : {}),
+    ...(date ? { date } : {}),
   });
 
   const response = await requestJson<ListReservationsResponse>(
@@ -162,6 +168,17 @@ export async function listReservations(
   };
 }
 
+export async function validateArrival(id: string, accessToken: string) {
+  const response = await requestJson<ReservationResponse>(
+    `/reservations/${id}/check-in`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  return mapReservation(response);
+}
+
 export async function createReservation(payload: CreateReservationPayload) {
   const response = await requestJson<ReservationResponse>('/reservations', {
     method: 'POST',
@@ -171,11 +188,12 @@ export async function createReservation(payload: CreateReservationPayload) {
   return mapReservation(response);
 }
 
-export async function cancelReservation(id: string) {
+export async function cancelReservation(id: string, accessToken: string) {
   const response = await requestJson<ReservationResponse>(
     `/reservations/${id}/cancel`,
     {
       method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
 

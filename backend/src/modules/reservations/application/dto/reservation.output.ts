@@ -14,4 +14,5 @@ export type ReservationOutput = {
   createdAt?: string;
   updatedAt?: string;
   cancelledAt?: string;
+  checkedInAt?: string;
 };

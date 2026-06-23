@@ -14,6 +14,7 @@ export type ListReservationsParams = {
   page: number;
   limit: number;
   status?: 'ACTIVE' | 'CANCELLED';
+  date?: string;
 };
 
 export type ListReservationsResult = {
@@ -39,4 +40,5 @@ export interface ReservationRepositoryPort {
   findById(id: string): Promise<Reservation | null>;
   update(params: UpdateReservationParams): Promise<Reservation>;
   cancel(id: string, cancelledAt: Date): Promise<Reservation>;
+  validateArrival(id: string, checkedInAt: Date): Promise<Reservation | null>;
 }

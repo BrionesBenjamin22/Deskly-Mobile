@@ -39,4 +39,7 @@ export class ReservationResponseDto {
 
   @ApiProperty({ example: '2026-05-21T10:30:00.000Z', required: false })
   cancelledAt?: string;
+
+  @ApiProperty({ example: '2026-06-23T12:05:00.000Z', required: false })
+  checkedInAt?: string;
 }

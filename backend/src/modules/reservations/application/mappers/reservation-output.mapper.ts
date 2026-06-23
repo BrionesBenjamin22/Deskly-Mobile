@@ -30,5 +30,8 @@ export function toReservationOutput(
     ...(reservation.cancelledAt
       ? { cancelledAt: reservation.cancelledAt.toISOString() }
       : {}),
+    ...(reservation.checkedInAt
+      ? { checkedInAt: reservation.checkedInAt.toISOString() }
+      : {}),
   };
 }

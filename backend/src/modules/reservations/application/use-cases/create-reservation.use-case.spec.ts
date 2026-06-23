@@ -37,6 +37,7 @@ function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPor
     findById: jest.fn(),
     update: jest.fn(),
     cancel: jest.fn(),
+    validateArrival: jest.fn(),
   };
 }
 

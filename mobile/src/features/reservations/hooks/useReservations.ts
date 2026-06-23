@@ -17,7 +17,12 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.';
 }
 
-export function useReservations(refreshKey = 0, onCancelled?: () => void) {
+export function useReservations(
+  accessToken: string,
+  refreshKey = 0,
+  onCancelled?: () => void,
+  managerView = false,
+) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -30,7 +35,18 @@ export function useReservations(refreshKey = 0, onCancelled?: () => void) {
     setErrorMessage(null);
 
     try {
-      const response = await listReservations(1, 50);
+      const today = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      const response = await listReservations(
+        1,
+        50,
+        managerView ? 'ACTIVE' : undefined,
+        managerView ? today : undefined,
+      );
       setReservations(response.reservations);
     } catch (error) {
       setReservations([]);
@@ -38,7 +54,7 @@ export function useReservations(refreshKey = 0, onCancelled?: () => void) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [managerView]);
 
   useEffect(() => {
     void loadReservations();
@@ -59,7 +75,7 @@ export function useReservations(refreshKey = 0, onCancelled?: () => void) {
     setActionStatus('loading');
 
     try {
-      await cancelReservation(reservation.id);
+      await cancelReservation(reservation.id, accessToken);
       await loadReservations();
       setActionStatus('success');
       onCancelled?.();

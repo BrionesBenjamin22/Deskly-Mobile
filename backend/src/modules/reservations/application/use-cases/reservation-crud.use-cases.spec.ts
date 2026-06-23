@@ -9,6 +9,7 @@ import { CancelReservationUseCase } from './cancel-reservation.use-case';
 import { GetReservationByIdUseCase } from './get-reservation-by-id.use-case';
 import { ListReservationsUseCase } from './list-reservations.use-case';
 import { UpdateReservationUseCase } from './update-reservation.use-case';
+import { ValidateArrivalUseCase } from './validate-arrival.use-case';
 
 const desk = new Desk({
   id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
@@ -52,6 +53,7 @@ function createReservationRepositoryMock(): jest.Mocked<ReservationRepositoryPor
     findById: jest.fn(),
     update: jest.fn(),
     cancel: jest.fn(),
+    validateArrival: jest.fn(),
   };
 }
 
@@ -199,5 +201,39 @@ describe('Reservation CRUD use cases', () => {
         activeReservation.id ?? '',
       ),
     ).rejects.toThrow(ReservationCannotBeCancelledError);
+  });
+
+  it('validates arrival for an active reservation on the current day', async () => {
+    const todayReservation = new Reservation({
+      id: activeReservation.id,
+      deskId: activeReservation.deskId,
+      memberId: activeReservation.memberId,
+      deskCode: activeReservation.deskCode,
+      date: '2026-06-23',
+      startTime: activeReservation.startTime,
+      endTime: activeReservation.endTime,
+      status: 'ACTIVE',
+    });
+    const checkedInReservation = new Reservation({
+      id: activeReservation.id,
+      deskId: activeReservation.deskId,
+      memberId: activeReservation.memberId,
+      deskCode: activeReservation.deskCode,
+      date: '2026-06-23',
+      startTime: activeReservation.startTime,
+      endTime: activeReservation.endTime,
+      status: 'ACTIVE',
+      checkedInAt: new Date('2026-06-23T12:00:00.000Z'),
+    });
+    reservationRepository.findById.mockResolvedValue(todayReservation);
+    reservationRepository.validateArrival.mockResolvedValue(
+      checkedInReservation,
+    );
+
+    const output = await new ValidateArrivalUseCase(
+      reservationRepository,
+    ).execute(activeReservation.id ?? '', new Date('2026-06-23T12:00:00.000Z'));
+
+    expect(output.checkedInAt).toBe('2026-06-23T12:00:00.000Z');
   });
 });
