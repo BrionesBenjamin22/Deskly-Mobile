@@ -11,6 +11,7 @@ import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
+import { UserRole } from '../../auth/types/auth.types';
 import { createPayment } from '../services/payments.service';
 import { usePayments } from '../hooks/usePayments';
 import { ReservationPaymentSummary } from '../types/payment.types';
@@ -22,6 +23,8 @@ type PaymentsScreenProps = {
   onPressProfile?: () => void;
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  userRole?: UserRole;
   refreshKey?: number;
 };
 
@@ -205,6 +208,8 @@ export function PaymentsScreen({
   onPressProfile,
   onPressLogout,
   onPressSwitchAccount,
+  onPressUserManagement,
+  userRole,
   refreshKey = 0,
 }: PaymentsScreenProps) {
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
@@ -364,6 +369,8 @@ export function PaymentsScreen({
           onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          userRole={userRole}
         />
       </View>
 

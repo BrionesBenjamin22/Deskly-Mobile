@@ -5,10 +5,14 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { User } from '../../domain/entities/user.entity';
 import {
   MemberDataRequiredError,
+  LastActiveAdminError,
+  UserAlreadyInactiveError,
   UserAlreadyExistsError,
 } from '../../domain/errors/auth.errors';
 import {
   AuthRepositoryPort,
+  ListUsersParams,
+  ListUsersResult,
   RegisterUserParams,
   RegisterUserResult,
 } from '../../domain/ports/auth-repository.port';
@@ -96,6 +100,17 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
       });
       if (!current) return null;
 
+      if (
+        current.active &&
+        current.role === UserRole.ADMIN &&
+        params.role !== UserRole.ADMIN &&
+        (await transaction.user.count({
+          where: { role: UserRole.ADMIN, active: true },
+        })) <= 1
+      ) {
+        throw new LastActiveAdminError();
+      }
+
       if (current.role !== params.role) {
         await transaction.userRoleHistory.create({
           data: {
@@ -110,6 +125,85 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
       const user = await transaction.user.update({
         where: { id: params.userId },
         data: { role: params.role },
+        include: userWithMember,
+      });
+      return this.toDomain(user);
+    });
+  }
+
+  async listUsers(params: ListUsersParams): Promise<ListUsersResult> {
+    const search = params.search?.trim();
+    const where = search
+      ? {
+          OR: [
+            {
+              username: {
+                contains: search,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+            { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            {
+              member: {
+                fullName: {
+                  contains: search,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
+            },
+          ],
+        }
+      : {};
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        include: userWithMember,
+        orderBy: [{ active: 'desc' }, { username: 'asc' }],
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return { users: users.map((user) => this.toDomain(user)), total };
+  }
+
+  async deactivate(params: {
+    userId: string;
+    changedById: string;
+  }): Promise<User | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.user.findUnique({
+        where: { id: params.userId },
+      });
+      if (!current) return null;
+      if (!current.active) throw new UserAlreadyInactiveError();
+      if (
+        current.role === UserRole.ADMIN &&
+        (await transaction.user.count({
+          where: { role: UserRole.ADMIN, active: true },
+        })) <= 1
+      ) {
+        throw new LastActiveAdminError();
+      }
+
+      await transaction.userStatusHistory.create({
+        data: {
+          userId: params.userId,
+          changedById: params.changedById,
+          previousActive: true,
+          newActive: false,
+        },
+      });
+      const user = await transaction.user.update({
+        where: { id: params.userId },
+        data: {
+          active: false,
+          ...((await transaction.member.findUnique({
+            where: { userId: params.userId },
+          }))
+            ? { member: { update: { active: false } } }
+            : {}),
+        },
         include: userWithMember,
       });
       return this.toDomain(user);

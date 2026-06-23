@@ -37,6 +37,7 @@ type MyReservationsScreenProps = {
   onPressLogout?: () => void;
   onReservationCancelled?: () => void;
   onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
   refreshKey?: number;
 };
 
@@ -110,6 +111,7 @@ export function MyReservationsScreen({
   onPressLogout,
   onReservationCancelled,
   onPressSwitchAccount,
+  onPressUserManagement,
   refreshKey = 0,
 }: MyReservationsScreenProps) {
   const [selectedFilter, setSelectedFilter] = useState<StatusFilter>('all');
@@ -256,6 +258,7 @@ export function MyReservationsScreen({
           onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
         />
       </View>
 

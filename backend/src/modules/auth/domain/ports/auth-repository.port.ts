@@ -14,6 +14,17 @@ export type RegisterUserResult = {
   isFirstUser: boolean;
 };
 
+export type ListUsersParams = {
+  page: number;
+  limit: number;
+  search?: string;
+};
+
+export type ListUsersResult = {
+  users: User[];
+  total: number;
+};
+
 export interface AuthRepositoryPort {
   hasUsers(): Promise<boolean>;
   register(params: RegisterUserParams): Promise<RegisterUserResult>;
@@ -22,6 +33,11 @@ export interface AuthRepositoryPort {
   updateRole(params: {
     userId: string;
     role: UserRoleValue;
+    changedById: string;
+  }): Promise<User | null>;
+  listUsers(params: ListUsersParams): Promise<ListUsersResult>;
+  deactivate(params: {
+    userId: string;
     changedById: string;
   }): Promise<User | null>;
 }

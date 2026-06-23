@@ -39,22 +39,39 @@ enum InfractionLevel {
 }
 
 model User {
-  id                  String            @id @default(uuid()) @db.Uuid
-  email               String            @unique @db.VarChar(255)
-  username            String            @unique @db.VarChar(60)
-  passwordHash        String            @map("password_hash") @db.VarChar(255)
-  role                UserRole          @default(MIEMBRO)
-  active              Boolean           @default(true)
-  blockedUntil        DateTime?         @map("blocked_until")
-  createdAt           DateTime          @default(now()) @map("created_at")
-  updatedAt           DateTime          @updatedAt @map("updated_at")
+  id                  String              @id @default(uuid()) @db.Uuid
+  email               String              @unique @db.VarChar(255)
+  username            String              @unique @db.VarChar(60)
+  passwordHash        String              @map("password_hash") @db.VarChar(255)
+  role                UserRole            @default(MIEMBRO)
+  active              Boolean             @default(true)
+  blockedUntil        DateTime?           @map("blocked_until")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
   member              Member?
-  roleChanges         UserRoleHistory[] @relation("RoleChangeTarget")
-  changedRoles        UserRoleHistory[] @relation("RoleChangeActor")
-  registeredPenalties Penalty[]         @relation("PenaltyRegistrar")
+  roleChanges         UserRoleHistory[]   @relation("RoleChangeTarget")
+  changedRoles        UserRoleHistory[]   @relation("RoleChangeActor")
+  statusChanges       UserStatusHistory[] @relation("StatusChangeTarget")
+  changedStatuses     UserStatusHistory[] @relation("StatusChangeActor")
+  registeredPenalties Penalty[]           @relation("PenaltyRegistrar")
 
   @@index([active])
   @@map("users")
+}
+
+model UserStatusHistory {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  changedById    String   @map("changed_by_id") @db.Uuid
+  previousActive Boolean  @map("previous_active")
+  newActive      Boolean  @map("new_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  user           User     @relation("StatusChangeTarget", fields: [userId], references: [id], onDelete: Restrict)
+  changedBy      User     @relation("StatusChangeActor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([changedById])
+  @@map("user_status_history")
 }
 
 model Member {
@@ -155,7 +172,7 @@ model Reservation {
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
   cancelledAt DateTime?         @map("cancelled_at")
-  checkedInAt  DateTime?         @map("checked_in_at")
+  checkedInAt DateTime?         @map("checked_in_at")
   desk        Desk              @relation(fields: [deskId], references: [id], onDelete: Restrict)
   payments    Payment[]
   member      Member            @relation(fields: [memberId], references: [id], onDelete: Restrict)

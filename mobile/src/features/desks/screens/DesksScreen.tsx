@@ -21,6 +21,7 @@ import {
   ReservationServiceError,
 } from '../../reservations/services/reservations.service';
 import { createPayment } from '../../payments/services/payments.service';
+import { UserRole } from '../../auth/types/auth.types';
 
 type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
 type ZoneFilter = DeskZone | 'all';
@@ -32,6 +33,8 @@ type DesksScreenProps = {
   onPressProfile?: () => void;
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  userRole?: UserRole;
   onReservationCreated?: () => void;
   externalRefreshKey?: number;
 };
@@ -209,6 +212,8 @@ export function DesksScreen({
   onPressProfile,
   onPressLogout,
   onPressSwitchAccount,
+  onPressUserManagement,
+  userRole,
   onReservationCreated,
   externalRefreshKey = 0,
 }: DesksScreenProps) {
@@ -496,6 +501,8 @@ export function DesksScreen({
           onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          userRole={userRole}
         />
       </View>
 

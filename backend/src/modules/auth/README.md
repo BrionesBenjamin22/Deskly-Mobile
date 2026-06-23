@@ -112,6 +112,16 @@ Requiere JWT y rol actual `ADMIN`.
 
 Un administrador no puede modificar su propio rol. `GESTOR` y `MIEMBRO` reciben `403`.
 
+### GET /users
+
+Requiere JWT y rol `ADMIN`. Devuelve usuarios activos e inactivos con paginacion de 9 elementos por defecto. Admite `page`, `limit` y `search`; la busqueda contempla nombre, username y email.
+
+### DELETE /users/:id
+
+Requiere JWT y rol `ADMIN`. Aplica una baja logica sobre el usuario y su perfil de miembro, preservando sus relaciones e historial. No permite autodesactivacion ni desactivar al ultimo administrador activo.
+
+El cambio de rol tampoco puede degradar al ultimo administrador activo.
+
 ## Sesion y JWT
 
 El token incluye `sub`, `email`, `username`, `role`, `active`, `iat` y `exp`. `JWT_EXPIRES_IN` acepta segundos, minutos u horas y no puede superar 3600 segundos. El valor recomendado y predeterminado es `1h`.
@@ -126,6 +136,7 @@ No se implementan refresh tokens ni almacenamiento de sesiones. Al expirar el ac
 - consulta del usuario actual en cada request protegida para aplicar desactivaciones y cambios de rol inmediatamente.
 - errores HTTP sin hashes, secretos ni detalles internos.
 - auditoria transaccional de cambios de rol.
+- auditoria transaccional de bajas logicas mediante `UserStatusHistory`.
 
 ## Variables de entorno
 

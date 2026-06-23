@@ -22,6 +22,7 @@ type ProfileScreenProps = {
   onPressProfile: () => void;
   onPressLogout: () => void;
   onPressSwitchAccount: () => void;
+  onPressUserManagement: () => void;
 };
 
 const roleLabels: Record<UserRole, string> = {
@@ -48,6 +49,7 @@ export function ProfileScreen({
   onPressProfile,
   onPressLogout,
   onPressSwitchAccount,
+  onPressUserManagement,
 }: ProfileScreenProps) {
   const [user, setUser] = useState<AuthUser | CurrentUserResponse['user']>(
     initialUser,
@@ -154,6 +156,7 @@ export function ProfileScreen({
           onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
         />
       </View>
 

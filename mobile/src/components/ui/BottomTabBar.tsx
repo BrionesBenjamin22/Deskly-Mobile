@@ -18,6 +18,7 @@ export type BottomTabBarProps = {
   onPressProfile?: () => void;
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
   userRole?: UserRole;
 };
 
@@ -39,6 +40,7 @@ export function BottomTabBar({
   onPressSwitchAccount,
   onPressPayments,
   onPressSettings,
+  onPressUserManagement,
   userRole,
 }: BottomTabBarProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -68,6 +70,13 @@ export function BottomTabBar({
             label="Mi perfil"
             onPress={() => runProfileAction(onPressProfile)}
           />
+          {userRole === 'ADMIN' ? (
+            <ProfileMenuItem
+              icon="users"
+              label="Gestion Usuarios"
+              onPress={() => runProfileAction(onPressUserManagement)}
+            />
+          ) : null}
           <ProfileMenuItem
             icon="users"
             label="Cambiar cuenta"
