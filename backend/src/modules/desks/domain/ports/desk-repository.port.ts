@@ -54,6 +54,7 @@ export interface DeskRepositoryPort {
   ): Promise<DeskAvailabilityResult[]>;
   list(params: ListDesksParams): Promise<ListDesksResult>;
   findById(id: string): Promise<Desk | null>;
+  findByName(name: string, excludeId?: string): Promise<Desk | null>;
   create(params: CreateDeskParams): Promise<Desk>;
   update(params: UpdateDeskParams): Promise<Desk>;
   softDelete(id: string): Promise<void>;

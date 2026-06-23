@@ -18,7 +18,9 @@ type DeskSettingsScreenProps = {
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressProfile?: () => void;
+  onPressPayments?: () => void;
   onPressLogout?: () => void;
+  onDeskCreated?: () => void;
   onPressSwitchAccount?: () => void;
 };
 
@@ -183,8 +185,10 @@ export function DeskSettingsScreen({
   onPressDesks,
   onPressReservations,
   onPressProfile,
+  onPressPayments,
   onPressLogout,
   onPressSwitchAccount,
+  onDeskCreated,
 }: DeskSettingsScreenProps) {
   const {
     amenities,
@@ -278,6 +282,9 @@ export function DeskSettingsScreen({
     const saved = await saveDesk(payload, editingDesk?.id);
 
     if (saved) {
+      if (!editingDesk) {
+        onDeskCreated?.();
+      }
       handleCancelEdit();
     }
   };
@@ -688,6 +695,7 @@ export function DeskSettingsScreen({
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
           onPressProfile={onPressProfile}
+          onPressPayments={onPressPayments}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
         />

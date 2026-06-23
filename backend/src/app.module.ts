@@ -7,6 +7,7 @@ import { DatabaseModule } from './infrastructure/database/database.module';
 import { DesksModule } from './modules/desks/desks.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from './modules/auth/auth.module';
     DesksModule,
     ReservationsModule,
     AuthModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

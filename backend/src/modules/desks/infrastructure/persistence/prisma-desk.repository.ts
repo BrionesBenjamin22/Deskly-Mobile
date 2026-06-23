@@ -112,6 +112,19 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
     return desk ? this.toDomain(desk) : null;
   }
 
+  async findByName(name: string, excludeId?: string): Promise<Desk | null> {
+    const desk = await this.prisma.desk.findFirst({
+      where: {
+        name: { equals: name, mode: 'insensitive' },
+        deletedAt: null,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      include: deskRelations,
+    });
+
+    return desk ? this.toDomain(desk) : null;
+  }
+
   async create(params: CreateDeskParams): Promise<Desk> {
     const { amenityIds, ...data } = params;
     const desk = await this.prisma.desk.create({

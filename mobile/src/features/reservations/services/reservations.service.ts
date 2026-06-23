@@ -133,6 +133,7 @@ function mapReservation(reservation: ReservationResponse): Reservation {
     deskId: reservation.deskId,
     deskCode: reservation.deskCode,
     deskName: reservation.deskName ?? `Escritorio ${reservation.deskCode}`,
+    date: reservation.date,
     dateLabel: toDateLabel(reservation.date),
     startTime: reservation.startTime,
     endTime: reservation.endTime,
@@ -140,10 +141,15 @@ function mapReservation(reservation: ReservationResponse): Reservation {
   };
 }
 
-export async function listReservations(page = 1, limit = 9) {
+export async function listReservations(
+  page = 1,
+  limit = 9,
+  status?: 'ACTIVE' | 'CANCELLED',
+) {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
+    ...(status ? { status } : {}),
   });
 
   const response = await requestJson<ListReservationsResponse>(

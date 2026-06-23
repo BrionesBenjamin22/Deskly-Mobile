@@ -36,6 +36,7 @@ function createDeskRepositoryMock(): jest.Mocked<DeskRepositoryPort> {
     findAvailableByTimeSlot: jest.fn(),
     list: jest.fn(),
     findById: jest.fn(),
+    findByName: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     softDelete: jest.fn(),

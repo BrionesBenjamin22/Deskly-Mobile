@@ -6,6 +6,8 @@ import { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionLoggingFilter } from './common/filters/http-exception-logging.filter';
 
+type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
+
 function getAllowedOrigins() {
   const configuredOrigins = process.env.FRONTEND_URL?.split(',')
     .map((origin) => origin.trim())
@@ -39,7 +41,7 @@ async function bootstrap() {
   const logger = new Logger('HTTP');
 
   app.enableCors({
-    origin(origin, callback) {
+    origin(origin: string | undefined, callback: CorsOriginCallback) {
       if (!origin) {
         callback(null, true);
         return;

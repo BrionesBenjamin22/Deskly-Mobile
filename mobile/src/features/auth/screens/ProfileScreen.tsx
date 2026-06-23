@@ -17,6 +17,7 @@ type ProfileScreenProps = {
   initialUser: AuthUser;
   onPressDesks: () => void;
   onPressReservations: () => void;
+  onPressPayments: () => void;
   onPressProfile: () => void;
   onPressLogout: () => void;
   onPressSwitchAccount: () => void;
@@ -41,6 +42,7 @@ export function ProfileScreen({
   initialUser,
   onPressDesks,
   onPressReservations,
+  onPressPayments,
   onPressProfile,
   onPressLogout,
   onPressSwitchAccount,
@@ -145,6 +147,7 @@ export function ProfileScreen({
           activeTab="profile"
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
+          onPressPayments={onPressPayments}
           onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}

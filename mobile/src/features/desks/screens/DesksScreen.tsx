@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
@@ -8,7 +8,8 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
 import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
-import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
+import { CalendarPicker } from '../components/CalendarPicker';
+import { DateSelector, getDeskDateOptions, DeskDateOption } from '../components/DateSelector';
 import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
 import { DeskList } from '../components/DeskList';
 import { ReservationBottomSheet } from '../components/ReservationBottomSheet';
@@ -16,8 +17,10 @@ import { useAvailableDesks } from '../hooks/useAvailableDesks';
 import { Desk, DeskZone } from '../types/desk.types';
 import {
   createReservation,
+  listReservations,
   ReservationServiceError,
 } from '../../reservations/services/reservations.service';
+import { createPayment } from '../../payments/services/payments.service';
 
 type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
 type ZoneFilter = DeskZone | 'all';
@@ -25,10 +28,12 @@ type FilterDropdownId = 'startTime' | 'endTime' | 'zone';
 
 type DesksScreenProps = {
   onPressReservations?: () => void;
+  onPressPayments?: () => void;
   onPressProfile?: () => void;
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
   onReservationCreated?: () => void;
+  externalRefreshKey?: number;
 };
 
 const reservationStatusContent: Record<
@@ -88,6 +93,18 @@ function getFriendlyReservationError(error: unknown) {
   }
 
   return 'Lo sentimos, no pudimos confirmar tu reserva. Revise los datos e intente nuevamente.';
+}
+
+function timesOverlap(
+  start1: string,
+  end1: string,
+  start2: string,
+  end2: string,
+): boolean {
+  return (
+    timeToMinutes(start1) < timeToMinutes(end2) &&
+    timeToMinutes(end1) > timeToMinutes(start2)
+  );
 }
 
 function getSelectedDateLabel(dateValue: string) {
@@ -188,10 +205,12 @@ function FilterDropdown<TValue extends string>({
 
 export function DesksScreen({
   onPressReservations,
+  onPressPayments,
   onPressProfile,
   onPressLogout,
   onPressSwitchAccount,
   onReservationCreated,
+  externalRefreshKey = 0,
 }: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDate, setSelectedDate] = useState(
@@ -208,11 +227,26 @@ export function DesksScreen({
   const [selectedZone, setSelectedZone] = useState<ZoneFilter>('all');
   const [openDropdown, setOpenDropdown] = useState<FilterDropdownId | null>(null);
   const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  const quickDates = useMemo(() => getDeskDateOptions(new Date(), 30), []);
+  const isCalendarDate = !quickDates.slice(0, 10).some((d) => d.id === selectedDate);
+
+  const calendarDateLabel = useMemo(() => {
+    if (!isCalendarDate) return null;
+    const date = new Date(`${selectedDate}T00:00:00`);
+    return new Intl.DateTimeFormat('es-AR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(date);
+  }, [selectedDate, isCalendarDate]);
+
   const { desks, errorMessage, isLoading } = useAvailableDesks({
     date: selectedDate,
     startTime,
     endTime,
-    refreshKey: availabilityRefreshKey,
+    refreshKey: availabilityRefreshKey + externalRefreshKey,
     ...(selectedZone === 'all' ? {} : { zone: selectedZone }),
   });
   const availableCount = desks.filter(
@@ -236,17 +270,39 @@ export function DesksScreen({
     date: string;
     startTime: string;
     endTime: string;
+    amount: number;
   }) => {
     handleCloseReservation();
     setReservationStatus('loading');
     setReservationErrorMessage(reservationStatusContent.error.description);
 
     try {
-      await createReservation({
+      const { reservations: allActive } = await listReservations(1, 50, 'ACTIVE');
+
+      const conflict = allActive.find(
+        (r) =>
+          r.date === payload.date &&
+          timesOverlap(r.startTime, r.endTime, payload.startTime, payload.endTime),
+      );
+
+      if (conflict) {
+        setReservationErrorMessage(
+          `Ya tenés una reserva activa en ${conflict.deskName} de ${conflict.startTime} a ${conflict.endTime}. Los horarios se superponen.`,
+        );
+        setReservationStatus('error');
+        return;
+      }
+
+      const reservation = await createReservation({
         deskId: payload.desk.id,
         date: payload.date,
         startTime: payload.startTime,
         endTime: payload.endTime,
+      });
+      await createPayment({
+        reservationId: reservation.id,
+        date: payload.date,
+        amount: payload.amount,
       });
       setAvailabilityRefreshKey((current) => current + 1);
       onReservationCreated?.();
@@ -285,6 +341,42 @@ export function DesksScreen({
           <AppText variant="title">Escritorios Disponibles</AppText>
 
           <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+
+          {isCalendarDate && calendarDateLabel ? (
+            <View style={styles.calendarDateBanner}>
+              <Icon name="calendar" size={16} color={colors.primary} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cambiar fecha del calendario"
+                onPress={() => setShowCalendar(true)}
+                style={styles.calendarDateBannerContent}
+              >
+                <AppText variant="caption" color={colors.primary} style={styles.calendarDateText}>
+                  {calendarDateLabel.charAt(0).toUpperCase() + calendarDateLabel.slice(1)}
+                </AppText>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Limpiar fecha del calendario"
+                onPress={() => setSelectedDate(getDeskDateOptions()[0].id)}
+                style={({ pressed }) => [styles.calendarDateClear, pressed && styles.pressed]}
+              >
+                <Icon name="x" size={14} color={colors.primaryLight} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Abrir selector de calendario"
+              onPress={() => setShowCalendar(true)}
+              style={({ pressed }) => [styles.calendarButton, pressed && styles.pressed]}
+            >
+              <Icon name="calendar" size={16} color={colors.primaryLight} />
+              <AppText variant="caption" color={colors.primaryLight} style={styles.calendarButtonText}>
+                Ver más fechas
+              </AppText>
+            </Pressable>
+          )}
 
           <View style={styles.filtersHeader}>
             <Pressable
@@ -400,6 +492,7 @@ export function DesksScreen({
         <BottomTabBar
           activeTab="desks"
           onPressReservations={onPressReservations}
+          onPressPayments={onPressPayments}
           onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
@@ -435,6 +528,12 @@ export function DesksScreen({
           }
         />
       ) : null}
+
+      <CalendarPicker
+        visible={showCalendar}
+        onSelectDate={setSelectedDate}
+        onClose={() => setShowCalendar(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -552,5 +651,42 @@ const styles = StyleSheet.create({
   },
   dropdownOptionText: {
     fontWeight: '700',
+  },
+  calendarButton: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  calendarButtonText: {
+    fontWeight: '700',
+  },
+  calendarDateBanner: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: colors.softMint,
+    borderColor: colors.primary,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  calendarDateBannerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  calendarDateText: {
+    fontWeight: '700',
+  },
+  calendarDateClear: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 32,
   },
 });

@@ -6,12 +6,14 @@ import { radii, spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
 
-type BottomTab = 'desks' | 'reservations' | 'settings' | 'profile';
+type BottomTab = 'desks' | 'reservations' | 'payments' | 'settings' | 'profile';
 
 export type BottomTabBarProps = {
   activeTab: BottomTab;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
+  onPressPayments?: () => void;
+  onPressSettings?: () => void;
   onPressProfile?: () => void;
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
@@ -20,6 +22,9 @@ export type BottomTabBarProps = {
 const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
+  { key: 'payments', label: 'Pagos', icon: 'wallet' },
+  // Configuracion existe como flujo interno, pero no se expone en la barra inferior por decision de producto.
+  //{ key: 'settings', label: 'Configuracion', icon: 'user' },
   { key: 'profile', label: 'Cuenta', icon: 'user' },
 ];
 
@@ -30,12 +35,15 @@ export function BottomTabBar({
   onPressProfile,
   onPressLogout,
   onPressSwitchAccount,
+  onPressPayments,
+  onPressSettings,
 }: BottomTabBarProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const handlers = {
     desks: onPressDesks,
     reservations: onPressReservations,
-    settings: undefined,
+    payments: onPressPayments,
+    settings: onPressSettings,
     profile: onPressProfile,
   };
 
