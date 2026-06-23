@@ -18,6 +18,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
 const INTEGER_PATTERN = /^\d+$/;
 const MAX_INTEGER = 2147483647;
+const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 
 export function validateLogin(
   values: LoginFormValues,
@@ -74,7 +75,7 @@ export function validateRegister(
       errors.dni = 'Ingrese un DNI válido, solo con números.';
     }
 
-    if (!isValidInteger(values.phone)) {
+    if (!isValidInteger(values.phone, MAX_SAFE_INTEGER)) {
       errors.phone = 'Ingrese un teléfono válido, solo con números.';
     }
   }
@@ -82,11 +83,11 @@ export function validateRegister(
   return errors;
 }
 
-function isValidInteger(value: string) {
+function isValidInteger(value: string, maximum = MAX_INTEGER) {
   if (!INTEGER_PATTERN.test(value)) {
     return false;
   }
 
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 && parsed <= MAX_INTEGER;
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= maximum;
 }

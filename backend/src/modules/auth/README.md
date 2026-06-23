@@ -38,7 +38,7 @@ La primera cuenta debe crearse inmediatamente durante la puesta en marcha contro
 - `userId`: relacion unica con `User`.
 - `fullName`: nombre y apellido, hasta 200 caracteres.
 - `dni`: entero positivo y unico.
-- `phone`: entero positivo.
+- `phone`: entero positivo almacenado como `BIGINT` para admitir numeros telefonicos completos.
 - `active`: un miembro inactivo no puede iniciar ni mantener una sesion valida.
 - relacion uno-a-muchos con `Reservation`.
 

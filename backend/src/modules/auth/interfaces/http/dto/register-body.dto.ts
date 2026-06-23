@@ -21,11 +21,15 @@ export class RegisterMemberBodyDto {
   @IsInt()
   @IsPositive()
   @Max(2147483647)
+  @Type(() => Number)
   dni!: number;
 
-  @IsInt()
-  @IsPositive()
-  @Max(2147483647)
+  @IsInt({ message: 'El teléfono debe contener solo números.' })
+  @IsPositive({ message: 'El teléfono debe ser mayor que cero.' })
+  @Max(Number.MAX_SAFE_INTEGER, {
+    message: 'El teléfono supera la longitud permitida.',
+  })
+  @Type(() => Number)
   phone!: number;
 }
 

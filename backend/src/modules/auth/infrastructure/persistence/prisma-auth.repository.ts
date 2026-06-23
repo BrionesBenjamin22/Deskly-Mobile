@@ -41,7 +41,14 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
               passwordHash: params.passwordHash,
               role: isFirstUser ? UserRole.ADMIN : UserRole.MIEMBRO,
               ...(!isFirstUser && params.member
-                ? { member: { create: params.member } }
+                ? {
+                    member: {
+                      create: {
+                        ...params.member,
+                        phone: BigInt(params.member.phone),
+                      },
+                    },
+                  }
                 : {}),
             },
             include: userWithMember,
@@ -122,7 +129,7 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
             id: user.member.id,
             fullName: user.member.fullName,
             dni: user.member.dni,
-            phone: user.member.phone,
+            phone: Number(user.member.phone),
             active: user.member.active,
           }
         : null,
