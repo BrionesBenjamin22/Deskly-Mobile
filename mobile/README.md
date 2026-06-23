@@ -37,6 +37,16 @@ Registro:
 
 Los errores de formulario se muestran junto al campo y resaltan el input. Los errores de API, red y timeout se presentan mediante `StatusModal` con un llamado a la accion. En esta etapa no se agrega persistencia segura del token ni recuperacion automatica de sesion; esas responsabilidades quedan separadas para el siguiente paso del flujo de autenticacion.
 
+## Perfil y cierre de sesion
+
+La barra inferior incorpora la opcion `Perfil`. Al seleccionarla abre un menu reutilizable con:
+
+- `Mi perfil`: consulta `GET /auth/me` con el access token y muestra usuario, email, rol, estado y datos publicos del miembro cuando existe.
+- `Cambiar cuenta`: descarta la sesion en memoria y vuelve al login con una indicacion visible.
+- `Cerrar sesion`: descarta el access token y los datos de usuario en memoria, reinicia la navegacion y confirma el cierre mediante `StatusModal`.
+
+El backend utiliza JWT stateless, por lo que el logout no crea una blacklist ni una sesion persistida: el cliente deja de enviar el token descartado.
+
 ## Variables de entorno
 
 El frontend usa variables publicas de Expo para configurar integraciones visibles desde la aplicacion.
@@ -127,7 +137,7 @@ Mensajes de exito de alta y edicion:
 
 ## Navegacion inferior
 
-La barra inferior muestra accesos a escritorios y reservas. Las acciones `Configuracion` y `Salir` no se muestran como botones directos por decision de producto.
+La barra inferior muestra accesos a escritorios, reservas y perfil. Las acciones de cuenta se agrupan en el menu de perfil para evitar controles innecesarios en la navegacion principal.
 
 ## Contrato mock
 

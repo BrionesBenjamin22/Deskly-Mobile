@@ -16,8 +16,9 @@ type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
 
 type MyReservationsScreenProps = {
   onPressDesks?: () => void;
-  onPressSettings?: () => void;
+  onPressProfile?: () => void;
   onPressLogout?: () => void;
+  onPressSwitchAccount?: () => void;
   refreshKey?: number;
 };
 
@@ -56,8 +57,9 @@ function Section({ title, children }: PropsWithChildren<{ title: string }>) {
 
 export function MyReservationsScreen({
   onPressDesks,
-  onPressSettings,
+  onPressProfile,
   onPressLogout,
+  onPressSwitchAccount,
   refreshKey = 0,
 }: MyReservationsScreenProps) {
   const {
@@ -125,8 +127,9 @@ export function MyReservationsScreen({
         <BottomTabBar
           activeTab="reservations"
           onPressDesks={onPressDesks}
-          onPressSettings={onPressSettings}
+          onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
         />
       </View>
 

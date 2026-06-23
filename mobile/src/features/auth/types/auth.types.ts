@@ -23,6 +23,17 @@ export type LoginResponse = {
   user: AuthUser;
 };
 
+export type CurrentUserResponse = {
+  user: Omit<AuthUser, 'member'> & {
+    member:
+      | (NonNullable<AuthUser['member']> & {
+          dni: number;
+          phone: number;
+        })
+      | null;
+  };
+};
+
 export type RegisterPayload = {
   email: string;
   username: string;

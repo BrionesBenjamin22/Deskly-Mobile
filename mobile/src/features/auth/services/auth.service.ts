@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../../../config/api';
 import {
+  CurrentUserResponse,
   LoginPayload,
   LoginResponse,
   RegisterPayload,
@@ -115,4 +116,10 @@ export function register(payload: RegisterPayload) {
 
 export function getRegistrationStatus() {
   return request<RegistrationStatusResponse>('/auth/registration-status');
+}
+
+export function getCurrentUser(accessToken: string) {
+  return request<CurrentUserResponse>('/auth/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 }

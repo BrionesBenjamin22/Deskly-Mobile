@@ -39,6 +39,10 @@ type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
 
 type AuthScreenProps = {
   onAuthenticated: (session: LoginResponse) => void;
+  initialFeedback?: {
+    title: string;
+    description: string;
+  };
 };
 
 const initialLoginValues: LoginFormValues = {
@@ -63,7 +67,10 @@ function getFriendlyError(error: unknown) {
   return 'Lo sentimos, no pudimos completar la solicitud. Revise los datos e intente nuevamente.';
 }
 
-export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
+export function AuthScreen({
+  onAuthenticated,
+  initialFeedback,
+}: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [loginValues, setLoginValues] = useState(initialLoginValues);
   const [registerValues, setRegisterValues] = useState(initialRegisterValues);
@@ -73,8 +80,15 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const [registerErrors, setRegisterErrors] = useState<
     FormErrors<RegisterFormValues>
   >({});
-  const [requestStatus, setRequestStatus] = useState<RequestStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
+  const [requestStatus, setRequestStatus] = useState<RequestStatus>(
+    initialFeedback ? 'success' : 'idle',
+  );
+  const [statusMessage, setStatusMessage] = useState(
+    initialFeedback?.description ?? '',
+  );
+  const [successTitle, setSuccessTitle] = useState(
+    initialFeedback?.title ?? '',
+  );
   const [pendingSession, setPendingSession] = useState<LoginResponse | null>(
     null,
   );
@@ -102,6 +116,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     setLoginErrors({});
     setRegisterErrors({});
     setRequestStatus('idle');
+    setSuccessTitle('');
     setPendingSession(null);
 
     if (nextMode === 'register') {
@@ -123,6 +138,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     try {
       const session = await login(loginValues);
       setPendingSession(session);
+      setSuccessTitle('Bienvenido a Deskly');
       setStatusMessage(`Bienvenido, ${session.user.username}.`);
       setRequestStatus('success');
     } catch (error) {
@@ -172,6 +188,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
       setRegisterValues(initialRegisterValues);
       setRequiresMember(true);
       setMode('login');
+      setSuccessTitle('Cuenta creada');
       setStatusMessage(
         'Su cuenta fue creada correctamente. Ya puede iniciar sesión.',
       );
@@ -189,13 +206,14 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     }
 
     setRequestStatus('idle');
+    setSuccessTitle('');
   };
 
   const modalContent = getModalContent(
     requestStatus,
     statusMessage,
     mode,
-    Boolean(pendingSession),
+    successTitle,
   );
 
   return (
@@ -458,7 +476,7 @@ function getModalContent(
   status: RequestStatus,
   message: string,
   mode: AuthMode,
-  isLoginSuccess: boolean,
+  successTitle: string,
 ): { type: StatusModalType; title: string; description: string } | null {
   if (status === 'idle') {
     return null;
@@ -475,7 +493,7 @@ function getModalContent(
   if (status === 'success') {
     return {
       type: 'success',
-      title: isLoginSuccess ? 'Bienvenido a Deskly' : 'Cuenta creada',
+      title: successTitle,
       description: message,
     };
   }

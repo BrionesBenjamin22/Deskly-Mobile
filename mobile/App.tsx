@@ -7,9 +7,15 @@ import { DeskSettingsScreen } from './src/features/desks/screens/DeskSettingsScr
 import { DesksScreen } from './src/features/desks/screens/DesksScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
 import { AuthScreen } from './src/features/auth/screens/AuthScreen';
+import { ProfileScreen } from './src/features/auth/screens/ProfileScreen';
 import { LoginResponse } from './src/features/auth/types/auth.types';
 
-type AppTab = 'desks' | 'reservations' | 'settings';
+type AppTab = 'desks' | 'reservations' | 'settings' | 'profile';
+
+type AuthFeedback = {
+  title: string;
+  description: string;
+};
 
 type AnimatedTabScreenProps = PropsWithChildren<{
   isActive: boolean;
@@ -58,6 +64,7 @@ function AnimatedTabScreen({ children, isActive }: AnimatedTabScreenProps) {
 
 export default function App() {
   const [session, setSession] = useState<LoginResponse | null>(null);
+  const [authFeedback, setAuthFeedback] = useState<AuthFeedback | undefined>();
   const [activeTab, setActiveTab] = useState<AppTab>('desks');
   const [mountedTabs, setMountedTabs] = useState<Set<AppTab>>(
     () => new Set(['desks']),
@@ -77,23 +84,47 @@ export default function App() {
     setActiveTab(tab);
   };
 
-  const handleLogout = () => {
+  const resetSession = (feedback: AuthFeedback) => {
     setSession(null);
+    setAuthFeedback(feedback);
     setActiveTab('desks');
     setMountedTabs(new Set(['desks']));
+  };
+
+  const handleLogout = () => {
+    resetSession({
+      title: 'Sesión cerrada',
+      description: 'Su sesión se cerró correctamente.',
+    });
+  };
+
+  const handleSwitchAccount = () => {
+    resetSession({
+      title: 'Cambiar cuenta',
+      description: 'Ingrese las credenciales de la cuenta que desea utilizar.',
+    });
+  };
+
+  const handleAuthenticated = (nextSession: LoginResponse) => {
+    setAuthFeedback(undefined);
+    setSession(nextSession);
   };
 
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
         {!session ? (
-          <AuthScreen onAuthenticated={setSession} />
+          <AuthScreen
+            onAuthenticated={handleAuthenticated}
+            initialFeedback={authFeedback}
+          />
         ) : mountedTabs.has('desks') ? (
           <AnimatedTabScreen isActive={activeTab === 'desks'}>
             <DesksScreen
               onPressReservations={() => handleTabChange('reservations')}
-              onPressSettings={() => handleTabChange('settings')}
+              onPressProfile={() => handleTabChange('profile')}
               onPressLogout={handleLogout}
+              onPressSwitchAccount={handleSwitchAccount}
               onReservationCreated={() =>
                 setReservationsRefreshKey((current) => current + 1)
               }
@@ -106,8 +137,9 @@ export default function App() {
             <MyReservationsScreen
               refreshKey={reservationsRefreshKey}
               onPressDesks={() => handleTabChange('desks')}
-              onPressSettings={() => handleTabChange('settings')}
+              onPressProfile={() => handleTabChange('profile')}
               onPressLogout={handleLogout}
+              onPressSwitchAccount={handleSwitchAccount}
             />
           </AnimatedTabScreen>
         ) : null}
@@ -117,7 +149,23 @@ export default function App() {
             <DeskSettingsScreen
               onPressDesks={() => handleTabChange('desks')}
               onPressReservations={() => handleTabChange('reservations')}
+              onPressProfile={() => handleTabChange('profile')}
               onPressLogout={handleLogout}
+              onPressSwitchAccount={handleSwitchAccount}
+            />
+          </AnimatedTabScreen>
+        ) : null}
+
+        {session && mountedTabs.has('profile') ? (
+          <AnimatedTabScreen isActive={activeTab === 'profile'}>
+            <ProfileScreen
+              accessToken={session.access_token}
+              initialUser={session.user}
+              onPressDesks={() => handleTabChange('desks')}
+              onPressReservations={() => handleTabChange('reservations')}
+              onPressProfile={() => handleTabChange('profile')}
+              onPressLogout={handleLogout}
+              onPressSwitchAccount={handleSwitchAccount}
             />
           </AnimatedTabScreen>
         ) : null}

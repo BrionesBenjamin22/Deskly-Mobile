@@ -13,6 +13,16 @@ export type PublicUserOutput = {
   } | null;
 };
 
+export type CurrentUserOutput = Omit<PublicUserOutput, 'member'> & {
+  member: {
+    id: string;
+    fullName: string;
+    dni: number;
+    phone: number;
+    active: boolean;
+  } | null;
+};
+
 export function toPublicUser(user: User): PublicUserOutput {
   return {
     id: user.id,
@@ -24,6 +34,25 @@ export function toPublicUser(user: User): PublicUserOutput {
       ? {
           id: user.member.id,
           fullName: user.member.fullName,
+          active: user.member.active,
+        }
+      : null,
+  };
+}
+
+export function toCurrentUser(user: User): CurrentUserOutput {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    active: user.active,
+    member: user.member
+      ? {
+          id: user.member.id,
+          fullName: user.member.fullName,
+          dni: user.member.dni,
+          phone: user.member.phone,
           active: user.member.active,
         }
       : null,

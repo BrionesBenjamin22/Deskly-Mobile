@@ -98,6 +98,8 @@ Responde `201`. Devuelve exclusivamente datos publicos. Conflictos de email, use
 
 Requiere `Authorization: Bearer <token>`. Revalida firma, expiracion, existencia y estado actual de usuario/miembro. Responde `401` ante token ausente, invalido o expirado.
 
+Devuelve los datos de cuenta y, para el propio usuario autenticado, nombre completo, DNI y telefono del miembro asociado. Estos datos personales no se incorporan al JWT ni a la respuesta publica de login.
+
 ### PATCH /users/:id/role
 
 Requiere JWT y rol actual `ADMIN`.

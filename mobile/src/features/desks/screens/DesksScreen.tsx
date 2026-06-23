@@ -25,8 +25,9 @@ type FilterDropdownId = 'startTime' | 'endTime' | 'zone';
 
 type DesksScreenProps = {
   onPressReservations?: () => void;
-  onPressSettings?: () => void;
+  onPressProfile?: () => void;
   onPressLogout?: () => void;
+  onPressSwitchAccount?: () => void;
   onReservationCreated?: () => void;
 };
 
@@ -187,8 +188,9 @@ function FilterDropdown<TValue extends string>({
 
 export function DesksScreen({
   onPressReservations,
-  onPressSettings,
+  onPressProfile,
   onPressLogout,
+  onPressSwitchAccount,
   onReservationCreated,
 }: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
@@ -398,8 +400,9 @@ export function DesksScreen({
         <BottomTabBar
           activeTab="desks"
           onPressReservations={onPressReservations}
-          onPressSettings={onPressSettings}
+          onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
         />
       </View>
 
