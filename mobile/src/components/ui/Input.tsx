@@ -1,4 +1,11 @@
-import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
+import {
+  StyleProp,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 import { colors } from '../../theme/colors';
 import { radii, spacing } from '../../theme/spacing';
@@ -6,11 +13,12 @@ import { AppText } from './AppText';
 
 type InputProps = TextInputProps & {
   label: string;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
-export function Input({ label, style, ...props }: InputProps) {
+export function Input({ label, containerStyle, style, ...props }: InputProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
         {label}
       </AppText>

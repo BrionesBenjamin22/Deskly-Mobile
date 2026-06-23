@@ -9,27 +9,41 @@ import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
+import { PenaltyReasonModal } from '../../penalties/components/PenaltyReasonModal';
+import { useRegisterAbsence } from '../../penalties/hooks/useRegisterAbsence';
+import { UserRole } from '../../auth/types/auth.types';
 import { ReservationEmptyState } from '../components/ReservationEmptyState';
 import { ReservationList } from '../components/ReservationList';
 import { useReservations } from '../hooks/useReservations';
+import { useValidateArrival } from '../hooks/useValidateArrival';
 import { Reservation } from '../types/reservation.types';
 
 type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
-type StatusFilter = 'all' | 'active' | 'completed' | 'cancelled';
+type StatusFilter =
+  | 'all'
+  | 'reserved'
+  | 'active'
+  | 'completed'
+  | 'cancelled';
 
 function getStatusLabel(status: StatusFilter): string {
   if (status === 'all') return 'reservas';
+  if (status === 'reserved') return 'reservas reservadas';
   if (status === 'active') return 'reservas activas';
-  if (status === 'completed') return 'reservas completadas';
+  if (status === 'completed') return 'reservas finalizadas';
   return 'reservas canceladas';
 }
 
 type MyReservationsScreenProps = {
+  accessToken: string;
+  userRole: UserRole;
   onPressDesks?: () => void;
   onPressPayments?: () => void;
-  onPressSettings?: () => void;
+  onPressProfile?: () => void;
   onPressLogout?: () => void;
   onReservationCancelled?: () => void;
+  onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
   refreshKey?: number;
 };
 
@@ -95,15 +109,21 @@ function FilterChip({ label, selected, onPress }: FilterChipProps) {
 }
 
 export function MyReservationsScreen({
+  accessToken,
+  userRole,
   onPressDesks,
   onPressPayments,
-  onPressSettings,
+  onPressProfile,
   onPressLogout,
   onReservationCancelled,
+  onPressSwitchAccount,
+  onPressUserManagement,
   refreshKey = 0,
 }: MyReservationsScreenProps) {
   const [selectedFilter, setSelectedFilter] = useState<StatusFilter>('all');
   const [reservationToCancel, setReservationToCancel] = useState<Reservation | null>(null);
+  const [reservationToPenalize, setReservationToPenalize] = useState<Reservation | null>(null);
+  const [penaltyReason, setPenaltyReason] = useState('');
   const {
     actionStatus,
     activeReservations,
@@ -112,10 +132,38 @@ export function MyReservationsScreen({
     handleCancelReservation: executeCancelReservation,
     isLoading,
     reservationHistory,
-  } = useReservations(refreshKey, onReservationCancelled);
+    refresh,
+  } = useReservations(
+    accessToken,
+    refreshKey,
+    onReservationCancelled,
+    userRole === 'GESTOR',
+  );
+
+  const penaltyAction = useRegisterAbsence(accessToken, async () => {
+    await refresh();
+    onReservationCancelled?.();
+  });
+  const arrivalAction = useValidateArrival(accessToken, async () => {
+    await refresh();
+  });
 
   const handleCancelReservation = (reservation: Reservation) => {
+    if (userRole === 'GESTOR') {
+      setPenaltyReason('');
+      setReservationToPenalize(reservation);
+      return;
+    }
     setReservationToCancel(reservation);
+  };
+
+  const handleConfirmAbsence = async () => {
+    if (!reservationToPenalize) return;
+    const registered = await penaltyAction.submit(reservationToPenalize.id, penaltyReason);
+    if (registered) {
+      setReservationToPenalize(null);
+      setPenaltyReason('');
+    }
   };
 
   const handleConfirmCancel = () => {
@@ -127,13 +175,18 @@ export function MyReservationsScreen({
 
   const allReservations = [...activeReservations, ...reservationHistory];
   const filteredReservations = allReservations.filter((r) => {
-    if (selectedFilter === 'all') return true;
+    if (userRole === 'GESTOR' || selectedFilter === 'all') return true;
     return r.status === selectedFilter;
   });
 
   const hasAnyReservation = allReservations.length > 0;
   const activeStatus =
     actionStatus === 'idle' ? null : cancellationStatusContent[actionStatus];
+  const isManagerEmpty =
+    userRole === 'GESTOR' &&
+    !isLoading &&
+    !errorMessage &&
+    filteredReservations.length === 0;
 
   return (
     <ScreenContainer>
@@ -142,18 +195,27 @@ export function MyReservationsScreen({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          <View style={styles.header}>
-            <AppText variant="title">Mis Reservas</AppText>
-            <AppText variant="caption" color={colors.primaryLight} style={styles.count}>
-              {filteredReservations.length} {getStatusLabel(selectedFilter)}
+          {!isManagerEmpty ? <View style={styles.header}>
+            <AppText variant="title">
+              {userRole === 'GESTOR' ? 'Reservas activas de hoy' : 'Mis Reservas'}
             </AppText>
-          </View>
+            <AppText variant="caption" color={colors.primaryLight} style={styles.count}>
+              {userRole === 'GESTOR'
+                ? `${filteredReservations.length} reservas para gestionar`
+                : `${filteredReservations.length} ${getStatusLabel(selectedFilter)}`}
+            </AppText>
+          </View> : null}
 
-          <View style={styles.filtersContainer}>
+          {userRole !== 'GESTOR' ? <View style={styles.filtersContainer}>
             <FilterChip
               label="Todas"
               selected={selectedFilter === 'all'}
               onPress={() => setSelectedFilter('all')}
+            />
+            <FilterChip
+              label="Reservadas"
+              selected={selectedFilter === 'reserved'}
+              onPress={() => setSelectedFilter('reserved')}
             />
             <FilterChip
               label="Activas"
@@ -161,7 +223,7 @@ export function MyReservationsScreen({
               onPress={() => setSelectedFilter('active')}
             />
             <FilterChip
-              label="Completadas"
+              label="Finalizadas"
               selected={selectedFilter === 'completed'}
               onPress={() => setSelectedFilter('completed')}
             />
@@ -170,7 +232,7 @@ export function MyReservationsScreen({
               selected={selectedFilter === 'cancelled'}
               onPress={() => setSelectedFilter('cancelled')}
             />
-          </View>
+          </View> : null}
 
           {isLoading ? (
             <DesksFeedbackCard
@@ -189,10 +251,24 @@ export function MyReservationsScreen({
               {filteredReservations.length > 0 ? (
                 <ReservationList
                   reservations={filteredReservations}
-                  onCancel={selectedFilter === 'all' || selectedFilter === 'active' ? handleCancelReservation : undefined}
+                  onCancel={handleCancelReservation}
+                  onValidateArrival={
+                    userRole === 'GESTOR'
+                      ? (reservation) => void arrivalAction.submit(reservation.id)
+                      : undefined
+                  }
+                  managerView={userRole === 'GESTOR'}
                 />
               ) : (
-                <ReservationEmptyState />
+                userRole === 'GESTOR' ? (
+                  <View style={styles.managerEmptyState}>
+                    <AppText variant="subtitle" color={colors.primaryLight}>
+                      No hay Reservas para hoy
+                    </AppText>
+                  </View>
+                ) : (
+                  <ReservationEmptyState />
+                )
               )}
             </>
           )}
@@ -200,10 +276,13 @@ export function MyReservationsScreen({
 
         <BottomTabBar
           activeTab="reservations"
+          userRole={userRole}
           onPressDesks={onPressDesks}
           onPressPayments={onPressPayments}
-          onPressSettings={onPressSettings}
+          onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
         />
       </View>
 
@@ -222,6 +301,57 @@ export function MyReservationsScreen({
         onConfirm={handleConfirmCancel}
         onCancel={() => setReservationToCancel(null)}
       />
+
+      <PenaltyReasonModal
+        visible={reservationToPenalize !== null}
+        reason={penaltyReason}
+        onChangeReason={setPenaltyReason}
+        onConfirm={() => void handleConfirmAbsence()}
+        onCancel={() => {
+          setReservationToPenalize(null);
+          setPenaltyReason('');
+        }}
+      />
+
+      {penaltyAction.status !== 'idle' ? (
+        <StatusModal
+          visible
+          type={penaltyAction.status === 'loading' ? 'loading' : penaltyAction.status}
+          title={
+            penaltyAction.status === 'loading'
+              ? 'Registrando infraccion...'
+              : penaltyAction.status === 'success'
+                ? 'Infraccion registrada'
+                : 'No pudimos registrar la infraccion'
+          }
+          description={
+            penaltyAction.status === 'success'
+              ? 'La reserva fue cancelada y el antecedente quedo registrado correctamente.'
+              : penaltyAction.errorMessage ?? 'Revise los datos e intente nuevamente.'
+          }
+          onClose={penaltyAction.status === 'loading' ? undefined : penaltyAction.clearStatus}
+        />
+      ) : null}
+
+      {arrivalAction.status !== 'idle' ? (
+        <StatusModal
+          visible
+          type={arrivalAction.status === 'loading' ? 'loading' : arrivalAction.status}
+          title={
+            arrivalAction.status === 'loading'
+              ? 'Validando llegada...'
+              : arrivalAction.status === 'success'
+                ? 'Llegada validada'
+                : 'No pudimos validar la llegada'
+          }
+          description={
+            arrivalAction.status === 'success'
+              ? 'La llegada del miembro quedo registrada correctamente.'
+              : arrivalAction.errorMessage ?? 'Revise la reserva e intente nuevamente.'
+          }
+          onClose={arrivalAction.status === 'loading' ? undefined : arrivalAction.clearStatus}
+        />
+      ) : null}
 
       {activeStatus ? (
         <StatusModal
@@ -282,5 +412,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: '900',
     letterSpacing: 0,
+  },
+  managerEmptyState: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 320,
   },
 });

@@ -6,6 +6,8 @@ import { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionLoggingFilter } from './common/filters/http-exception-logging.filter';
 
+type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
+
 function getAllowedOrigins() {
   const configuredOrigins = process.env.FRONTEND_URL?.split(',')
     .map((origin) => origin.trim())
@@ -25,9 +27,7 @@ function getAllowedOrigins() {
 }
 
 function isLocalDevelopmentOrigin(origin: string) {
-  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(
-    origin,
-  );
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
 }
 
 function isPrivateNetworkDevelopmentOrigin(origin: string) {
@@ -41,7 +41,7 @@ async function bootstrap() {
   const logger = new Logger('HTTP');
 
   app.enableCors({
-    origin(origin, callback) {
+    origin(origin: string | undefined, callback: CorsOriginCallback) {
       if (!origin) {
         callback(null, true);
         return;
@@ -106,6 +106,7 @@ async function bootstrap() {
     .setTitle('Deskly API')
     .setDescription('API para la gestion de espacios de coworking.')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);

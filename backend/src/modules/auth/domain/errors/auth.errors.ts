@@ -1,0 +1,9 @@
+export class InvalidCredentialsError extends Error {}
+export class InactiveUserError extends Error {}
+export class UserAlreadyExistsError extends Error {}
+export class MemberDataRequiredError extends Error {}
+export class UserNotFoundError extends Error {}
+export class SelfRoleChangeForbiddenError extends Error {}
+export class SelfDeactivationForbiddenError extends Error {}
+export class LastActiveAdminError extends Error {}
+export class UserAlreadyInactiveError extends Error {}

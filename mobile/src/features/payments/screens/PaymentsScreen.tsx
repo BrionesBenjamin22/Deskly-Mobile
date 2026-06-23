@@ -11,15 +11,21 @@ import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
+import { UserRole } from '../../auth/types/auth.types';
 import { createPayment } from '../services/payments.service';
 import { usePayments } from '../hooks/usePayments';
 import { ReservationPaymentSummary } from '../types/payment.types';
 
 type PaymentsScreenProps = {
+  accessToken: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressSettings?: () => void;
+  onPressProfile?: () => void;
   onPressLogout?: () => void;
+  onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  userRole?: UserRole;
   refreshKey?: number;
 };
 
@@ -197,14 +203,22 @@ const paymentStatusContent: Record<
 };
 
 export function PaymentsScreen({
+  accessToken,
   onPressDesks,
   onPressReservations,
   onPressSettings,
+  onPressProfile,
   onPressLogout,
+  onPressSwitchAccount,
+  onPressUserManagement,
+  userRole,
   refreshKey = 0,
 }: PaymentsScreenProps) {
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
-  const { summaries, isLoading, errorMessage } = usePayments(refreshKey + localRefreshKey);
+  const { summaries, isLoading, errorMessage } = usePayments(
+    accessToken,
+    refreshKey + localRefreshKey,
+  );
   const [paymentStatus, setPaymentStatus] = useState<PaymentActionStatus>('idle');
   const [paymentErrorMessage, setPaymentErrorMessage] = useState(
     paymentStatusContent.error.description,
@@ -357,7 +371,11 @@ export function PaymentsScreen({
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
           onPressSettings={onPressSettings}
+          onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          userRole={userRole}
         />
       </View>
 

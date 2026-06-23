@@ -1,8 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { CreatePaymentUseCase } from '../../application/use-cases/create-payment.use-case';
 import { ListPaymentsUseCase } from '../../application/use-cases/list-payments.use-case';
@@ -13,10 +10,12 @@ import { ReservationNotFoundError } from '../../domain/errors/reservation-not-fo
 
 describe('PaymentsController', () => {
   let controller: PaymentsController;
-  let createPaymentUseCase: CreatePaymentUseCase;
-  let listPaymentsUseCase: ListPaymentsUseCase;
-  let getPaymentByIdUseCase: GetPaymentByIdUseCase;
-  let deletePaymentUseCase: DeletePaymentUseCase;
+  let createPaymentUseCase: jest.Mocked<Pick<CreatePaymentUseCase, 'execute'>>;
+  let listPaymentsUseCase: jest.Mocked<Pick<ListPaymentsUseCase, 'execute'>>;
+  let getPaymentByIdUseCase: jest.Mocked<
+    Pick<GetPaymentByIdUseCase, 'execute'>
+  >;
+  let deletePaymentUseCase: jest.Mocked<Pick<DeletePaymentUseCase, 'execute'>>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -50,16 +49,15 @@ describe('PaymentsController', () => {
     }).compile();
 
     controller = module.get<PaymentsController>(PaymentsController);
-    createPaymentUseCase = module.get<CreatePaymentUseCase>(
-      CreatePaymentUseCase,
-    );
+    createPaymentUseCase =
+      module.get<typeof createPaymentUseCase>(CreatePaymentUseCase);
     listPaymentsUseCase =
-      module.get<ListPaymentsUseCase>(ListPaymentsUseCase);
-    getPaymentByIdUseCase = module.get<GetPaymentByIdUseCase>(
+      module.get<typeof listPaymentsUseCase>(ListPaymentsUseCase);
+    getPaymentByIdUseCase = module.get<typeof getPaymentByIdUseCase>(
       GetPaymentByIdUseCase,
     );
     deletePaymentUseCase =
-      module.get<DeletePaymentUseCase>(DeletePaymentUseCase);
+      module.get<typeof deletePaymentUseCase>(DeletePaymentUseCase);
   });
 
   describe('create', () => {
@@ -75,7 +73,7 @@ describe('PaymentsController', () => {
         ...body,
       };
 
-      jest.spyOn(createPaymentUseCase, 'execute').mockResolvedValue(expected);
+      createPaymentUseCase.execute.mockResolvedValue(expected);
 
       const result = await controller.create(body);
 
@@ -90,13 +88,11 @@ describe('PaymentsController', () => {
         amount: 100.5,
       };
 
-      jest
-        .spyOn(createPaymentUseCase, 'execute')
-        .mockRejectedValue(new ReservationNotFoundError());
-
-      expect(() => controller.create(body)).rejects.toThrow(
-        NotFoundException,
+      createPaymentUseCase.execute.mockRejectedValue(
+        new ReservationNotFoundError(),
       );
+
+      await expect(controller.create(body)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -126,7 +122,7 @@ describe('PaymentsController', () => {
         },
       };
 
-      jest.spyOn(listPaymentsUseCase, 'execute').mockResolvedValue(expected);
+      listPaymentsUseCase.execute.mockResolvedValue(expected);
 
       const result = await controller.list(query);
 
@@ -147,9 +143,7 @@ describe('PaymentsController', () => {
         updatedAt: new Date(),
       };
 
-      jest
-        .spyOn(getPaymentByIdUseCase, 'execute')
-        .mockResolvedValue(expected);
+      getPaymentByIdUseCase.execute.mockResolvedValue(expected);
 
       const result = await controller.findById(paymentId);
 
@@ -160,11 +154,11 @@ describe('PaymentsController', () => {
     it('should handle PaymentNotFoundError', async () => {
       const paymentId = '550e8400-e29b-41d4-a716-446655440000';
 
-      jest
-        .spyOn(getPaymentByIdUseCase, 'execute')
-        .mockRejectedValue(new PaymentNotFoundError());
+      getPaymentByIdUseCase.execute.mockRejectedValue(
+        new PaymentNotFoundError(),
+      );
 
-      expect(() => controller.findById(paymentId)).rejects.toThrow(
+      await expect(controller.findById(paymentId)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -174,7 +168,7 @@ describe('PaymentsController', () => {
     it('should delete payment successfully', async () => {
       const paymentId = '550e8400-e29b-41d4-a716-446655440000';
 
-      jest.spyOn(deletePaymentUseCase, 'execute').mockResolvedValue(undefined);
+      deletePaymentUseCase.execute.mockResolvedValue(undefined);
 
       await controller.delete(paymentId);
 
@@ -184,11 +178,11 @@ describe('PaymentsController', () => {
     it('should handle PaymentNotFoundError', async () => {
       const paymentId = '550e8400-e29b-41d4-a716-446655440000';
 
-      jest
-        .spyOn(deletePaymentUseCase, 'execute')
-        .mockRejectedValue(new PaymentNotFoundError());
+      deletePaymentUseCase.execute.mockRejectedValue(
+        new PaymentNotFoundError(),
+      );
 
-      expect(() => controller.delete(paymentId)).rejects.toThrow(
+      await expect(controller.delete(paymentId)).rejects.toThrow(
         NotFoundException,
       );
     });

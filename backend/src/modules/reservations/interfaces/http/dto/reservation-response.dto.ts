@@ -7,6 +7,12 @@ export class ReservationResponseDto {
   @ApiProperty({ example: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc' })
   deskId!: string;
 
+  @ApiProperty({ example: '8ae2e38a-300c-4cc1-b6ba-cee270f163f7' })
+  memberId!: string;
+
+  @ApiProperty({ example: 'Nombre Apellido', required: false })
+  memberFullName?: string;
+
   @ApiProperty({ example: 'D-01' })
   deskCode!: string;
 
@@ -22,8 +28,11 @@ export class ReservationResponseDto {
   @ApiProperty({ example: '13:00' })
   endTime!: string;
 
-  @ApiProperty({ example: 'ACTIVE', enum: ['ACTIVE', 'CANCELLED'] })
-  status!: 'ACTIVE' | 'CANCELLED';
+  @ApiProperty({
+    example: 'RESERVED',
+    enum: ['RESERVED', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
+  })
+  status!: 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
   @ApiProperty({ example: '2026-05-21T10:00:00.000Z', required: false })
   createdAt?: string;
@@ -33,4 +42,7 @@ export class ReservationResponseDto {
 
   @ApiProperty({ example: '2026-05-21T10:30:00.000Z', required: false })
   cancelledAt?: string;
+
+  @ApiProperty({ example: '2026-06-23T12:05:00.000Z', required: false })
+  checkedInAt?: string;
 }

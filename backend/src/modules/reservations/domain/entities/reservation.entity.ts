@@ -1,8 +1,14 @@
-export type ReservationStatusValue = 'ACTIVE' | 'CANCELLED';
+export type ReservationStatusValue =
+  | 'RESERVED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export type ReservationProperties = {
   id?: string;
   deskId: string;
+  memberId: string;
+  memberFullName?: string;
   deskCode?: string;
   deskName?: string | null;
   date: string;
@@ -12,6 +18,7 @@ export type ReservationProperties = {
   createdAt?: Date;
   updatedAt?: Date;
   cancelledAt?: Date | null;
+  checkedInAt?: Date | null;
 };
 
 export class Reservation {
@@ -23,6 +30,14 @@ export class Reservation {
 
   get deskId(): string {
     return this.properties.deskId;
+  }
+
+  get memberId(): string {
+    return this.properties.memberId;
+  }
+
+  get memberFullName(): string | undefined {
+    return this.properties.memberFullName;
   }
 
   get deskCode(): string | undefined {
@@ -59,5 +74,9 @@ export class Reservation {
 
   get cancelledAt(): Date | null | undefined {
     return this.properties.cancelledAt;
+  }
+
+  get checkedInAt(): Date | null | undefined {
+    return this.properties.checkedInAt;
   }
 }

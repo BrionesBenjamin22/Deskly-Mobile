@@ -1,12 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DeletePaymentUseCase } from './delete-payment.use-case';
-import { PAYMENT_REPOSITORY } from '../../domain/ports/payment-repository.port';
+import {
+  PAYMENT_REPOSITORY,
+  PaymentRepositoryPort,
+} from '../../domain/ports/payment-repository.port';
 import { Payment } from '../../domain/entities/payment.entity';
 import { PaymentNotFoundError } from '../../domain/errors/payment-not-found.error';
 
 describe('DeletePaymentUseCase', () => {
   let useCase: DeletePaymentUseCase;
-  let paymentRepositoryMock: any;
+  let paymentRepositoryMock: jest.Mocked<
+    Pick<PaymentRepositoryPort, 'findById' | 'delete'>
+  >;
 
   beforeEach(async () => {
     paymentRepositoryMock = {

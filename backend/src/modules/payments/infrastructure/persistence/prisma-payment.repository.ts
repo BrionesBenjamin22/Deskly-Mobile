@@ -16,7 +16,7 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
     const savedPayment = await this.prisma.payment.create({
       data: {
         reservationId: payment.reservationId,
-        date: payment.date,
+        date: this.stringToDate(payment.date),
         amount: payment.amount,
       },
     });
@@ -115,5 +115,9 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
       return date;
     }
     return date.toISOString().split('T')[0];
+  }
+
+  private stringToDate(date: string): Date {
+    return new Date(`${date}T00:00:00.000Z`);
   }
 }

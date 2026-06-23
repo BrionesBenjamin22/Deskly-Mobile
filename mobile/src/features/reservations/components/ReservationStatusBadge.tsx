@@ -14,6 +14,12 @@ const statusMap: Record<
   ReservationStatus,
   { label: string; backgroundColor: string; color: string; icon: IconName }
 > = {
+  reserved: {
+    label: 'Reservada',
+    backgroundColor: colors.softMint,
+    color: colors.accent,
+    icon: 'calendar',
+  },
   active: {
     label: 'Activa',
     backgroundColor: statusColors.successSoft,
@@ -21,7 +27,7 @@ const statusMap: Record<
     icon: 'circleCheck',
   },
   completed: {
-    label: 'Completada',
+    label: 'Finalizada',
     backgroundColor: colors.gray,
     color: colors.primaryLight,
     icon: 'circleCheck',

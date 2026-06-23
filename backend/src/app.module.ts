@@ -6,7 +6,9 @@ import { CommonModule } from './common/common.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { DesksModule } from './modules/desks/desks.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { PenaltiesModule } from './modules/penalties/penalties.module';
 
 @Module({
   imports: [
@@ -15,7 +17,9 @@ import { PaymentsModule } from './modules/payments/payments.module';
     CommonModule,
     DesksModule,
     ReservationsModule,
+    AuthModule,
     PaymentsModule,
+    PenaltiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

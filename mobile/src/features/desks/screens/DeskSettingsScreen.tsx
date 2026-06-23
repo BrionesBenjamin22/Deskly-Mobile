@@ -13,13 +13,18 @@ import { radii, spacing } from '../../../theme/spacing';
 import { useDeskSettings } from '../hooks/useDeskSettings';
 import { Desk, DeskAmenity, DeskZone } from '../types/desk.types';
 import { DeskPayload } from '../services/desks.service';
+import { UserRole } from '../../auth/types/auth.types';
 
 type DeskSettingsScreenProps = {
   onPressDesks?: () => void;
   onPressReservations?: () => void;
+  onPressProfile?: () => void;
   onPressPayments?: () => void;
   onPressLogout?: () => void;
   onDeskCreated?: () => void;
+  onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  userRole?: UserRole;
 };
 
 type DeskFormState = {
@@ -182,8 +187,12 @@ function Chip({ label, selected, onPress }: ChipProps) {
 export function DeskSettingsScreen({
   onPressDesks,
   onPressReservations,
+  onPressProfile,
   onPressPayments,
   onPressLogout,
+  onPressSwitchAccount,
+  onPressUserManagement,
+  userRole,
   onDeskCreated,
 }: DeskSettingsScreenProps) {
   const {
@@ -690,8 +699,12 @@ export function DeskSettingsScreen({
           activeTab="settings"
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
+          onPressProfile={onPressProfile}
           onPressPayments={onPressPayments}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          userRole={userRole}
         />
       </View>
     </ScreenContainer>

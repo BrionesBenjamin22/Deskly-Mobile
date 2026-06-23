@@ -50,7 +50,6 @@ export function StatusModal({
   description,
   onClose,
 }: StatusModalProps) {
-  const spinValue = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [isMounted, setIsMounted] = useState(visible);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,26 +101,6 @@ export function StatusModal({
   }, [progress, visible]);
 
   useEffect(() => {
-    if (!visible || type !== 'loading') {
-      spinValue.stopAnimation();
-      spinValue.setValue(0);
-      return;
-    }
-
-    const animation = Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    );
-
-    animation.start();
-
-    return () => animation.stop();
-  }, [spinValue, type, visible]);
-
-  useEffect(() => {
     if (!visible || type === 'loading' || !onClose) {
       return undefined;
     }
@@ -137,11 +116,6 @@ export function StatusModal({
       }
     };
   }, [onClose, requestClose, type, visible]);
-
-  const rotation = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
 
   const panelTranslateY = progress.interpolate({
     inputRange: [0, 1],
@@ -172,11 +146,9 @@ export function StatusModal({
           ]}
         >
           <View style={[styles.iconCircle, { backgroundColor: config.circleColor }]}>
-            <Animated.View
-              style={type === 'loading' ? { transform: [{ rotate: rotation }] } : undefined}
-            >
+            <View>
               <Icon name={config.icon} size={34} color={config.iconColor} />
-            </Animated.View>
+            </View>
           </View>
 
           <AppText variant="subtitle" color={colors.primary} style={styles.title}>

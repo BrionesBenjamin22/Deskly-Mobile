@@ -23,7 +23,10 @@ export class UpdateDeskUseCase {
     }
 
     if (input.name) {
-      const existing = await this.deskRepository.findByName(input.name, input.id);
+      const existing = await this.deskRepository.findByName(
+        input.name,
+        input.id,
+      );
       if (existing) {
         throw new DeskNameAlreadyExistsError();
       }

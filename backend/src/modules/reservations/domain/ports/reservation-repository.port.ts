@@ -13,7 +13,9 @@ export type OverlappingReservationParams = {
 export type ListReservationsParams = {
   page: number;
   limit: number;
-  status?: 'ACTIVE' | 'CANCELLED';
+  status?: import('../entities/reservation.entity').ReservationStatusValue;
+  date?: string;
+  memberId?: string;
 };
 
 export type ListReservationsResult = {
@@ -30,6 +32,7 @@ export type UpdateReservationParams = {
 };
 
 export interface ReservationRepositoryPort {
+  memberExists(memberId: string): Promise<boolean>;
   existsOverlappingReservation(
     params: OverlappingReservationParams,
   ): Promise<boolean>;
@@ -38,4 +41,5 @@ export interface ReservationRepositoryPort {
   findById(id: string): Promise<Reservation | null>;
   update(params: UpdateReservationParams): Promise<Reservation>;
   cancel(id: string, cancelledAt: Date): Promise<Reservation>;
+  validateArrival(id: string, checkedInAt: Date): Promise<Reservation | null>;
 }

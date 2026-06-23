@@ -28,7 +28,9 @@ export class ListPaymentsUseCase {
     const totalPages = Math.ceil(total / input.limit);
 
     return {
-      payments: payments.map(PaymentOutputMapper.toPaymentOutput),
+      payments: payments.map((payment) =>
+        PaymentOutputMapper.toPaymentOutput(payment),
+      ),
       pagination: {
         page: input.page,
         limit: input.limit,

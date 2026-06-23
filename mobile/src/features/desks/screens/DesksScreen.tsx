@@ -21,16 +21,21 @@ import {
   ReservationServiceError,
 } from '../../reservations/services/reservations.service';
 import { createPayment } from '../../payments/services/payments.service';
+import { UserRole } from '../../auth/types/auth.types';
 
 type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
 type ZoneFilter = DeskZone | 'all';
 type FilterDropdownId = 'startTime' | 'endTime' | 'zone';
 
 type DesksScreenProps = {
+  accessToken: string;
   onPressReservations?: () => void;
   onPressPayments?: () => void;
-  onPressSettings?: () => void;
+  onPressProfile?: () => void;
   onPressLogout?: () => void;
+  onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  userRole?: UserRole;
   onReservationCreated?: () => void;
   externalRefreshKey?: number;
 };
@@ -203,10 +208,14 @@ function FilterDropdown<TValue extends string>({
 }
 
 export function DesksScreen({
+  accessToken,
   onPressReservations,
   onPressPayments,
-  onPressSettings,
+  onPressProfile,
   onPressLogout,
+  onPressSwitchAccount,
+  onPressUserManagement,
+  userRole,
   onReservationCreated,
   externalRefreshKey = 0,
 }: DesksScreenProps) {
@@ -275,7 +284,13 @@ export function DesksScreen({
     setReservationErrorMessage(reservationStatusContent.error.description);
 
     try {
-      const { reservations: allActive } = await listReservations(1, 50, 'ACTIVE');
+      const reservationGroups = await Promise.all([
+        listReservations(accessToken, 1, 50, 'RESERVED'),
+        listReservations(accessToken, 1, 50, 'ACTIVE'),
+      ]);
+      const allActive = reservationGroups.flatMap(
+        (group) => group.reservations,
+      );
 
       const conflict = allActive.find(
         (r) =>
@@ -291,7 +306,7 @@ export function DesksScreen({
         return;
       }
 
-      const reservation = await createReservation({
+      const reservation = await createReservation(accessToken, {
         deskId: payload.desk.id,
         date: payload.date,
         startTime: payload.startTime,
@@ -491,8 +506,11 @@ export function DesksScreen({
           activeTab="desks"
           onPressReservations={onPressReservations}
           onPressPayments={onPressPayments}
-          onPressSettings={onPressSettings}
+          onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          userRole={userRole}
         />
       </View>
 

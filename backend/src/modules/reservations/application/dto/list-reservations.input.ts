@@ -4,4 +4,6 @@ export type ListReservationsInput = {
   page?: number;
   limit?: number;
   status?: ReservationStatusValue;
+  date?: string;
+  memberId?: string;
 };

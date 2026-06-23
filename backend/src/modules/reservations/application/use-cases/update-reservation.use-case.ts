@@ -34,7 +34,7 @@ export class UpdateReservationUseCase {
       throw new ReservationNotFoundError();
     }
 
-    if (currentReservation.status !== 'ACTIVE') {
+    if (currentReservation.status !== 'RESERVED') {
       throw new ReservationCannotBeUpdatedError();
     }
 

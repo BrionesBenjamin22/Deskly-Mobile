@@ -9,6 +9,7 @@ import { ReservationDate } from '../../../desks/domain/value-objects/reservation
 import { TimeSlot } from '../../../desks/domain/value-objects/time-slot.vo';
 import { Reservation } from '../../domain/entities/reservation.entity';
 import { DeskUnavailableError } from '../../domain/errors/desk-unavailable.error';
+import { MemberNotFoundError } from '../../domain/errors/member-not-found.error';
 import { RESERVATION_REPOSITORY } from '../../domain/ports/reservation-repository.port';
 import type { ReservationRepositoryPort } from '../../domain/ports/reservation-repository.port';
 import { CreateReservationInput } from '../dto/create-reservation.input';
@@ -42,6 +43,10 @@ export class CreateReservationUseCase {
       throw new DeskNotFoundError();
     }
 
+    if (!(await this.reservationRepository.memberExists(input.memberId))) {
+      throw new MemberNotFoundError();
+    }
+
     const hasOverlappingReservation =
       await this.reservationRepository.existsOverlappingReservation({
         deskId: desk.id,
@@ -57,11 +62,12 @@ export class CreateReservationUseCase {
     const reservation = await this.reservationRepository.save(
       new Reservation({
         deskId: desk.id,
+        memberId: input.memberId,
         deskCode: desk.code,
         date: reservationDate.value,
         startTime: timeSlot.startTime,
         endTime: timeSlot.endTime,
-        status: 'ACTIVE',
+        status: 'RESERVED',
       }),
     );
 
@@ -72,12 +78,16 @@ export class CreateReservationUseCase {
     return {
       reservationId: reservation.id,
       deskId: reservation.deskId,
+      memberId: reservation.memberId,
+      ...(reservation.memberFullName
+        ? { memberFullName: reservation.memberFullName }
+        : {}),
       deskCode: reservation.deskCode ?? desk.code,
       ...(reservation.deskName ? { deskName: reservation.deskName } : {}),
       date: reservation.date,
       startTime: reservation.startTime,
       endTime: reservation.endTime,
-      status: 'ACTIVE',
+      status: 'RESERVED',
     };
   }
 }

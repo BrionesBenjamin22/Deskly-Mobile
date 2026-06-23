@@ -11,6 +11,41 @@ Aplicacion movil Expo/React Native para Deskly. La aplicacion consume el backend
 - `src/config`: configuracion de API y variables publicas de Expo.
 - `src/features/desks`: pantallas, componentes, hooks, services y tipos del modulo de escritorios.
 - `src/features/reservations`: pantallas, componentes, hooks, services y tipos del modulo de reservas.
+- `src/features/auth`: pantalla, componentes, validaciones, service y tipos de autenticacion.
+
+## Autenticacion
+
+`AuthScreen` presenta un acceso simple que alterna entre inicio de sesion y registro sin agregar una dependencia de navegacion. Reutiliza los componentes globales `ScreenContainer`, `Card`, `Input`, `Button`, `AppText` y `StatusModal`.
+
+Login:
+
+- acepta email o nombre de usuario
+- valida identificador y contrasena antes de llamar al backend
+- consume `POST /auth/login`
+- conserva la sesion en memoria durante esta primera etapa
+- habilita el contenido principal despues de mostrar la confirmacion
+
+Registro:
+
+- consulta `GET /auth/registration-status` al abrir el formulario
+- si no existen usuarios, muestra solamente los datos de cuenta para crear el administrador inicial
+- si ya existen usuarios, agrega nombre y apellido, DNI y telefono para crear el miembro asociado
+- para registros posteriores solicita email, nombre de usuario, contrasena, nombre y apellido, DNI y telefono
+- replica limites y formatos previsibles del backend
+- consume `POST /auth/register`
+- vuelve al login con el email precargado y una confirmacion visible
+
+Los errores de formulario se muestran junto al campo y resaltan el input. Los errores de API, red y timeout se presentan mediante `StatusModal` con un llamado a la accion. En esta etapa no se agrega persistencia segura del token ni recuperacion automatica de sesion; esas responsabilidades quedan separadas para el siguiente paso del flujo de autenticacion.
+
+## Perfil y cierre de sesion
+
+La barra inferior incorpora la opcion `Perfil`. Al seleccionarla abre un menu reutilizable con:
+
+- `Mi perfil`: consulta `GET /auth/me` con el access token y muestra usuario, email, rol, estado y datos publicos del miembro cuando existe.
+- `Cambiar cuenta`: descarta la sesion en memoria y vuelve al login con una indicacion visible.
+- `Cerrar sesion`: descarta el access token y los datos de usuario en memoria, reinicia la navegacion y confirma el cierre mediante `StatusModal`.
+
+El backend utiliza JWT stateless, por lo que el logout no crea una blacklist ni una sesion persistida: el cliente deja de enviar el token descartado.
 
 ## Variables de entorno
 
@@ -102,7 +137,7 @@ Mensajes de exito de alta y edicion:
 
 ## Navegacion inferior
 
-La barra inferior muestra accesos a escritorios y reservas. Las acciones `Configuracion` y `Salir` no se muestran como botones directos por decision de producto.
+La barra inferior muestra accesos a escritorios, reservas y perfil. Las acciones de cuenta se agrupan en el menu de perfil para evitar controles innecesarios en la navegacion principal.
 
 ## Contrato mock
 

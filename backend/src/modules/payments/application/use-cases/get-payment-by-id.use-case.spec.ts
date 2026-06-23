@@ -1,12 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GetPaymentByIdUseCase } from './get-payment-by-id.use-case';
-import { PAYMENT_REPOSITORY } from '../../domain/ports/payment-repository.port';
+import {
+  PAYMENT_REPOSITORY,
+  PaymentRepositoryPort,
+} from '../../domain/ports/payment-repository.port';
 import { Payment } from '../../domain/entities/payment.entity';
 import { PaymentNotFoundError } from '../../domain/errors/payment-not-found.error';
 
 describe('GetPaymentByIdUseCase', () => {
   let useCase: GetPaymentByIdUseCase;
-  let paymentRepositoryMock: any;
+  let paymentRepositoryMock: jest.Mocked<
+    Pick<PaymentRepositoryPort, 'findById'>
+  >;
 
   beforeEach(async () => {
     paymentRepositoryMock = {
@@ -47,8 +52,8 @@ describe('GetPaymentByIdUseCase', () => {
         reservationId: '550e8400-e29b-41d4-a716-446655440001',
         date: '2026-06-22',
         amount: 100.5,
-        createdAt: expect.any(Date),
-        updatedAt: expect.any(Date),
+        createdAt: new Date('2026-06-22'),
+        updatedAt: new Date('2026-06-22'),
       });
       expect(paymentRepositoryMock.findById).toHaveBeenCalledWith(paymentId);
     });

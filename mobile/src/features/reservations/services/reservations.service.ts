@@ -6,16 +6,24 @@ type ApiErrorBody = {
   message?: string | string[];
 };
 
+type ApiReservationStatus =
+  | 'RESERVED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
 type ReservationResponse = {
   reservationId: string;
   deskId: string;
   deskCode: string;
   deskName?: string;
+  memberFullName?: string;
   date: string;
   startTime: string;
   endTime: string;
-  status: 'ACTIVE' | 'CANCELLED';
+  status: ApiReservationStatus;
   cancelledAt?: string;
+  checkedInAt?: string;
 };
 
 type ListReservationsResponse = {
@@ -67,12 +75,12 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
-      ...init,
     });
   } catch (error) {
     const isTimeout =
@@ -112,19 +120,13 @@ function toDateLabel(dateValue: string) {
 }
 
 function getReservationStatus(reservation: ReservationResponse): ReservationStatus {
-  if (reservation.status === 'CANCELLED') {
-    return 'cancelled';
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const reservationDate = new Date(`${reservation.date}T00:00:00`);
-
-  if (!Number.isNaN(reservationDate.getTime()) && reservationDate < today) {
-    return 'completed';
-  }
-
-  return 'active';
+  const statusMap: Record<ApiReservationStatus, ReservationStatus> = {
+    RESERVED: 'reserved',
+    ACTIVE: 'active',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+  };
+  return statusMap[reservation.status];
 }
 
 function mapReservation(reservation: ReservationResponse): Reservation {
@@ -133,27 +135,33 @@ function mapReservation(reservation: ReservationResponse): Reservation {
     deskId: reservation.deskId,
     deskCode: reservation.deskCode,
     deskName: reservation.deskName ?? `Escritorio ${reservation.deskCode}`,
+    memberFullName: reservation.memberFullName,
     date: reservation.date,
     dateLabel: toDateLabel(reservation.date),
     startTime: reservation.startTime,
     endTime: reservation.endTime,
     status: getReservationStatus(reservation),
+    checkedInAt: reservation.checkedInAt,
   };
 }
 
 export async function listReservations(
+  accessToken: string,
   page = 1,
   limit = 9,
-  status?: 'ACTIVE' | 'CANCELLED',
+  status?: ApiReservationStatus,
+  date?: string,
 ) {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
     ...(status ? { status } : {}),
+    ...(date ? { date } : {}),
   });
 
   const response = await requestJson<ListReservationsResponse>(
     `/reservations?${params}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 
   return {
@@ -162,20 +170,36 @@ export async function listReservations(
   };
 }
 
-export async function createReservation(payload: CreateReservationPayload) {
+export async function validateArrival(id: string, accessToken: string) {
+  const response = await requestJson<ReservationResponse>(
+    `/reservations/${id}/check-in`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  return mapReservation(response);
+}
+
+export async function createReservation(
+  accessToken: string,
+  payload: CreateReservationPayload,
+) {
   const response = await requestJson<ReservationResponse>('/reservations', {
     method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(payload),
   });
 
   return mapReservation(response);
 }
 
-export async function cancelReservation(id: string) {
+export async function cancelReservation(id: string, accessToken: string) {
   const response = await requestJson<ReservationResponse>(
     `/reservations/${id}/cancel`,
     {
       method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
 

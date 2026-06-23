@@ -1,10 +1,16 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
+import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/infrastructure/database/prisma.service';
 
 describe('Payments Integration Tests (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
+  let memberId: string;
+  let deskId: string;
   let reservationId: string;
   let paymentId: string;
 
@@ -22,40 +28,62 @@ describe('Payments Integration Tests (e2e)', () => {
       }),
     );
     await app.init();
+
+    prisma = app.get(PrismaService);
+    await cleanupPaymentFixtures(prisma);
+    const uniqueSuffix = `${Date.now()}${Math.floor(Math.random() * 100_000)}`;
+    const user = await prisma.user.create({
+      data: {
+        email: `payments-e2e-${uniqueSuffix}@deskly.test`,
+        username: `payments_e2e_${uniqueSuffix}`,
+        passwordHash: 'not-used-by-payments-e2e',
+        member: {
+          create: {
+            fullName: 'Payments E2E Member',
+            dni: Number(uniqueSuffix.slice(-9)),
+            phone: BigInt(`11${uniqueSuffix.slice(-8)}`),
+          },
+        },
+      },
+      include: { member: true },
+    });
+
+    if (!user.member) {
+      throw new Error('Payment test member was not created');
+    }
+
+    memberId = user.member.id;
+
+    const desk = await prisma.desk.create({
+      data: {
+        name: `Payments E2E Desk ${uniqueSuffix}`,
+        peopleCapacity: 1,
+        enabled: true,
+      },
+    });
+    deskId = desk.id;
+
+    const reservation = await prisma.reservation.create({
+      data: {
+        deskId,
+        memberId,
+        date: new Date('2026-06-25T00:00:00.000Z'),
+        startTime: new Date('1970-01-01T09:00:00.000Z'),
+        endTime: new Date('1970-01-01T13:00:00.000Z'),
+      },
+    });
+    reservationId = reservation.id;
   });
 
   afterAll(async () => {
-    await app.close();
+    try {
+      await cleanupPaymentFixtures(prisma);
+    } finally {
+      await app.close();
+    }
   });
 
   describe('Payment Flow', () => {
-    // Primero crear una reserva para usar en los tests
-    beforeAll(async () => {
-      // Obtener un desk válido
-      const desksResponse = await request(app.getHttpServer())
-        .get('/desks')
-        .expect(200);
-
-      const deskId = desksResponse.body.desks[0]?.deskId;
-
-      if (!deskId) {
-        throw new Error('No desk found for testing');
-      }
-
-      // Crear una reserva
-      const reservationResponse = await request(app.getHttpServer())
-        .post('/reservations')
-        .send({
-          deskId,
-          date: '2026-06-25',
-          startTime: '09:00',
-          endTime: '13:00',
-        })
-        .expect(201);
-
-      reservationId = reservationResponse.body.reservationId;
-    });
-
     describe('POST /payments', () => {
       it('should create a payment successfully', async () => {
         const response = await request(app.getHttpServer())
@@ -273,3 +301,48 @@ describe('Payments Integration Tests (e2e)', () => {
     });
   });
 });
+
+async function cleanupPaymentFixtures(prisma: PrismaService): Promise<void> {
+  const users = await prisma.user.findMany({
+    where: { email: { startsWith: 'payments-e2e-' } },
+    include: { member: { select: { id: true } } },
+  });
+  const memberIds = users.flatMap((user) =>
+    user.member ? [user.member.id] : [],
+  );
+  const desks = await prisma.desk.findMany({
+    where: { name: { startsWith: 'Payments E2E Desk ' } },
+    select: { id: true },
+  });
+  const deskIds = desks.map((desk) => desk.id);
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      OR: [
+        ...(memberIds.length > 0 ? [{ memberId: { in: memberIds } }] : []),
+        ...(deskIds.length > 0 ? [{ deskId: { in: deskIds } }] : []),
+      ],
+    },
+    select: { id: true },
+  });
+  const reservationIds = reservations.map((reservation) => reservation.id);
+
+  if (reservationIds.length > 0) {
+    await prisma.payment.deleteMany({
+      where: { reservationId: { in: reservationIds } },
+    });
+    await prisma.reservation.deleteMany({
+      where: { id: { in: reservationIds } },
+    });
+  }
+  if (deskIds.length > 0) {
+    await prisma.desk.deleteMany({ where: { id: { in: deskIds } } });
+  }
+  if (memberIds.length > 0) {
+    await prisma.member.deleteMany({ where: { id: { in: memberIds } } });
+  }
+  if (users.length > 0) {
+    await prisma.user.deleteMany({
+      where: { id: { in: users.map((user) => user.id) } },
+    });
+  }
+}

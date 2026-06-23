@@ -11,6 +11,10 @@ export function toReservationOutput(
   return {
     reservationId: reservation.id,
     deskId: reservation.deskId,
+    memberId: reservation.memberId,
+    ...(reservation.memberFullName
+      ? { memberFullName: reservation.memberFullName }
+      : {}),
     deskCode: reservation.deskCode,
     ...(reservation.deskName ? { deskName: reservation.deskName } : {}),
     date: reservation.date,
@@ -25,6 +29,9 @@ export function toReservationOutput(
       : {}),
     ...(reservation.cancelledAt
       ? { cancelledAt: reservation.cancelledAt.toISOString() }
+      : {}),
+    ...(reservation.checkedInAt
+      ? { checkedInAt: reservation.checkedInAt.toISOString() }
       : {}),
   };
 }

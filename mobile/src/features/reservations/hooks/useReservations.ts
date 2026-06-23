@@ -17,7 +17,12 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.';
 }
 
-export function useReservations(refreshKey = 0, onCancelled?: () => void) {
+export function useReservations(
+  accessToken: string,
+  refreshKey = 0,
+  onCancelled?: () => void,
+  managerView = false,
+) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -30,27 +35,48 @@ export function useReservations(refreshKey = 0, onCancelled?: () => void) {
     setErrorMessage(null);
 
     try {
-      const response = await listReservations(1, 50);
-      setReservations(response.reservations);
+      const today = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      if (managerView) {
+        const [reserved, active] = await Promise.all([
+          listReservations(accessToken, 1, 50, 'RESERVED', today),
+          listReservations(accessToken, 1, 50, 'ACTIVE', today),
+        ]);
+        setReservations([...reserved.reservations, ...active.reservations]);
+      } else {
+        const response = await listReservations(accessToken, 1, 50);
+        setReservations(response.reservations);
+      }
     } catch (error) {
       setReservations([]);
       setErrorMessage(getFriendlyErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [accessToken, managerView]);
 
   useEffect(() => {
     void loadReservations();
   }, [loadReservations, refreshKey]);
 
   const activeReservations = useMemo(
-    () => reservations.filter((reservation) => reservation.status === 'active'),
+    () =>
+      reservations.filter((reservation) =>
+        ['reserved', 'active'].includes(reservation.status),
+      ),
     [reservations],
   );
 
   const reservationHistory = useMemo(
-    () => reservations.filter((reservation) => reservation.status !== 'active'),
+    () =>
+      reservations.filter(
+        (reservation) =>
+          !['reserved', 'active'].includes(reservation.status),
+      ),
     [reservations],
   );
 
@@ -59,7 +85,7 @@ export function useReservations(refreshKey = 0, onCancelled?: () => void) {
     setActionStatus('loading');
 
     try {
-      await cancelReservation(reservation.id);
+      await cancelReservation(reservation.id, accessToken);
       await loadReservations();
       setActionStatus('success');
       onCancelled?.();
