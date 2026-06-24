@@ -11,6 +11,7 @@ import {
 } from '../../domain/errors/auth.errors';
 import {
   AuthRepositoryPort,
+  ChangePasswordParams,
   ListUsersParams,
   ListUsersResult,
   RegisterUserParams,
@@ -129,6 +130,13 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
         include: userWithMember,
       });
       return this.toDomain(user);
+    });
+  }
+
+  async changePassword(params: ChangePasswordParams): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: params.userId },
+      data: { passwordHash: params.newPasswordHash },
     });
   }
 

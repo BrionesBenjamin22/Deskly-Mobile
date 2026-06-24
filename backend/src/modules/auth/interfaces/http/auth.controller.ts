@@ -22,6 +22,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case';
 import { GetCurrentUserUseCase } from '../../application/use-cases/get-current-user.use-case';
 import { GetRegistrationStatusUseCase } from '../../application/use-cases/get-registration-status.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -31,11 +32,13 @@ import {
   BlockedUserError,
   InactiveUserError,
   InvalidCredentialsError,
+  InvalidCurrentPasswordError,
   MemberDataRequiredError,
   UserAlreadyExistsError,
   UserNotFoundError,
 } from '../../domain/errors/auth.errors';
 import type { AuthenticatedRequest } from './auth-request';
+import { ChangePasswordBodyDto } from './dto/change-password-body.dto';
 import { LoginBodyDto } from './dto/login-body.dto';
 import { RegisterBodyDto } from './dto/register-body.dto';
 import { UpdateProfileBodyDto } from './dto/update-profile-body.dto';
@@ -50,6 +53,7 @@ export class AuthController {
     private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
     private readonly getRegistrationStatusUseCase: GetRegistrationStatusUseCase,
     private readonly updateProfileUseCase: UpdateProfileUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
   ) {}
 
   @Get('registration-status')
@@ -136,6 +140,41 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Sesion invalida o expirada.' })
   getCurrentUser(@Req() request: AuthenticatedRequest) {
     return this.getCurrentUserUseCase.execute(request.user.id);
+  }
+
+  @Patch('me/password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(200)
+  @ApiOkResponse({ description: 'Contraseña actualizada correctamente.' })
+  @ApiBadRequestResponse({ description: 'Datos invalidos o incompletos.' })
+  @ApiUnauthorizedResponse({ description: 'Contraseña actual incorrecta o sesion invalida.' })
+  async changePassword(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: ChangePasswordBodyDto,
+  ) {
+    try {
+      await this.changePasswordUseCase.execute({
+        userId: request.user.id,
+        currentPassword: body.currentPassword,
+        newPassword: body.newPassword,
+      });
+      return { message: 'Contraseña actualizada correctamente.' };
+    } catch (error) {
+      if (error instanceof InvalidCurrentPasswordError) {
+        throw new UnauthorizedException({
+          message: 'La contraseña actual es incorrecta.',
+          error: 'Lo sentimos, la contraseña actual no coincide. Intente nuevamente.',
+        });
+      }
+      if (error instanceof UserNotFoundError) {
+        throw new NotFoundException({
+          message: 'Usuario no encontrado.',
+          error: 'Lo sentimos, no pudimos encontrar su cuenta.',
+        });
+      }
+      throw error;
+    }
   }
 
   @Patch('me')

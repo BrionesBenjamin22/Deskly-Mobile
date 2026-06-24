@@ -24,6 +24,7 @@ type DeskSettingsScreenProps = {
   onDeskCreated?: () => void;
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
+  onPressChangePassword?: () => void;
   userRole?: UserRole;
 };
 
@@ -192,6 +193,7 @@ export function DeskSettingsScreen({
   onPressLogout,
   onPressSwitchAccount,
   onPressUserManagement,
+  onPressChangePassword,
   userRole,
   onDeskCreated,
 }: DeskSettingsScreenProps) {
@@ -704,6 +706,7 @@ export function DeskSettingsScreen({
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
+          onPressChangePassword={onPressChangePassword}
           userRole={userRole}
         />
       </View>

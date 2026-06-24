@@ -5,6 +5,7 @@ export class BlockedUserError extends Error {
     super('User is blocked until ' + blockedUntil.toISOString());
   }
 }
+export class InvalidCurrentPasswordError extends Error {}
 export class UserAlreadyExistsError extends Error {}
 export class MemberDataRequiredError extends Error {}
 export class UserNotFoundError extends Error {}

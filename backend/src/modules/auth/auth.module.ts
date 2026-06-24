@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
 import { BcryptPasswordHasherService } from './application/services/bcrypt-password-hasher.service';
+import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { GetRegistrationStatusUseCase } from './application/use-cases/get-registration-status.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
@@ -33,6 +34,7 @@ import { UsersController } from './interfaces/http/users.controller';
   providers: [
     RegisterUseCase,
     LoginUseCase,
+    ChangePasswordUseCase,
     GetCurrentUserUseCase,
     GetRegistrationStatusUseCase,
     UpdateUserRoleUseCase,

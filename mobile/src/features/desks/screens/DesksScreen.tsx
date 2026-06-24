@@ -35,6 +35,7 @@ type DesksScreenProps = {
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
+  onPressChangePassword?: () => void;
   userRole?: UserRole;
   onReservationCreated?: () => void;
   externalRefreshKey?: number;
@@ -215,6 +216,7 @@ export function DesksScreen({
   onPressLogout,
   onPressSwitchAccount,
   onPressUserManagement,
+  onPressChangePassword,
   userRole,
   onReservationCreated,
   externalRefreshKey = 0,
@@ -510,6 +512,7 @@ export function DesksScreen({
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
+          onPressChangePassword={onPressChangePassword}
           userRole={userRole}
         />
       </View>

@@ -22,6 +22,11 @@ export type UpdateProfileParams = {
   phone?: number;
 };
 
+export type ChangePasswordParams = {
+  userId: string;
+  newPasswordHash: string;
+};
+
 export type ListUsersParams = {
   page: number;
   limit: number;
@@ -44,6 +49,7 @@ export interface AuthRepositoryPort {
     changedById: string;
   }): Promise<User | null>;
   updateProfile(params: UpdateProfileParams): Promise<User | null>;
+  changePassword(params: ChangePasswordParams): Promise<void>;
   listUsers(params: ListUsersParams): Promise<ListUsersResult>;
   deactivate(params: {
     userId: string;

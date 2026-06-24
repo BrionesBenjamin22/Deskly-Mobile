@@ -22,6 +22,7 @@ export function useReservations(
   refreshKey = 0,
   onCancelled?: () => void,
   managerView = false,
+  selectedDate?: string,
 ) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,10 +42,11 @@ export function useReservations(
         month: '2-digit',
         day: '2-digit',
       }).format(new Date());
+      const date = selectedDate ?? today;
       if (managerView) {
         const [reserved, active] = await Promise.all([
-          listReservations(accessToken, 1, 50, 'RESERVED', today),
-          listReservations(accessToken, 1, 50, 'ACTIVE', today),
+          listReservations(accessToken, 1, 50, 'RESERVED', date),
+          listReservations(accessToken, 1, 50, 'ACTIVE', date),
         ]);
         setReservations([...reserved.reservations, ...active.reservations]);
       } else {
@@ -57,7 +59,7 @@ export function useReservations(
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, managerView]);
+  }, [accessToken, managerView, selectedDate]);
 
   useEffect(() => {
     void loadReservations();

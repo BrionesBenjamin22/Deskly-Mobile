@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../../../config/api';
 import {
+  ChangePasswordPayload,
   CurrentUserResponse,
   LoginPayload,
   LoginResponse,
@@ -154,6 +155,17 @@ export function getRegistrationStatus() {
 export function getCurrentUser(accessToken: string) {
   return request<CurrentUserResponse>('/auth/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function changePassword(accessToken: string, payload: ChangePasswordPayload) {
+  return request<{ message: string }>('/auth/me/password', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword,
+    }),
   });
 }
 

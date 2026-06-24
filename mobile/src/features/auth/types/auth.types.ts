@@ -60,3 +60,8 @@ export type UpdateProfilePayload = {
   fullName?: string;
   phone?: number;
 };
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};

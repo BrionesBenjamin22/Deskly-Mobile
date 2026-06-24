@@ -8,6 +8,7 @@ import { DesksScreen } from './src/features/desks/screens/DesksScreen';
 import { PaymentsScreen } from './src/features/payments/screens/PaymentsScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
 import { AuthScreen } from './src/features/auth/screens/AuthScreen';
+import { ChangePasswordModal } from './src/features/auth/components/ChangePasswordModal';
 import { ProfileScreen } from './src/features/auth/screens/ProfileScreen';
 import { LoginResponse } from './src/features/auth/types/auth.types';
 import { UserManagementScreen } from './src/features/users/screens/UserManagementScreen';
@@ -70,6 +71,7 @@ export default function App() {
   const [mountedTabs, setMountedTabs] = useState<Set<AppTab>>(
     () => new Set(['desks']),
   );
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
   const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
   const [desksRefreshKey, setDesksRefreshKey] = useState(0);
@@ -144,6 +146,7 @@ export default function App() {
               externalRefreshKey={desksRefreshKey}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressChangePassword={() => setShowChangePassword(true)}
               onReservationCreated={() => {
                 setReservationsRefreshKey((current) => current + 1);
                 setPaymentsRefreshKey((current) => current + 1);
@@ -164,6 +167,7 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressChangePassword={() => setShowChangePassword(true)}
               onReservationCancelled={() => {
                 setDesksRefreshKey((current) => current + 1);
                 setProfileRefreshKey((current) => current + 1);
@@ -185,6 +189,7 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressChangePassword={() => setShowChangePassword(true)}
             />
           </AnimatedTabScreen>
         ) : null}
@@ -200,6 +205,7 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressChangePassword={() => setShowChangePassword(true)}
               onDeskCreated={() => setDesksRefreshKey((current) => current + 1)}
             />
           </AnimatedTabScreen>
@@ -219,6 +225,7 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressChangePassword={() => setShowChangePassword(true)}
             />
           </AnimatedTabScreen>
         ) : null}
@@ -235,10 +242,18 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressChangePassword={() => setShowChangePassword(true)}
             />
           </AnimatedTabScreen>
         ) : null}
       </View>
+      {session ? (
+        <ChangePasswordModal
+          visible={showChangePassword}
+          accessToken={session.access_token}
+          onClose={() => setShowChangePassword(false)}
+        />
+      ) : null}
       <StatusBar style="dark" />
     </SafeAreaProvider>
   );

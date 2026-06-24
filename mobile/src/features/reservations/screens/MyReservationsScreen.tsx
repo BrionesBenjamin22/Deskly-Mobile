@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState } from 'react';
+import { PropsWithChildren, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
@@ -8,6 +8,8 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { CalendarPicker } from '../../desks/components/CalendarPicker';
+import { DateSelector, getDeskDateOptions } from '../../desks/components/DateSelector';
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
 import { PenaltyReasonModal } from '../../penalties/components/PenaltyReasonModal';
 import { useRegisterAbsence } from '../../penalties/hooks/useRegisterAbsence';
@@ -44,6 +46,7 @@ type MyReservationsScreenProps = {
   onReservationCancelled?: () => void;
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
+  onPressChangePassword?: () => void;
   refreshKey?: number;
 };
 
@@ -118,12 +121,39 @@ export function MyReservationsScreen({
   onReservationCancelled,
   onPressSwitchAccount,
   onPressUserManagement,
+  onPressChangePassword,
   refreshKey = 0,
 }: MyReservationsScreenProps) {
   const [selectedFilter, setSelectedFilter] = useState<StatusFilter>('all');
   const [reservationToCancel, setReservationToCancel] = useState<Reservation | null>(null);
   const [reservationToPenalize, setReservationToPenalize] = useState<Reservation | null>(null);
   const [penaltyReason, setPenaltyReason] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  const todayId = useMemo(() =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()),
+  []);
+
+  const [selectedDate, setSelectedDate] = useState(todayId);
+
+  const quickDates = useMemo(() => getDeskDateOptions(new Date(), 10), []);
+  const isCalendarDate = !quickDates.some((d) => d.id === selectedDate);
+  const isToday = selectedDate === todayId;
+
+  const selectedDateLabel = useMemo(() => {
+    const date = new Date(`${selectedDate}T12:00:00`);
+    return new Intl.DateTimeFormat('es-AR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(date);
+  }, [selectedDate]);
+
   const {
     actionStatus,
     activeReservations,
@@ -138,6 +168,7 @@ export function MyReservationsScreen({
     refreshKey,
     onReservationCancelled,
     userRole === 'GESTOR',
+    userRole === 'GESTOR' ? selectedDate : undefined,
   );
 
   const penaltyAction = useRegisterAbsence(accessToken, async () => {
@@ -179,7 +210,6 @@ export function MyReservationsScreen({
     return r.status === selectedFilter;
   });
 
-  const hasAnyReservation = allReservations.length > 0;
   const activeStatus =
     actionStatus === 'idle' ? null : cancellationStatusContent[actionStatus];
   const isManagerEmpty =
@@ -195,16 +225,49 @@ export function MyReservationsScreen({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          {!isManagerEmpty ? <View style={styles.header}>
+          <View style={styles.header}>
             <AppText variant="title">
-              {userRole === 'GESTOR' ? 'Reservas activas de hoy' : 'Mis Reservas'}
-            </AppText>
-            <AppText variant="caption" color={colors.primaryLight} style={styles.count}>
               {userRole === 'GESTOR'
-                ? `${filteredReservations.length} reservas para gestionar`
-                : `${filteredReservations.length} ${getStatusLabel(selectedFilter)}`}
+                ? (isToday ? 'Reservas activas de hoy' : `Reservas del ${selectedDateLabel}`)
+                : 'Mis Reservas'}
             </AppText>
-          </View> : null}
+            {!isManagerEmpty && (
+              <AppText variant="caption" color={colors.primaryLight} style={styles.count}>
+                {userRole === 'GESTOR'
+                  ? `${filteredReservations.length} reservas para gestionar`
+                  : `${filteredReservations.length} ${getStatusLabel(selectedFilter)}`}
+              </AppText>
+            )}
+          </View>
+
+          {userRole === 'GESTOR' && (
+            <View style={styles.dateSection}>
+              {isCalendarDate ? (
+                <View style={styles.calendarDateBanner}>
+                  <AppText variant="body" color={colors.primary} style={styles.calendarDateText}>
+                    {selectedDateLabel}
+                  </AppText>
+                  <Pressable onPress={() => setSelectedDate(todayId)} style={styles.clearDateButton}>
+                    <AppText variant="caption" color={colors.primaryLight}>Ver hoy</AppText>
+                  </Pressable>
+                </View>
+              ) : (
+                <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+              )}
+              <Pressable onPress={() => setShowCalendar(true)} style={styles.calendarTrigger}>
+                <AppText variant="caption" color={colors.primaryLight}>Ver más fechas</AppText>
+              </Pressable>
+            </View>
+          )}
+
+          <CalendarPicker
+            visible={showCalendar}
+            onSelectDate={(date) => {
+              setSelectedDate(date);
+              setShowCalendar(false);
+            }}
+            onClose={() => setShowCalendar(false)}
+          />
 
           {userRole !== 'GESTOR' ? <View style={styles.filtersContainer}>
             <FilterChip
@@ -263,7 +326,9 @@ export function MyReservationsScreen({
                 userRole === 'GESTOR' ? (
                   <View style={styles.managerEmptyState}>
                     <AppText variant="subtitle" color={colors.primaryLight}>
-                      No hay Reservas para hoy
+                      {isToday
+                        ? 'No hay reservas para hoy'
+                        : `No hay reservas para el ${selectedDateLabel}`}
                     </AppText>
                   </View>
                 ) : (
@@ -283,6 +348,7 @@ export function MyReservationsScreen({
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
+          onPressChangePassword={onPressChangePassword}
         />
       </View>
 
@@ -418,5 +484,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     minHeight: 320,
+  },
+  dateSection: {
+    gap: spacing.sm,
+  },
+  calendarDateBanner: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+  },
+  calendarDateText: {
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  clearDateButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  calendarTrigger: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
   },
 });

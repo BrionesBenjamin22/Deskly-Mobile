@@ -25,6 +25,7 @@ type PaymentsScreenProps = {
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
+  onPressChangePassword?: () => void;
   userRole?: UserRole;
   refreshKey?: number;
 };
@@ -211,6 +212,7 @@ export function PaymentsScreen({
   onPressLogout,
   onPressSwitchAccount,
   onPressUserManagement,
+  onPressChangePassword,
   userRole,
   refreshKey = 0,
 }: PaymentsScreenProps) {
@@ -375,6 +377,7 @@ export function PaymentsScreen({
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
+          onPressChangePassword={onPressChangePassword}
           userRole={userRole}
         />
       </View>
