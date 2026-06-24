@@ -268,3 +268,150 @@ Toda nueva funcionalidad debe considerar:
 - reutilizacion
 - minimizacion de renders
 - eficiencia de consultas
+
+## 20. Manejo de errores de autenticacion
+
+Cuando el backend rechaza un login, debe devolver respuestas diferenciadas por caso. No agrupar todos los 401 en un solo mensaje generico.
+
+Casos actuales y sus contratos:
+
+| Caso | HTTP | Campo extra | Valor |
+|------|------|-------------|-------|
+| Credenciales incorrectas | 401 | — | — |
+| Cuenta desactivada por admin | 401 | `errorCode` | `'ACCOUNT_INACTIVE'` |
+| Cuenta bloqueada por penalizaciones | 401 | `blockedUntil` | ISO string de la fecha de desbloqueo |
+
+El frontend detecta el caso por la presencia de `errorCode` o `blockedUntil` en el body del error y muestra un `StatusModal` con titulo especifico:
+- Credenciales incorrectas: titulo generico
+- Cuenta desactivada: "Cuenta desactivada"
+- Cuenta bloqueada: "Cuenta bloqueada"
+
+## 21. Clases de error custom en React Native
+
+Las clases que extienden `Error` en React Native pueden fallar con `instanceof` debido a la transpilacion de Babel, que rompe la cadena de prototipo.
+
+Regla obligatoria: toda clase de error custom debe incluir `Object.setPrototypeOf(this, NombreClase.prototype)` en su constructor.
+
+Ademas, la deteccion en los bloques `catch` debe usar doble verificacion:
+
+```typescript
+if (error instanceof MiError || (error instanceof Error && error.name === 'MiError')) {
+  // manejar
+}
+```
+
+Esto aplica a todos los errores en `auth.service.ts` y cualquier otro service que defina errores propios.
+
+## 22. Reutilizacion de componentes entre features
+
+Los componentes de UI de una feature pueden reutilizarse en otras features cuando el contrato de props es identico o compatible. No duplicar.
+
+Casos ya aplicados:
+- `CalendarPicker` y `DateSelector` de `features/desks/components` reutilizados en `features/reservations/screens/MyReservationsScreen.tsx` para la vista del GESTOR.
+- `getDeskDateOptions` de `DateSelector` reutilizado para generar las opciones rapidas de fecha en reservas.
+
+Regla: antes de crear un nuevo componente de calendario, selector de fecha o similares, verificar si ya existe en otra feature.
+
+## 23. Convencion de navegacion en App.tsx
+
+La navegacion es state-based. No se usa React Navigation ni ningun router externo. El estado `currentScreen` en `App.tsx` determina que pantalla se renderiza.
+
+Reglas:
+- Toda nueva pantalla debe recibir sus callbacks de navegacion como props.
+- Los modales globales (como `ChangePasswordModal`) se renderizan en `App.tsx` y se abren/cierran con estado local en ese nivel.
+- El `accessToken` y datos de sesion se pasan como props desde `App.tsx` hacia cada pantalla. No usar Context para esto a menos que se decida migrar.
+- Toda nueva pantalla que use `BottomTabBar` debe recibir y propagar `onPressChangePassword`.
+
+## 24. Endpoints implementados por modulo
+
+Referencia actualizada de todos los endpoints REST disponibles.
+
+### Auth (`/auth`)
+| Metodo | Ruta | Proteccion | Descripcion |
+|--------|------|------------|-------------|
+| GET | `/auth/registration-status` | Publica | Indica si el proximo registro requiere datos de miembro |
+| POST | `/auth/register` | Publica | Registro de usuario |
+| POST | `/auth/login` | Publica | Login, retorna JWT. Diferencia 3 casos de error |
+| GET | `/auth/me` | JWT | Usuario autenticado actual |
+| PATCH | `/auth/me` | JWT | Actualizar perfil (username, email, fullName, phone) |
+| PATCH | `/auth/me/password` | JWT | Cambiar contrasena (valida contrasena actual) |
+
+### Users (`/users`)
+| Metodo | Ruta | Proteccion | Descripcion |
+|--------|------|------------|-------------|
+| GET | `/users` | ADMIN | Listado paginado con busqueda |
+| PATCH | `/users/:id/role` | ADMIN | Cambiar rol |
+| PATCH | `/users/:id/access` | ADMIN | Restaurar acceso (desbloquear o reactivar) |
+| DELETE | `/users/:id` | ADMIN | Baja logica |
+
+### Desks (`/desks`)
+| Metodo | Ruta | Proteccion | Descripcion |
+|--------|------|------------|-------------|
+| GET | `/desks` | Publica | Listado paginado |
+| POST | `/desks` | Publica | Crear escritorio |
+| GET | `/desks/:id` | Publica | Detalle |
+| PATCH | `/desks/:id` | Publica | Editar |
+| DELETE | `/desks/:id` | Publica | Eliminar logicamente |
+| GET | `/desks/availability` | Publica | Escritorios disponibles por fecha y horario |
+
+### Reservations (`/reservations`)
+| Metodo | Ruta | Proteccion | Descripcion |
+|--------|------|------------|-------------|
+| POST | `/reservations` | MIEMBRO | Crear reserva |
+| GET | `/reservations` | JWT | Listar (MIEMBRO ve solo las propias) |
+| GET | `/reservations/:id` | Publica | Detalle |
+| PATCH | `/reservations/:id` | Publica | Editar |
+| PATCH | `/reservations/:id/cancel` | JWT | Cancelar |
+| DELETE | `/reservations/:id` | JWT | Cancelar logicamente |
+| PATCH | `/reservations/:id/check-in` | GESTOR | Validar llegada |
+
+### Payments (`/payments`)
+| Metodo | Ruta | Proteccion | Descripcion |
+|--------|------|------------|-------------|
+| POST | `/payments` | Publica | Crear pago vinculado a una reserva |
+| GET | `/payments` | Publica | Listado paginado |
+| GET | `/payments/:id` | Publica | Detalle |
+| DELETE | `/payments/:id` | Publica | Eliminar |
+
+### Penalties (`/penalties`)
+| Metodo | Ruta | Proteccion | Descripcion |
+|--------|------|------------|-------------|
+| POST | `/penalties/absence` | GESTOR | Registrar ausencia e infraccion |
+| GET | `/penalties` | JWT | Listado (MIEMBRO ve solo las propias) |
+| GET | `/penalties/me` | JWT | Penalizaciones activas del usuario actual |
+
+## 25. Cambio de contrasena
+
+El cambio de contrasena sigue el siguiente flujo:
+
+Backend:
+- Endpoint: `PATCH /auth/me/password`
+- DTO: `currentPassword` (1-72 chars) y `newPassword` (8-72 chars, minimo 1 mayuscula, minimo 1 numero)
+- Logica: valida contrasena actual contra hash, hashea la nueva, actualiza en BD
+- Errores: `InvalidCurrentPasswordError` → 401; `UserNotFoundError` → 404
+
+Frontend:
+- Modal `ChangePasswordModal` renderizado en `App.tsx` (nivel raiz, tiene acceso al token)
+- Se abre via callback `onPressChangePassword` propagado desde `App.tsx` → pantalla → `BottomTabBar`
+- Validacion en tiempo real: longitud, mayuscula, numero, coincidencia de confirmacion
+- Toda nueva pantalla que incorpore `BottomTabBar` debe recibir y propagar `onPressChangePassword`
+
+## 26. Permisos por rol — resumen operativo
+
+| Accion | ADMIN | GESTOR | MIEMBRO |
+|--------|-------|--------|---------|
+| Ver escritorios | si | si | si |
+| Crear/editar/eliminar escritorios | si | si | no |
+| Ver disponibilidad | si | si | si |
+| Crear reservas | si | si | si (propias) |
+| Ver reservas | todas | todas | solo propias |
+| Cancelar reservas | si | si | si (propias) |
+| Validar llegada (check-in) | no | si | no |
+| Registrar ausencia/penalizacion | no | si | no |
+| Filtrar reservas por fecha | no | si | no |
+| Gestion de usuarios | si | no | no |
+| Restaurar acceso de usuarios | si | no | no |
+| Ver penalizaciones de otros | si | si | no |
+| Ver propias penalizaciones | si | si | si |
+| Cambiar contrasena propia | si | si | si |
+| Editar perfil propio | no (readonly) | si | si |
