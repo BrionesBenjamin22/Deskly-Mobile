@@ -55,6 +55,29 @@ pnpm install
 pnpm start
 ```
 
+## Desarrollo con Docker Compose
+
+Copiar `.env.example` como `.env` en la raiz y definir una contrasena local. El
+backend sigue leyendo su configuracion de `backend/.env`, pero Compose reemplaza
+`DATABASE_URL` para conectarlo a PostgreSQL por la red interna.
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+El backend queda publicado solo en `127.0.0.1:3000`. Metro/Expo publica los puertos
+de desarrollo necesarios para conexiones externas. PostgreSQL no expone puertos al
+host y conserva sus datos en el volumen `postgres-data`.
+
+Antes de iniciar el backend, el servicio one-shot `migration` ejecuta
+`prisma migrate deploy`. La API solo arranca cuando todas las migraciones versionadas
+terminan correctamente; el contenedor no usa `db push` ni genera migraciones nuevas.
+
+Los contenedores de aplicacion eliminan capacidades Linux, impiden escalamiento de
+privilegios y usan filesystem de solo lectura con directorios temporales acotados.
+Para Expo Go en un dispositivo fisico, configurar `EXPO_PUBLIC_API_URL` con la IP
+LAN del equipo antes de construir e iniciar el servicio mobile.
+
 ## Convenciones de desarrollo
 
 - Cada entidad nueva debe respetar arquitectura hexagonal.

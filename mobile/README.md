@@ -171,3 +171,13 @@ Los homes consumen 9 elementos por pagina por defecto. Las pantallas que muestre
 
 - conectar navegacion real para `Mis reservas` y `Perfil`
 - incorporar historial de cambios en detalle cuando el backend exponga el endpoint correspondiente
+# Contenedor Docker
+
+El `Dockerfile` ofrece una etapa `development` para ejecutar Metro/Expo dentro de
+Docker. Las dependencias se instalan en una etapa independiente con lockfile y el
+proceso final corre como el usuario no privilegiado `expo`, con telemetria
+desactivada y `dumb-init`.
+
+`EXPO_PUBLIC_API_URL` se incorpora al bundle de Expo. En un dispositivo fisico se
+debe usar `http://<IP_LAN_DEL_HOST>:3000`; `127.0.0.1` solo apunta al host desde web
+o desde entornos donde el dispositivo comparte loopback.

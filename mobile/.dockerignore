@@ -1,0 +1,7 @@
+.env
+.expo
+.git
+coverage
+node_modules
+*.log
+Dockerfile*

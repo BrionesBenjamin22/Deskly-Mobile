@@ -167,3 +167,15 @@ Comandos base:
 pnpm build
 pnpm test
 ```
+# Contenedor Docker
+
+El `Dockerfile` usa etapas separadas para instalar dependencias, compilar NestJS y
+crear una imagen de ejecucion sin dependencias de desarrollo. La etapa final corre
+como el usuario no privilegiado `deskly`, usa `dumb-init` y no incorpora archivos
+`.env` al contexto.
+
+La configuracion se inyecta en tiempo de ejecucion. Como minimo requiere
+`DATABASE_URL` y `JWT_SECRET`. Las migraciones deben ejecutarse de forma explicita
+como tarea de despliegue; el servicio `migration` de Docker Compose ejecuta
+`prisma migrate deploy` antes de habilitar la API. El arranque del proceso NestJS no
+modifica automaticamente el esquema de datos.
