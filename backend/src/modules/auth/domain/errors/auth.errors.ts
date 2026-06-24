@@ -1,5 +1,10 @@
 export class InvalidCredentialsError extends Error {}
 export class InactiveUserError extends Error {}
+export class BlockedUserError extends Error {
+  constructor(readonly blockedUntil: Date) {
+    super('User is blocked until ' + blockedUntil.toISOString());
+  }
+}
 export class UserAlreadyExistsError extends Error {}
 export class MemberDataRequiredError extends Error {}
 export class UserNotFoundError extends Error {}

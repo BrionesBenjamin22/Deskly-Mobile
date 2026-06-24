@@ -21,9 +21,16 @@ import {
 } from '../../domain/ports/penalty-repository.port';
 
 export const ACTIVE_PENALTIES_TO_BLOCK = 3;
+export const BLOCK_DURATION_DAYS = 7;
 
 export function shouldBlockAccount(activePenaltyCount: number): boolean {
   return activePenaltyCount >= ACTIVE_PENALTIES_TO_BLOCK;
+}
+
+export function calculateBlockedUntil(registeredAt: Date): Date {
+  const blockedUntil = new Date(registeredAt);
+  blockedUntil.setDate(blockedUntil.getDate() + BLOCK_DURATION_DAYS);
+  return blockedUntil;
 }
 
 @Injectable()
@@ -94,19 +101,18 @@ export class PrismaPenaltyRepository implements PenaltyRepositoryPort {
           });
 
           if (level === InfractionLevel.PENALTY) {
-            const activePenalties = await transaction.penalty.findMany({
+            const activePenaltyCount = await transaction.penalty.count({
               where: {
                 memberId: params.memberId,
                 level: InfractionLevel.PENALTY,
                 activeUntil: { gt: params.registeredAt },
               },
-              orderBy: { activeUntil: 'asc' },
-              select: { activeUntil: true },
             });
-            if (shouldBlockAccount(activePenalties.length)) {
+            if (shouldBlockAccount(activePenaltyCount)) {
+              const blockedUntil = calculateBlockedUntil(params.registeredAt);
               await transaction.user.updateMany({
                 where: { member: { id: params.memberId } },
-                data: { blockedUntil: activePenalties[0].activeUntil },
+                data: { blockedUntil },
               });
             }
           }

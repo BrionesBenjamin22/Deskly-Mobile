@@ -21,6 +21,8 @@ import { radii, spacing } from '../../../theme/spacing';
 import { AuthField } from '../components/AuthField';
 import {
   AuthServiceError,
+  BlockedAccountServiceError,
+  InactiveAccountServiceError,
   getRegistrationStatus,
   login,
   register,
@@ -32,6 +34,8 @@ import {
   RegisterFormValues,
   validateLogin,
   validateRegister,
+  getRealtimeDNIError,
+  getRealtimePhoneError,
 } from '../validation/auth.validation';
 
 type AuthMode = 'login' | 'register';
@@ -89,6 +93,7 @@ export function AuthScreen({
   const [successTitle, setSuccessTitle] = useState(
     initialFeedback?.title ?? '',
   );
+  const [errorTitle, setErrorTitle] = useState('No pudimos completar la solicitud');
   const [pendingSession, setPendingSession] = useState<LoginResponse | null>(
     null,
   );
@@ -142,6 +147,20 @@ export function AuthScreen({
       setStatusMessage(`Bienvenido, ${session.user.username}.`);
       setRequestStatus('success');
     } catch (error) {
+      const isBlocked =
+        error instanceof BlockedAccountServiceError ||
+        (error instanceof Error && error.name === 'BlockedAccountServiceError');
+      const isInactive =
+        error instanceof InactiveAccountServiceError ||
+        (error instanceof Error && error.name === 'InactiveAccountServiceError');
+
+      if (isBlocked) {
+        setErrorTitle('Cuenta bloqueada');
+      } else if (isInactive) {
+        setErrorTitle('Cuenta desactivada');
+      } else {
+        setErrorTitle('No pudimos completar la solicitud');
+      }
       setStatusMessage(getFriendlyError(error));
       setRequestStatus('error');
     }
@@ -214,6 +233,7 @@ export function AuthScreen({
     statusMessage,
     mode,
     successTitle,
+    errorTitle,
   );
 
   return (
@@ -229,9 +249,9 @@ export function AuthScreen({
         >
           <View style={styles.brand}>
             <Image
-              source={require('../../../../assets/Deskly-logo.jpeg')}
+              source={require('../../../../assets/new-logo-deskly.png')}
               style={styles.logo}
-              resizeMode="cover"
+              resizeMode="contain"
             />
             <View style={styles.brandCopy}>
               <AppText variant="title" color={colors.primary}>
@@ -298,9 +318,17 @@ export function AuthScreen({
                     ...current,
                     [field]: value,
                   }));
+
+                  let realtimeError: string | undefined = undefined;
+                  if (field === 'dni') {
+                    realtimeError = getRealtimeDNIError(value);
+                  } else if (field === 'phone') {
+                    realtimeError = getRealtimePhoneError(value);
+                  }
+
                   setRegisterErrors((current) => ({
                     ...current,
-                    [field]: undefined,
+                    [field]: realtimeError,
                   }));
                 }}
                 onSubmit={handleRegister}
@@ -364,6 +392,7 @@ function LoginForm({
         autoCapitalize="none"
         autoCorrect={false}
         editable={!disabled}
+        required
         onChangeText={(value) => onChange('identifier', value)}
       />
       <AuthField
@@ -373,6 +402,7 @@ function LoginForm({
         error={errors.password}
         secureTextEntry
         editable={!disabled}
+        required
         onChangeText={(value) => onChange('password', value)}
         onSubmitEditing={onSubmit}
       />
@@ -409,6 +439,7 @@ function RegisterForm({
         autoCapitalize="none"
         autoCorrect={false}
         editable={!disabled}
+        required
         onChangeText={(value) => onChange('email', value)}
       />
       <AuthField
@@ -419,6 +450,7 @@ function RegisterForm({
         autoCapitalize="none"
         autoCorrect={false}
         editable={!disabled}
+        required
         onChangeText={(value) => onChange('username', value)}
       />
       <AuthField
@@ -428,6 +460,7 @@ function RegisterForm({
         error={errors.password}
         secureTextEntry
         editable={!disabled}
+        required
         onChangeText={(value) => onChange('password', value)}
       />
       {requiresMember ? (
@@ -439,6 +472,7 @@ function RegisterForm({
             error={errors.fullName}
             autoCapitalize="words"
             editable={!disabled}
+            required
             onChangeText={(value) => onChange('fullName', value)}
           />
           <View style={styles.row}>
@@ -450,6 +484,7 @@ function RegisterForm({
                 error={errors.dni}
                 keyboardType="number-pad"
                 editable={!disabled}
+                required
                 onChangeText={(value) => onChange('dni', value)}
               />
             </View>
@@ -461,6 +496,7 @@ function RegisterForm({
                 error={errors.phone}
                 keyboardType="phone-pad"
                 editable={!disabled}
+                required
                 onChangeText={(value) => onChange('phone', value)}
               />
             </View>
@@ -477,6 +513,7 @@ function getModalContent(
   message: string,
   mode: AuthMode,
   successTitle: string,
+  errorTitle = 'No pudimos completar la solicitud',
 ): { type: StatusModalType; title: string; description: string } | null {
   if (status === 'idle') {
     return null;
@@ -500,7 +537,7 @@ function getModalContent(
 
   return {
     type: 'error',
-    title: 'No pudimos completar la solicitud',
+    title: errorTitle,
     description: message,
   };
 }

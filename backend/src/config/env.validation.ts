@@ -39,21 +39,23 @@ export function validateEnvironment(
 }
 
 function validateJwtExpiration(value: string): string {
-  const match = /^(\d+)(s|m|h)$/.exec(value);
+  const match = /^(\d+)(s|m|h|d)$/.exec(value);
 
   if (!match) {
     throw new Error(
-      'JWT_EXPIRES_IN must use seconds, minutes or hours (for example: 1h)',
+      'JWT_EXPIRES_IN must use seconds, minutes, hours or days (for example: 1h, 1d)',
     );
   }
 
   const amount = Number(match[1]);
   const unit = match[2];
-  const seconds = amount * (unit === 'h' ? 3600 : unit === 'm' ? 60 : 1);
+  const seconds =
+    amount *
+    (unit === 'd' ? 86400 : unit === 'h' ? 3600 : unit === 'm' ? 60 : 1);
 
-  if (seconds <= 0 || seconds > 3600) {
+  if (seconds <= 0 || seconds > 7 * 86400) {
     throw new Error(
-      'JWT_EXPIRES_IN must be greater than 0 and no longer than 1 hour',
+      'JWT_EXPIRES_IN must be greater than 0 and no longer than 7 days',
     );
   }
 

@@ -20,6 +20,7 @@ import {
   Home,
   LogOut,
   MapPin,
+  Pencil,
   Search,
   SlidersHorizontal,
   User,
@@ -45,6 +46,7 @@ export type IconName =
   | 'loader'
   | 'logout'
   | 'mapPin'
+  | 'pencil'
   | 'search'
   | 'user'
   | 'users'
@@ -73,6 +75,7 @@ const icons: Record<IconName, LucideIcon> = {
   loader: LoaderCircle,
   logout: LogOut,
   mapPin: MapPin,
+  pencil: Pencil,
   search: Search,
   user: User,
   users: Users,

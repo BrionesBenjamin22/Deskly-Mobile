@@ -8,6 +8,7 @@ import { GetRegistrationStatusUseCase } from './application/use-cases/get-regist
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { UpdateUserRoleUseCase } from './application/use-cases/update-user-role.use-case';
+import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
 import { ListUsersUseCase } from './application/use-cases/list-users.use-case';
 import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.use-case';
 import { RestoreUserAccessUseCase } from './application/use-cases/restore-user-access.use-case';
@@ -35,6 +36,7 @@ import { UsersController } from './interfaces/http/users.controller';
     GetCurrentUserUseCase,
     GetRegistrationStatusUseCase,
     UpdateUserRoleUseCase,
+    UpdateProfileUseCase,
     ListUsersUseCase,
     DeactivateUserUseCase,
     RestoreUserAccessUseCase,

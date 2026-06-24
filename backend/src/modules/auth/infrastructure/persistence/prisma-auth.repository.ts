@@ -15,6 +15,7 @@ import {
   ListUsersResult,
   RegisterUserParams,
   RegisterUserResult,
+  UpdateProfileParams,
 } from '../../domain/ports/auth-repository.port';
 
 const userWithMember = { member: true } as const;
@@ -240,6 +241,45 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
       });
       return this.toDomain(user);
     });
+  }
+
+  async updateProfile(params: UpdateProfileParams): Promise<User | null> {
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const updateData: Prisma.UserUpdateInput = {};
+
+        if (params.email) updateData.email = params.email;
+        if (params.username) updateData.username = params.username;
+
+        if (params.fullName || params.phone) {
+          updateData.member = {
+            update: {},
+          };
+
+          if (params.fullName) {
+            (updateData.member as any).update.fullName = params.fullName;
+          }
+          if (params.phone) {
+            (updateData.member as any).update.phone = BigInt(params.phone);
+          }
+        }
+
+        const user = await transaction.user.update({
+          where: { id: params.userId },
+          data: updateData,
+          include: userWithMember,
+        });
+        return this.toDomain(user);
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new UserAlreadyExistsError();
+      }
+      throw error;
+    }
   }
 
   private toDomain(user: PersistedUser): User {

@@ -14,6 +14,14 @@ export type RegisterUserResult = {
   isFirstUser: boolean;
 };
 
+export type UpdateProfileParams = {
+  userId: string;
+  email?: string;
+  username?: string;
+  fullName?: string;
+  phone?: number;
+};
+
 export type ListUsersParams = {
   page: number;
   limit: number;
@@ -35,6 +43,7 @@ export interface AuthRepositoryPort {
     role: UserRoleValue;
     changedById: string;
   }): Promise<User | null>;
+  updateProfile(params: UpdateProfileParams): Promise<User | null>;
   listUsers(params: ListUsersParams): Promise<ListUsersResult>;
   deactivate(params: {
     userId: string;

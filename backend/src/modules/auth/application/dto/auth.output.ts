@@ -14,6 +14,7 @@ export type PublicUserOutput = {
 };
 
 export type CurrentUserOutput = Omit<PublicUserOutput, 'member'> & {
+  blockedUntil: string | null;
   member: {
     id: string;
     fullName: string;
@@ -47,6 +48,7 @@ export function toCurrentUser(user: User): CurrentUserOutput {
     username: user.username,
     role: user.role,
     active: user.active,
+    blockedUntil: user.blockedUntil?.toISOString() ?? null,
     member: user.member
       ? {
           id: user.member.id,

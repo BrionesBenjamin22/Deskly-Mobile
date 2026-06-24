@@ -25,6 +25,7 @@ export type LoginResponse = {
 
 export type CurrentUserResponse = {
   user: Omit<AuthUser, 'member'> & {
+    blockedUntil: string | null;
     member:
       | (NonNullable<AuthUser['member']> & {
           dni: number;
@@ -51,4 +52,11 @@ export type RegistrationStatusResponse = {
 
 export type RegisterResponse = {
   user: AuthUser;
+};
+
+export type UpdateProfilePayload = {
+  email?: string;
+  username?: string;
+  fullName?: string;
+  phone?: number;
 };

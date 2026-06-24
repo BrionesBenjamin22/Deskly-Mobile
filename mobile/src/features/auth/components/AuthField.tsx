@@ -8,12 +8,14 @@ import { spacing } from '../../../theme/spacing';
 
 type AuthFieldProps = ComponentProps<typeof Input> & {
   error?: string;
+  required?: boolean;
 };
 
-export function AuthField({ error, style, ...props }: AuthFieldProps) {
+export function AuthField({ error, required, style, ...props }: AuthFieldProps) {
   return (
     <View style={styles.container}>
       <Input
+        required={required}
         style={[style, error ? styles.inputError : undefined]}
         {...props}
       />

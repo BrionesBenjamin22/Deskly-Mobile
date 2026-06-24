@@ -6,11 +6,14 @@ import {
   RegisterPayload,
   RegisterResponse,
   RegistrationStatusResponse,
+  UpdateProfilePayload,
 } from '../types/auth.types';
 
 type ApiErrorBody = {
   error?: string;
   message?: string | string[];
+  blockedUntil?: string;
+  errorCode?: string;
 };
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -22,6 +25,26 @@ export class AuthServiceError extends Error {
   ) {
     super(message);
     this.name = 'AuthServiceError';
+    Object.setPrototypeOf(this, AuthServiceError.prototype);
+  }
+}
+
+export class BlockedAccountServiceError extends AuthServiceError {
+  constructor(
+    message: string,
+    readonly blockedUntil: Date | null,
+  ) {
+    super(message, 'api');
+    this.name = 'BlockedAccountServiceError';
+    Object.setPrototypeOf(this, BlockedAccountServiceError.prototype);
+  }
+}
+
+export class InactiveAccountServiceError extends AuthServiceError {
+  constructor(message: string) {
+    super(message, 'api');
+    this.name = 'InactiveAccountServiceError';
+    Object.setPrototypeOf(this, InactiveAccountServiceError.prototype);
   }
 }
 
@@ -47,9 +70,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
       ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
     });
     const body = (await response.json().catch(() => null)) as
       | T
@@ -57,10 +83,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       | null;
 
     if (!response.ok) {
-      throw new AuthServiceError(
-        getErrorMessage(body as ApiErrorBody | null),
-        'api',
-      );
+      const errorBody = body as ApiErrorBody | null;
+      if (errorBody?.blockedUntil) {
+        throw new BlockedAccountServiceError(
+          getErrorMessage(errorBody),
+          new Date(errorBody.blockedUntil),
+        );
+      }
+      if (errorBody?.errorCode === 'ACCOUNT_INACTIVE') {
+        throw new InactiveAccountServiceError(getErrorMessage(errorBody));
+      }
+      throw new AuthServiceError(getErrorMessage(errorBody), 'api');
     }
 
     return body as T;
@@ -121,5 +154,18 @@ export function getRegistrationStatus() {
 export function getCurrentUser(accessToken: string) {
   return request<CurrentUserResponse>('/auth/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function updateProfile(accessToken: string, payload: UpdateProfilePayload) {
+  return request<CurrentUserResponse>('/auth/me', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      email: payload.email?.trim().toLowerCase(),
+      username: payload.username?.trim().toLowerCase(),
+      fullName: payload.fullName?.trim(),
+      phone: payload.phone,
+    }),
   });
 }

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 
 import { User } from '../../domain/entities/user.entity';
 import {
+  BlockedUserError,
   InactiveUserError,
   InvalidCredentialsError,
 } from '../../domain/errors/auth.errors';
@@ -33,6 +34,7 @@ function createRepository(): jest.Mocked<AuthRepositoryPort> {
     findByIdentifier: jest.fn(),
     findById: jest.fn(),
     updateRole: jest.fn(),
+    updateProfile: jest.fn(),
     listUsers: jest.fn(),
     deactivate: jest.fn(),
     restoreAccess: jest.fn(),
@@ -113,39 +115,131 @@ describe('LoginUseCase', () => {
   it('rejects inactive users', async () => {
     repository.findByIdentifier.mockResolvedValue(
       new User({
-        id: activeUser.id,
-        email: activeUser.email,
-        username: activeUser.username,
-        passwordHash: activeUser.passwordHash,
-        role: activeUser.role,
+        ...activeUser,
         active: false,
-        member: activeUser.member,
-      }),
+      } as any),
     );
     passwordHasher.compare.mockResolvedValue(true);
 
     await expect(
       useCase.execute({ identifier: 'member', password: 'Password123' }),
     ).rejects.toBeInstanceOf(InactiveUserError);
+    expect(jwtService.signAsync).not.toHaveBeenCalled();
   });
 
-  it('rejects users blocked by active penalties', async () => {
-    repository.findByIdentifier.mockResolvedValue(
-      new User({
-        id: activeUser.id,
-        email: activeUser.email,
-        username: activeUser.username,
-        passwordHash: activeUser.passwordHash,
-        role: activeUser.role,
-        active: true,
-        blockedUntil: new Date('2099-01-01T00:00:00.000Z'),
-        member: activeUser.member,
-      }),
-    );
-    passwordHasher.compare.mockResolvedValue(true);
+  describe('penalty blocking', () => {
+    it('throws BlockedUserError when blockedUntil is in the future', async () => {
+      const blockedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      repository.findByIdentifier.mockResolvedValue(
+        new User({
+          id: activeUser.id,
+          email: activeUser.email,
+          username: activeUser.username,
+          passwordHash: activeUser.passwordHash,
+          role: activeUser.role,
+          active: true,
+          blockedUntil,
+          member: activeUser.member,
+        }),
+      );
+      passwordHasher.compare.mockResolvedValue(true);
 
-    await expect(
-      useCase.execute({ identifier: 'member', password: 'Password123' }),
-    ).rejects.toBeInstanceOf(InactiveUserError);
+      await expect(
+        useCase.execute({ identifier: 'member', password: 'Password123' }),
+      ).rejects.toBeInstanceOf(BlockedUserError);
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+
+    it('BlockedUserError carries the exact blockedUntil date', async () => {
+      const blockedUntil = new Date('2099-01-01T00:00:00.000Z');
+      repository.findByIdentifier.mockResolvedValue(
+        new User({
+          id: activeUser.id,
+          email: activeUser.email,
+          username: activeUser.username,
+          passwordHash: activeUser.passwordHash,
+          role: activeUser.role,
+          active: true,
+          blockedUntil,
+          member: activeUser.member,
+        }),
+      );
+      passwordHasher.compare.mockResolvedValue(true);
+
+      const error = await useCase
+        .execute({ identifier: 'member', password: 'Password123' })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(BlockedUserError);
+      expect((error as BlockedUserError).blockedUntil).toEqual(blockedUntil);
+    });
+
+    it('allows login when blockedUntil is in the past (auto-unblock)', async () => {
+      const expiredBlock = new Date(Date.now() - 1000);
+      repository.findByIdentifier.mockResolvedValue(
+        new User({
+          id: activeUser.id,
+          email: activeUser.email,
+          username: activeUser.username,
+          passwordHash: activeUser.passwordHash,
+          role: activeUser.role,
+          active: true,
+          blockedUntil: expiredBlock,
+          member: activeUser.member,
+        }),
+      );
+      passwordHasher.compare.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        identifier: 'member',
+        password: 'Password123',
+      });
+
+      expect(result.access_token).toBe('signed-token');
+      expect(jwtService.signAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows login when blockedUntil is null', async () => {
+      repository.findByIdentifier.mockResolvedValue(
+        new User({
+          id: activeUser.id,
+          email: activeUser.email,
+          username: activeUser.username,
+          passwordHash: activeUser.passwordHash,
+          role: activeUser.role,
+          active: true,
+          blockedUntil: null,
+          member: activeUser.member,
+        }),
+      );
+      passwordHasher.compare.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        identifier: 'member',
+        password: 'Password123',
+      });
+
+      expect(result.access_token).toBe('signed-token');
+    });
+
+    it('does not confuse an inactive account with a penalty block', async () => {
+      repository.findByIdentifier.mockResolvedValue(
+        new User({
+          id: activeUser.id,
+          email: activeUser.email,
+          username: activeUser.username,
+          passwordHash: activeUser.passwordHash,
+          role: activeUser.role,
+          active: false,
+          blockedUntil: new Date('2099-01-01T00:00:00.000Z'),
+          member: activeUser.member,
+        }),
+      );
+      passwordHasher.compare.mockResolvedValue(true);
+
+      await expect(
+        useCase.execute({ identifier: 'member', password: 'Password123' }),
+      ).rejects.toBeInstanceOf(InactiveUserError);
+    });
   });
 });

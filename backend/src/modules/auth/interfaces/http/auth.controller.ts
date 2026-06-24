@@ -5,6 +5,8 @@ import {
   Controller,
   Get,
   HttpCode,
+  NotFoundException,
+  Patch,
   Post,
   Req,
   UnauthorizedException,
@@ -24,15 +26,19 @@ import { GetCurrentUserUseCase } from '../../application/use-cases/get-current-u
 import { GetRegistrationStatusUseCase } from '../../application/use-cases/get-registration-status.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
+import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import {
+  BlockedUserError,
   InactiveUserError,
   InvalidCredentialsError,
   MemberDataRequiredError,
   UserAlreadyExistsError,
+  UserNotFoundError,
 } from '../../domain/errors/auth.errors';
 import type { AuthenticatedRequest } from './auth-request';
 import { LoginBodyDto } from './dto/login-body.dto';
 import { RegisterBodyDto } from './dto/register-body.dto';
+import { UpdateProfileBodyDto } from './dto/update-profile-body.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -43,6 +49,7 @@ export class AuthController {
     private readonly loginUseCase: LoginUseCase,
     private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
     private readonly getRegistrationStatusUseCase: GetRegistrationStatusUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
   ) {}
 
   @Get('registration-status')
@@ -93,14 +100,29 @@ export class AuthController {
     try {
       return await this.loginUseCase.execute(body);
     } catch (error) {
-      if (
-        error instanceof InvalidCredentialsError ||
-        error instanceof InactiveUserError
-      ) {
+      if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException({
-          message:
-            'No fue posible iniciar sesion con las credenciales proporcionadas.',
+          message: 'Credenciales incorrectas.',
           error: 'Lo sentimos, revise sus credenciales e intente nuevamente.',
+        });
+      }
+      if (error instanceof InactiveUserError) {
+        throw new UnauthorizedException({
+          message: 'Su cuenta se encuentra desactivada.',
+          error: 'Su cuenta fue desactivada por un administrador. Contacte al administrador para restaurar el acceso.',
+          errorCode: 'ACCOUNT_INACTIVE',
+        });
+      }
+      if (error instanceof BlockedUserError) {
+        const date = error.blockedUntil.toLocaleDateString('es-AR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+        throw new UnauthorizedException({
+          message: 'Su cuenta se encuentra bloqueada.',
+          error: `Su acceso fue restringido hasta el ${date}. Puede contactar a un administrador para solicitar el desbloqueo anticipado.`,
+          blockedUntil: error.blockedUntil.toISOString(),
         });
       }
       throw error;
@@ -114,5 +136,42 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Sesion invalida o expirada.' })
   getCurrentUser(@Req() request: AuthenticatedRequest) {
     return this.getCurrentUserUseCase.execute(request.user.id);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(200)
+  @ApiOkResponse({ description: 'Perfil actualizado correctamente.' })
+  @ApiBadRequestResponse({ description: 'Datos invalidos o incompletos.' })
+  @ApiConflictResponse({ description: 'Email o nombre de usuario ya registrado.' })
+  @ApiUnauthorizedResponse({ description: 'Sesion invalida o expirada.' })
+  async updateProfile(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: UpdateProfileBodyDto,
+  ) {
+    try {
+      return await this.updateProfileUseCase.execute({
+        userId: request.user.id,
+        email: body.email?.trim().toLowerCase(),
+        username: body.username?.trim().toLowerCase(),
+        fullName: body.fullName?.trim(),
+        phone: body.phone,
+      });
+    } catch (error) {
+      if (error instanceof UserAlreadyExistsError) {
+        throw new ConflictException({
+          message: 'El email o nombre de usuario ya se encuentra registrado.',
+          error: 'Lo sentimos, utilice otros datos e intente nuevamente.',
+        });
+      }
+      if (error instanceof UserNotFoundError) {
+        throw new NotFoundException({
+          message: 'Usuario no encontrado.',
+          error: 'Lo sentimos, no pudimos encontrar su cuenta.',
+        });
+      }
+      throw error;
+    }
   }
 }

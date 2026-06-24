@@ -50,19 +50,29 @@ export function PenaltyReasonModal({
               </AppText>
             </View>
 
-            <Input
-              label="Motivo de la cancelacion"
-              placeholder="Ej.: El miembro no se presento luego del periodo de tolerancia"
-              value={reason}
-              onChangeText={onChangeReason}
-              multiline
-              maxLength={500}
-              containerStyle={styles.inputContainer}
-              style={styles.input}
-            />
-            <AppText variant="caption" color={colors.primaryLight} style={styles.counter}>
-              {reason.length}/500
-            </AppText>
+            <View style={styles.inputWrapper}>
+              <View style={styles.labelRow}>
+                <AppText variant="caption" color={colors.blackOverlay} style={styles.inputLabel}>
+                  Motivo de la cancelacion
+                </AppText>
+                <AppText variant="caption" color={colors.primaryLight} style={styles.counter}>
+                  {reason.length}/500
+                </AppText>
+              </View>
+              <Input
+                placeholder="Ej.: El miembro no se presento luego del periodo de tolerancia"
+                value={reason}
+                onChangeText={onChangeReason}
+                multiline
+                numberOfLines={4}
+                maxLength={500}
+                autoComplete="off"
+                autoCorrect={false}
+                label=""
+                containerStyle={styles.inputContainer}
+                style={styles.input}
+              />
+            </View>
 
             <View style={styles.actions}>
               <View style={styles.action}>
@@ -94,10 +104,15 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: radii.lg,
-    gap: spacing.md,
+    gap: spacing.lg,
     padding: spacing.xl,
     width: '100%',
     maxWidth: 520,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   iconCircle: {
     alignItems: 'center',
@@ -108,23 +123,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 64,
   },
-  heading: { gap: spacing.xs },
-  title: { fontWeight: '800', textAlign: 'center' },
+  heading: { gap: spacing.sm },
+  title: { fontWeight: '800', textAlign: 'center', marginBottom: spacing.xs },
   description: { textAlign: 'center' },
-  inputContainer: { flex: 0 },
+  inputWrapper: {
+    gap: spacing.sm,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  inputLabel: {
+    fontWeight: '700',
+    color: colors.blackOverlay,
+  },
+  inputContainer: {
+    flex: 0,
+  },
   input: {
-    minHeight: 112,
-    paddingTop: spacing.md,
+    minHeight: 120,
     paddingVertical: spacing.md,
     textAlignVertical: 'top',
   },
-  counter: { marginTop: -spacing.sm, textAlign: 'right' },
-  actions: {
-    alignItems: 'stretch',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+  counter: {
+    textAlign: 'right',
+    color: colors.primaryLight,
   },
-  action: { flex: 1 },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    width: '100%',
+  },
+  action: {
+    flex: 1,
+    minWidth: 0,
+  },
   keyboardArea: { flex: 1 },
 });
