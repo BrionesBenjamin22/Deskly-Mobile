@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
@@ -14,7 +14,8 @@ import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
 import { DeskList } from '../components/DeskList';
 import { ReservationBottomSheet } from '../components/ReservationBottomSheet';
 import { useAvailableDesks } from '../hooks/useAvailableDesks';
-import { Desk, DeskZone } from '../types/desk.types';
+import { Desk, DeskZone, Locality, WorkArea } from '../types/desk.types';
+import { listLocalities, listWorkAreas } from '../services/desks.service';
 import {
   createReservation,
   listReservations,
@@ -25,7 +26,7 @@ import { UserRole } from '../../auth/types/auth.types';
 
 type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
 type ZoneFilter = DeskZone | 'all';
-type FilterDropdownId = 'startTime' | 'endTime' | 'zone';
+type FilterDropdownId = 'startTime' | 'endTime' | 'zone' | 'locality' | 'area';
 
 type DesksScreenProps = {
   accessToken: string;
@@ -69,6 +70,8 @@ const zoneOptions: { label: string; value: ZoneFilter }[] = [
   { label: 'Zona B', value: 'B' },
   { label: 'Zona C', value: 'C' },
 ];
+
+const allOption = { label: 'Todas', value: 'all' };
 
 const timeOptions = [
   '08:00',
@@ -129,6 +132,17 @@ function getSelectedDateLabel(dateValue: string) {
 
 function getZoneFilterLabel(value: ZoneFilter) {
   return zoneOptions.find((option) => option.value === value)?.label ?? 'Todas';
+}
+
+function getFilterLabel<TItem extends { id: string; name: string }>(
+  value: string,
+  items: TItem[],
+) {
+  if (value === 'all') {
+    return 'Todas';
+  }
+
+  return items.find((item) => item.id === value)?.name ?? 'Todas';
 }
 
 type FilterDropdownProps<TValue extends string> = {
@@ -234,12 +248,48 @@ export function DesksScreen({
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
   const [selectedZone, setSelectedZone] = useState<ZoneFilter>('all');
+  const [localities, setLocalities] = useState<Locality[]>([]);
+  const [workAreas, setWorkAreas] = useState<WorkArea[]>([]);
+  const [selectedLocalityId, setSelectedLocalityId] = useState('all');
+  const [selectedAreaId, setSelectedAreaId] = useState('all');
   const [openDropdown, setOpenDropdown] = useState<FilterDropdownId | null>(null);
   const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
 
   const quickDates = useMemo(() => getDeskDateOptions(new Date(), 30), []);
   const isCalendarDate = !quickDates.slice(0, 10).some((d) => d.id === selectedDate);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listLocalities()
+      .then((items) => {
+        if (isMounted) setLocalities(items);
+      })
+      .catch(() => {
+        if (isMounted) setLocalities([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listWorkAreas(selectedLocalityId === 'all' ? undefined : selectedLocalityId)
+      .then((items) => {
+        if (isMounted) setWorkAreas(items);
+      })
+      .catch(() => {
+        if (isMounted) setWorkAreas([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedLocalityId]);
 
   const calendarDateLabel = useMemo(() => {
     if (!isCalendarDate) return null;
@@ -257,6 +307,8 @@ export function DesksScreen({
     endTime,
     refreshKey: availabilityRefreshKey + externalRefreshKey,
     ...(selectedZone === 'all' ? {} : { zone: selectedZone }),
+    ...(selectedLocalityId === 'all' ? {} : { localityId: selectedLocalityId }),
+    ...(selectedAreaId === 'all' ? {} : { areaId: selectedAreaId }),
   });
   const availableCount = desks.filter(
     (desk) => desk.enabled && desk.status === 'available',
@@ -265,6 +317,20 @@ export function DesksScreen({
   const endTimeOptions = timeOptions.filter(
     (time) => timeToMinutes(time) > timeToMinutes(startTime),
   );
+  const localityOptions = [
+    allOption,
+    ...localities.map((locality) => ({
+      label: locality.name,
+      value: locality.id,
+    })),
+  ];
+  const areaOptions = [
+    allOption,
+    ...workAreas.map((area) => ({
+      label: area.name,
+      value: area.id,
+    })),
+  ];
 
   const handleOpenReservation = (desk: Desk) => {
     setSelectedDesk(desk);
@@ -342,6 +408,8 @@ export function DesksScreen({
     setStartTime('09:00');
     setEndTime('18:00');
     setSelectedZone('all');
+    setSelectedLocalityId('all');
+    setSelectedAreaId('all');
     setOpenDropdown(null);
   };
 
@@ -463,6 +531,33 @@ export function DesksScreen({
                 onToggle={handleToggleDropdown}
                 onSelect={(value) => {
                   setSelectedZone(value);
+                  setOpenDropdown(null);
+                }}
+              />
+
+              <FilterDropdown
+                id="locality"
+                label="Localidad"
+                valueLabel={getFilterLabel(selectedLocalityId, localities)}
+                options={localityOptions}
+                openDropdown={openDropdown}
+                onToggle={handleToggleDropdown}
+                onSelect={(value) => {
+                  setSelectedLocalityId(value);
+                  setSelectedAreaId('all');
+                  setOpenDropdown(null);
+                }}
+              />
+
+              <FilterDropdown
+                id="area"
+                label="Area"
+                valueLabel={getFilterLabel(selectedAreaId, workAreas)}
+                options={areaOptions}
+                openDropdown={openDropdown}
+                onToggle={handleToggleDropdown}
+                onSelect={(value) => {
+                  setSelectedAreaId(value);
                   setOpenDropdown(null);
                 }}
               />

@@ -32,6 +32,7 @@ type DeskFormState = {
   name: string;
   peopleCapacity: string;
   descriptionId?: string;
+  areaId?: string;
   zone?: DeskZone;
   amenityIds: string[];
   enabled: boolean;
@@ -73,6 +74,7 @@ function toFormState(desk: Desk): DeskFormState {
     name: desk.name ?? '',
     peopleCapacity: String(desk.peopleCapacity),
     descriptionId: desk.descriptionId,
+    areaId: desk.areaId,
     zone: desk.zone,
     amenityIds: desk.amenities.map((amenity) => amenity.id),
     enabled: desk.enabled,
@@ -84,6 +86,7 @@ function buildPayload(form: DeskFormState): DeskPayload {
     name: form.name,
     peopleCapacity: Number(form.peopleCapacity),
     descriptionId: form.descriptionId,
+    areaId: form.areaId,
     zone: form.zone,
     amenityIds: form.amenityIds,
     enabled: form.enabled,
@@ -104,6 +107,10 @@ function buildChangedPayload(form: DeskFormState, desk: Desk): DeskPayload {
 
   if (form.descriptionId !== original.descriptionId) {
     payload.descriptionId = form.descriptionId;
+  }
+
+  if (form.areaId !== original.areaId) {
+    payload.areaId = form.areaId;
   }
 
   if (form.zone !== original.zone) {
@@ -210,6 +217,7 @@ export function DeskSettingsScreen({
     saveAmenity,
     saveDesk,
     successMessage,
+    workAreas,
   } = useDeskSettings();
   const [editingDesk, setEditingDesk] = useState<Desk | null>(null);
   const [editingAmenity, setEditingAmenity] = useState<DeskAmenity | null>(
@@ -450,6 +458,27 @@ export function DeskSettingsScreen({
 
             <View style={styles.fieldGroup}>
               <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+                Area de trabajo
+              </AppText>
+              <View style={styles.chips}>
+                {workAreas.map((area) => (
+                  <Chip
+                    key={area.id}
+                    label={`${area.name}${area.locality ? ` - ${area.locality.name}` : ''}`}
+                    selected={form.areaId === area.id}
+                    onPress={() =>
+                      setForm((current) => ({
+                        ...current,
+                        areaId: current.areaId === area.id ? undefined : area.id,
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
                 Amenities
               </AppText>
               <View style={styles.chips}>
@@ -639,6 +668,7 @@ export function DeskSettingsScreen({
                         <AppText variant="caption" color={colors.blackOverlay}>
                           Código {desk.code}
                           {desk.zone ? ` · Zona ${desk.zone}` : ''}
+                          {desk.area ? ` · ${desk.area.name}` : ''}
                         </AppText>
                       </View>
                       <View style={[styles.statusPill, !desk.enabled && styles.statusPillMuted]}>

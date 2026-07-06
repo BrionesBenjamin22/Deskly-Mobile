@@ -21,7 +21,9 @@ function getDeskTitle(desk: Desk) {
 
 function getLocationText(desk: Desk) {
   const zone = desk.zone ? `Zona ${desk.zone}` : 'Zona sin asignar';
-  const location = desk.description?.description ?? desk.description?.name;
+  const area = desk.area?.name;
+  const locality = desk.area?.locality?.name;
+  const location = [locality, area].filter(Boolean).join(' - ');
 
   return location ? `${zone} - ${location}` : zone;
 }
