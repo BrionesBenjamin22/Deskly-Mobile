@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { DeskNotFoundError } from '../../../desks/domain/errors/desk-not-found.error';
+import { LocalityInactiveError } from '../../../desks/domain/errors/locality-inactive.error';
+import { WorkAreaInactiveError } from '../../../desks/domain/errors/work-area-inactive.error';
 import { DESK_REPOSITORY } from '../../../desks/domain/ports/desk-repository.port';
 import type { DeskRepositoryPort } from '../../../desks/domain/ports/desk-repository.port';
 import { InvalidReservationDateError } from '../../../desks/domain/errors/invalid-reservation-date.error';
@@ -41,6 +43,14 @@ export class CreateReservationUseCase {
 
     if (!desk || !desk.enabled) {
       throw new DeskNotFoundError();
+    }
+
+    if (desk.area && !desk.area.active) {
+      throw new WorkAreaInactiveError();
+    }
+
+    if (desk.area?.locality && !desk.area.locality.active) {
+      throw new LocalityInactiveError();
     }
 
     if (!(await this.reservationRepository.memberExists(input.memberId))) {

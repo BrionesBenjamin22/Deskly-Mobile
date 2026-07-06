@@ -27,6 +27,8 @@ import {
 } from '@nestjs/swagger';
 
 import { DeskNotFoundError } from '../../../desks/domain/errors/desk-not-found.error';
+import { LocalityInactiveError } from '../../../desks/domain/errors/locality-inactive.error';
+import { WorkAreaInactiveError } from '../../../desks/domain/errors/work-area-inactive.error';
 import type { AuthenticatedRequest } from '../../../auth/interfaces/http/auth-request';
 import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
@@ -244,6 +246,22 @@ export class ReservationsController {
         error: 'Desk unavailable',
         message:
           'El escritorio ya no esta disponible. Seleccione otro escritorio.',
+      });
+    }
+
+    if (error instanceof WorkAreaInactiveError) {
+      throw new ConflictException({
+        message: error.message,
+        error:
+          'Lo sentimos, el area de trabajo del escritorio no esta disponible. Seleccione otro escritorio e intente nuevamente.',
+      });
+    }
+
+    if (error instanceof LocalityInactiveError) {
+      throw new ConflictException({
+        message: error.message,
+        error:
+          'Lo sentimos, la localidad del area de trabajo no esta disponible. Seleccione otro escritorio e intente nuevamente.',
       });
     }
 

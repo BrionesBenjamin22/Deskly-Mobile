@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { DeskNotFoundError } from '../../../desks/domain/errors/desk-not-found.error';
+import { LocalityInactiveError } from '../../../desks/domain/errors/locality-inactive.error';
+import { WorkAreaInactiveError } from '../../../desks/domain/errors/work-area-inactive.error';
 import { InvalidReservationDateError } from '../../../desks/domain/errors/invalid-reservation-date.error';
 import { InvalidTimeFormatError } from '../../../desks/domain/errors/invalid-time-format.error';
 import { DESK_REPOSITORY } from '../../../desks/domain/ports/desk-repository.port';
@@ -57,6 +59,14 @@ export class UpdateReservationUseCase {
 
     if (!desk || !desk.enabled) {
       throw new DeskNotFoundError();
+    }
+
+    if (desk.area && !desk.area.active) {
+      throw new WorkAreaInactiveError();
+    }
+
+    if (desk.area?.locality && !desk.area.locality.active) {
+      throw new LocalityInactiveError();
     }
 
     const hasOverlappingReservation =
