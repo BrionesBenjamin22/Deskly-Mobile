@@ -28,6 +28,7 @@ import { ListDesksUseCase } from '../../application/use-cases/list-desks.use-cas
 import { UpdateDeskUseCase } from '../../application/use-cases/update-desk.use-case';
 import { DeskNameAlreadyExistsError } from '../../domain/errors/desk-name-already-exists.error';
 import { DeskNotFoundError } from '../../domain/errors/desk-not-found.error';
+import { WorkAreaNotFoundError } from '../../domain/errors/work-area-not-found.error';
 import { CreateDeskBodyDto } from './dto/create-desk-body.dto';
 import { DeskResponseDto } from './dto/desk-response.dto';
 import { ListDesksQueryDto } from './dto/list-desks-query.dto';
@@ -124,6 +125,14 @@ export class DesksController {
       throw new ConflictException({
         message: error.message,
         error: 'Ya existe un escritorio con ese nombre.',
+      });
+    }
+
+    if (error instanceof WorkAreaNotFoundError) {
+      throw new NotFoundException({
+        message: error.message,
+        error:
+          'Lo sentimos, no pudimos recuperar la informacion del area de trabajo. Seleccione otra e intente nuevamente.',
       });
     }
 

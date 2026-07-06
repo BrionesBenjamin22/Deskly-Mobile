@@ -9,6 +9,8 @@ export function toDeskOutput(desk: Desk): DeskOutput {
     peopleCapacity: desk.peopleCapacity,
     ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
     ...(desk.description ? { description: desk.description } : {}),
+    ...(desk.areaId ? { areaId: desk.areaId } : {}),
+    ...(desk.area ? { area: desk.area } : {}),
     ...(desk.zone ? { zone: desk.zone } : {}),
     amenities: desk.amenities,
     enabled: desk.enabled,

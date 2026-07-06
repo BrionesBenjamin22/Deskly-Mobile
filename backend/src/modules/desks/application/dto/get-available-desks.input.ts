@@ -5,4 +5,6 @@ export type GetAvailableDesksInput = {
   startTime: string;
   endTime: string;
   zone?: DeskZoneValue;
+  areaId?: string;
+  localityId?: string;
 };

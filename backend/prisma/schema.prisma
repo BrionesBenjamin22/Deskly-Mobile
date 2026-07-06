@@ -114,19 +114,51 @@ model Desk {
   name           String?          @db.VarChar(120)
   peopleCapacity Int              @default(1) @map("people_capacity")
   descriptionId  String?          @map("description_id") @db.Uuid
+  areaId         String           @default("11111111-1111-4111-8111-111111111111") @map("area_id") @db.Uuid
   zone           DeskZone?
   enabled        Boolean          @default(true)
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
   deletedAt      DateTime?        @map("deleted_at")
   description    DeskDescription? @relation(fields: [descriptionId], references: [id], onDelete: Restrict)
+  area           WorkArea         @relation(fields: [areaId], references: [id], onDelete: Restrict)
   amenities      DeskAmenity[]
   reservations   Reservation[]
 
   @@index([enabled, deletedAt])
   @@index([descriptionId])
+  @@index([areaId])
   @@index([zone])
   @@map("desks")
+}
+
+model Locality {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @unique @db.VarChar(120)
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  areas     WorkArea[]
+
+  @@index([active])
+  @@map("localities")
+}
+
+model WorkArea {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(255)
+  localityId  String   @map("locality_id") @db.Uuid
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  locality    Locality @relation(fields: [localityId], references: [id], onDelete: Restrict)
+  desks       Desk[]
+
+  @@unique([localityId, name])
+  @@index([active])
+  @@index([localityId, active])
+  @@map("work_areas")
 }
 
 model DeskDescription {
