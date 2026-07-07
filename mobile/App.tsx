@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DeskSettingsScreen } from './src/features/desks/screens/DeskSettingsScreen';
 import { DesksScreen } from './src/features/desks/screens/DesksScreen';
 import type { DeskAvailabilityContext } from './src/features/desks/screens/DesksScreen';
+import { WorkAreasScreen } from './src/features/desks/screens/WorkAreasScreen';
 import type { WorkArea } from './src/features/desks/types/desk.types';
 import { PaymentsScreen } from './src/features/payments/screens/PaymentsScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
@@ -16,6 +17,7 @@ import { LoginResponse } from './src/features/auth/types/auth.types';
 import { UserManagementScreen } from './src/features/users/screens/UserManagementScreen';
 
 type AppTab = 'desks' | 'reservations' | 'payments' | 'settings' | 'profile' | 'users';
+type DeskFlowScreen = 'areas' | 'desks';
 
 type AuthFeedback = {
   title: string;
@@ -83,6 +85,8 @@ export default function App() {
   );
   const [deskAvailabilityContext, setDeskAvailabilityContext] =
     useState<DeskAvailabilityContext>();
+  const [deskFlowScreen, setDeskFlowScreen] =
+    useState<DeskFlowScreen>('areas');
 
   const handleTabChange = (tab: AppTab) => {
     if (tab === 'profile') {
@@ -107,6 +111,7 @@ export default function App() {
     setMountedTabs(new Set(['desks']));
     setSelectedWorkArea(null);
     setDeskAvailabilityContext(undefined);
+    setDeskFlowScreen('areas');
   };
 
   const handleLogout = () => {
@@ -128,6 +133,7 @@ export default function App() {
     setSession(nextSession);
     setSelectedWorkArea(null);
     setDeskAvailabilityContext(undefined);
+    setDeskFlowScreen('areas');
     if (nextSession.user.role === 'GESTOR') {
       setActiveTab('reservations');
       setMountedTabs(new Set(['reservations']));
@@ -139,12 +145,23 @@ export default function App() {
 
   const handlePressDesks = () => {
     setSelectedWorkArea(null);
+    setDeskFlowScreen('areas');
     handleTabChange('desks');
   };
 
   const handleBackToWorkAreas = (context: DeskAvailabilityContext) => {
     setDeskAvailabilityContext(context);
     setSelectedWorkArea(null);
+    setDeskFlowScreen('areas');
+  };
+
+  const handleSelectWorkArea = (
+    area: WorkArea,
+    context: DeskAvailabilityContext,
+  ) => {
+    setSelectedWorkArea(area);
+    setDeskAvailabilityContext(context);
+    setDeskFlowScreen('desks');
   };
 
   return (
@@ -157,25 +174,41 @@ export default function App() {
           />
         ) : mountedTabs.has('desks') ? (
           <AnimatedTabScreen isActive={activeTab === 'desks'}>
-            <DesksScreen
-              accessToken={session.access_token}
-              userRole={session.user.role}
-              initialAvailabilityContext={deskAvailabilityContext}
-              selectedWorkArea={selectedWorkArea}
-              onBackToWorkAreas={handleBackToWorkAreas}
-              onPressReservations={() => handleTabChange('reservations')}
-              onPressPayments={() => handleTabChange('payments')}
-              onPressProfile={() => handleTabChange('profile')}
-              onPressLogout={handleLogout}
-              externalRefreshKey={desksRefreshKey}
-              onPressSwitchAccount={handleSwitchAccount}
-              onPressUserManagement={() => handleTabChange('users')}
-              onPressChangePassword={() => setShowChangePassword(true)}
-              onReservationCreated={() => {
-                setReservationsRefreshKey((current) => current + 1);
-                setPaymentsRefreshKey((current) => current + 1);
-              }}
-            />
+            {deskFlowScreen === 'areas' ? (
+              <WorkAreasScreen
+                userRole={session.user.role}
+                initialAvailabilityContext={deskAvailabilityContext}
+                refreshKey={desksRefreshKey}
+                onSelectWorkArea={handleSelectWorkArea}
+                onPressReservations={() => handleTabChange('reservations')}
+                onPressPayments={() => handleTabChange('payments')}
+                onPressProfile={() => handleTabChange('profile')}
+                onPressLogout={handleLogout}
+                onPressSwitchAccount={handleSwitchAccount}
+                onPressUserManagement={() => handleTabChange('users')}
+                onPressChangePassword={() => setShowChangePassword(true)}
+              />
+            ) : (
+              <DesksScreen
+                accessToken={session.access_token}
+                userRole={session.user.role}
+                initialAvailabilityContext={deskAvailabilityContext}
+                selectedWorkArea={selectedWorkArea}
+                onBackToWorkAreas={handleBackToWorkAreas}
+                onPressReservations={() => handleTabChange('reservations')}
+                onPressPayments={() => handleTabChange('payments')}
+                onPressProfile={() => handleTabChange('profile')}
+                onPressLogout={handleLogout}
+                externalRefreshKey={desksRefreshKey}
+                onPressSwitchAccount={handleSwitchAccount}
+                onPressUserManagement={() => handleTabChange('users')}
+                onPressChangePassword={() => setShowChangePassword(true)}
+                onReservationCreated={() => {
+                  setReservationsRefreshKey((current) => current + 1);
+                  setPaymentsRefreshKey((current) => current + 1);
+                }}
+              />
+            )}
           </AnimatedTabScreen>
         ) : null}
 
