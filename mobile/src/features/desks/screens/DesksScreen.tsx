@@ -28,8 +28,17 @@ type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
 type ZoneFilter = DeskZone | 'all';
 type FilterDropdownId = 'startTime' | 'endTime' | 'zone' | 'locality' | 'area';
 
+export type DeskAvailabilityContext = {
+  date: string;
+  startTime: string;
+  endTime: string;
+};
+
 type DesksScreenProps = {
   accessToken: string;
+  initialAvailabilityContext?: Partial<DeskAvailabilityContext>;
+  selectedWorkArea?: WorkArea | null;
+  onBackToWorkAreas?: (context: DeskAvailabilityContext) => void;
   onPressReservations?: () => void;
   onPressPayments?: () => void;
   onPressProfile?: () => void;
@@ -224,6 +233,9 @@ function FilterDropdown<TValue extends string>({
 
 export function DesksScreen({
   accessToken,
+  initialAvailabilityContext,
+  selectedWorkArea,
+  onBackToWorkAreas,
   onPressReservations,
   onPressPayments,
   onPressProfile,
@@ -237,7 +249,7 @@ export function DesksScreen({
 }: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDate, setSelectedDate] = useState(
-    () => getDeskDateOptions()[0].id,
+    () => initialAvailabilityContext?.date ?? getDeskDateOptions()[0].id,
   );
   const [reservationStatus, setReservationStatus] =
     useState<ReservationUiStatus>('idle');
@@ -245,8 +257,12 @@ export function DesksScreen({
     reservationStatusContent.error.description,
   );
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('18:00');
+  const [startTime, setStartTime] = useState(
+    () => initialAvailabilityContext?.startTime ?? '09:00',
+  );
+  const [endTime, setEndTime] = useState(
+    () => initialAvailabilityContext?.endTime ?? '18:00',
+  );
   const [selectedZone, setSelectedZone] = useState<ZoneFilter>('all');
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [workAreas, setWorkAreas] = useState<WorkArea[]>([]);
@@ -258,6 +274,22 @@ export function DesksScreen({
 
   const quickDates = useMemo(() => getDeskDateOptions(new Date(), 30), []);
   const isCalendarDate = !quickDates.slice(0, 10).some((d) => d.id === selectedDate);
+  const selectedWorkAreaLocalityId = selectedWorkArea?.localityId;
+  const effectiveAreaId = selectedWorkArea?.id ?? selectedAreaId;
+  const effectiveLocalityId =
+    selectedWorkArea?.localityId ?? selectedLocalityId;
+
+  useEffect(() => {
+    if (!selectedWorkArea) {
+      return;
+    }
+
+    setSelectedAreaId(selectedWorkArea.id);
+    if (selectedWorkAreaLocalityId) {
+      setSelectedLocalityId(selectedWorkAreaLocalityId);
+    }
+    setOpenDropdown(null);
+  }, [selectedWorkArea, selectedWorkAreaLocalityId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -307,8 +339,8 @@ export function DesksScreen({
     endTime,
     refreshKey: availabilityRefreshKey + externalRefreshKey,
     ...(selectedZone === 'all' ? {} : { zone: selectedZone }),
-    ...(selectedLocalityId === 'all' ? {} : { localityId: selectedLocalityId }),
-    ...(selectedAreaId === 'all' ? {} : { areaId: selectedAreaId }),
+    ...(effectiveLocalityId === 'all' ? {} : { localityId: effectiveLocalityId }),
+    ...(effectiveAreaId === 'all' ? {} : { areaId: effectiveAreaId }),
   });
   const availableCount = desks.filter(
     (desk) => desk.enabled && desk.status === 'available',
@@ -408,9 +440,17 @@ export function DesksScreen({
     setStartTime('09:00');
     setEndTime('18:00');
     setSelectedZone('all');
-    setSelectedLocalityId('all');
-    setSelectedAreaId('all');
+    setSelectedLocalityId(selectedWorkArea?.localityId ?? 'all');
+    setSelectedAreaId(selectedWorkArea?.id ?? 'all');
     setOpenDropdown(null);
+  };
+
+  const handleBackToWorkAreas = () => {
+    onBackToWorkAreas?.({
+      date: selectedDate,
+      startTime,
+      endTime,
+    });
   };
 
   return (
@@ -421,7 +461,27 @@ export function DesksScreen({
           style={styles.scroll}
           contentContainerStyle={styles.content}
         >
-          <AppText variant="title">Escritorios Disponibles</AppText>
+          {selectedWorkArea ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleBackToWorkAreas}
+              style={({ pressed }) => [styles.backAction, pressed && styles.pressed]}
+            >
+              <AppText variant="caption" color={colors.primary} style={styles.backActionText}>
+                Volver a areas
+              </AppText>
+            </Pressable>
+          ) : null}
+
+          <View style={styles.titleBlock}>
+            <AppText variant="title">Escritorios Disponibles</AppText>
+            {selectedWorkArea ? (
+              <AppText variant="caption" color={colors.primaryLight} style={styles.areaContextText}>
+                {selectedWorkArea.name}
+                {selectedWorkArea.locality ? ` - ${selectedWorkArea.locality.name}` : ''}
+              </AppText>
+            ) : null}
+          </View>
 
           <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
 
@@ -801,5 +861,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 44,
     minWidth: 32,
+  },
+  backAction: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  backActionText: {
+    fontWeight: '800',
+  },
+  titleBlock: {
+    gap: spacing.xs,
+  },
+  areaContextText: {
+    fontWeight: '700',
   },
 });

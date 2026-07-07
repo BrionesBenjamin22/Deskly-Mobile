@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DeskSettingsScreen } from './src/features/desks/screens/DeskSettingsScreen';
 import { DesksScreen } from './src/features/desks/screens/DesksScreen';
+import type { DeskAvailabilityContext } from './src/features/desks/screens/DesksScreen';
+import type { WorkArea } from './src/features/desks/types/desk.types';
 import { PaymentsScreen } from './src/features/payments/screens/PaymentsScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
 import { AuthScreen } from './src/features/auth/screens/AuthScreen';
@@ -76,6 +78,11 @@ export default function App() {
   const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
   const [desksRefreshKey, setDesksRefreshKey] = useState(0);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
+  const [selectedWorkArea, setSelectedWorkArea] = useState<WorkArea | null>(
+    null,
+  );
+  const [deskAvailabilityContext, setDeskAvailabilityContext] =
+    useState<DeskAvailabilityContext>();
 
   const handleTabChange = (tab: AppTab) => {
     if (tab === 'profile') {
@@ -98,6 +105,8 @@ export default function App() {
     setAuthFeedback(feedback);
     setActiveTab('desks');
     setMountedTabs(new Set(['desks']));
+    setSelectedWorkArea(null);
+    setDeskAvailabilityContext(undefined);
   };
 
   const handleLogout = () => {
@@ -117,6 +126,8 @@ export default function App() {
   const handleAuthenticated = (nextSession: LoginResponse) => {
     setAuthFeedback(undefined);
     setSession(nextSession);
+    setSelectedWorkArea(null);
+    setDeskAvailabilityContext(undefined);
     if (nextSession.user.role === 'GESTOR') {
       setActiveTab('reservations');
       setMountedTabs(new Set(['reservations']));
@@ -124,6 +135,16 @@ export default function App() {
       setActiveTab('desks');
       setMountedTabs(new Set(['desks']));
     }
+  };
+
+  const handlePressDesks = () => {
+    setSelectedWorkArea(null);
+    handleTabChange('desks');
+  };
+
+  const handleBackToWorkAreas = (context: DeskAvailabilityContext) => {
+    setDeskAvailabilityContext(context);
+    setSelectedWorkArea(null);
   };
 
   return (
@@ -139,6 +160,9 @@ export default function App() {
             <DesksScreen
               accessToken={session.access_token}
               userRole={session.user.role}
+              initialAvailabilityContext={deskAvailabilityContext}
+              selectedWorkArea={selectedWorkArea}
+              onBackToWorkAreas={handleBackToWorkAreas}
               onPressReservations={() => handleTabChange('reservations')}
               onPressPayments={() => handleTabChange('payments')}
               onPressProfile={() => handleTabChange('profile')}
@@ -161,7 +185,7 @@ export default function App() {
               accessToken={session.access_token}
               userRole={session.user.role}
               refreshKey={reservationsRefreshKey}
-              onPressDesks={() => handleTabChange('desks')}
+              onPressDesks={handlePressDesks}
               onPressPayments={() => handleTabChange('payments')}
               onPressProfile={() => handleTabChange('profile')}
               onPressLogout={handleLogout}
@@ -182,7 +206,7 @@ export default function App() {
               accessToken={session.access_token}
               userRole={session?.user.role}
               refreshKey={paymentsRefreshKey}
-              onPressDesks={() => handleTabChange('desks')}
+              onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
               onPressSettings={() => handleTabChange('settings')}
               onPressProfile={() => handleTabChange('profile')}
@@ -198,7 +222,7 @@ export default function App() {
           <AnimatedTabScreen isActive={activeTab === 'settings'}>
             <DeskSettingsScreen
               userRole={session.user.role}
-              onPressDesks={() => handleTabChange('desks')}
+              onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
               onPressPayments={() => handleTabChange('payments')}
               onPressProfile={() => handleTabChange('profile')}
@@ -218,7 +242,7 @@ export default function App() {
               initialUser={session.user}
               userRole={session.user.role}
               penaltiesRefreshKey={profileRefreshKey}
-              onPressDesks={() => handleTabChange('desks')}
+              onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
               onPressProfile={() => handleTabChange('profile')}
               onPressPayments={() => handleTabChange('payments')}
@@ -235,7 +259,7 @@ export default function App() {
             <UserManagementScreen
               accessToken={session.access_token}
               currentUserId={session.user.id}
-              onPressDesks={() => handleTabChange('desks')}
+              onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
               onPressPayments={() => handleTabChange('payments')}
               onPressProfile={() => handleTabChange('profile')}
