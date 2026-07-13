@@ -149,6 +149,9 @@ model WorkArea {
   name        String   @db.VarChar(120)
   description String?  @db.VarChar(255)
   localityId  String   @map("locality_id") @db.Uuid
+  address     String?  @db.VarChar(255)
+  latitude    Float?
+  longitude   Float?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
