@@ -1,22 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import type { WorkArea } from '../types/desk.types';
+import { buildWorkArea } from '../testing/desk.fixtures';
 import { WorkAreaCard } from './WorkAreaCard';
 
-const workArea: WorkArea = {
-  id: 'area-1',
-  name: 'Sala Norte',
-  description: 'Espacio compartido y silencioso.',
-  localityId: 'locality-1',
-  active: true,
-  availableDeskCount: 2,
-  totalDeskCount: 4,
-  locality: {
-    id: 'locality-1',
-    name: 'Sede Centro',
-    active: true,
-  },
-};
+const workArea = buildWorkArea();
 
 describe('WorkAreaCard', () => {
   it('muestra la informacion visible del area disponible', () => {
