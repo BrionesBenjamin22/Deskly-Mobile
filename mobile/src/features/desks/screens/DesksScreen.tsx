@@ -342,7 +342,14 @@ export function DesksScreen({
     ...(effectiveLocalityId === 'all' ? {} : { localityId: effectiveLocalityId }),
     ...(effectiveAreaId === 'all' ? {} : { areaId: effectiveAreaId }),
   });
-  const availableCount = desks.filter(
+  const visibleDesks = selectedWorkArea
+    ? desks.filter(
+        (desk) =>
+          desk.areaId === selectedWorkArea.id ||
+          desk.area?.id === selectedWorkArea.id,
+      )
+    : desks;
+  const availableCount = visibleDesks.filter(
     (desk) => desk.enabled && desk.status === 'available',
   ).length;
   const startTimeOptions = timeOptions.slice(0, -1);
@@ -643,9 +650,9 @@ export function DesksScreen({
               title="Lo sentimos, no pudimos recuperar su informacion"
               description={errorMessage}
             />
-          ) : desks.length > 0 ? (
+          ) : visibleDesks.length > 0 ? (
             <DeskList
-              desks={desks}
+              desks={visibleDesks}
               selectedEndTime={endTime}
               selectedStartTime={startTime}
               onReserve={handleOpenReservation}

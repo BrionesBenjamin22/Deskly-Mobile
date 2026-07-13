@@ -41,10 +41,12 @@ Comandos:
 ```bash
 pnpm prisma:generate
 pnpm prisma:migrate
+pnpm prisma:seed
 pnpm prisma:studio
 ```
 
 El cliente Prisma se genera dentro de `@prisma/client` y no debe editarse manualmente.
+La seed es idempotente y carga localidades, areas de trabajo y escritorios de demostracion para validar el flujo de disponibilidad y reserva.
 
 ## Capas
 
