@@ -27,7 +27,7 @@ const createReservation = (
     areaId: 'area-1',
     areaName: 'Area abierta',
     localityId: 'locality-1',
-    localityName: 'Sede Centro',
+    localityName: 'Chascomus',
     ...overrides,
   } as RelatedReservationProperties);
 
@@ -40,7 +40,7 @@ describe('toReservationOutput', () => {
         areaId: 'area-1',
         areaName: 'Area abierta',
         localityId: 'locality-1',
-        localityName: 'Sede Centro',
+        localityName: 'Chascomus',
       },
     });
   });
@@ -55,7 +55,7 @@ describe('toReservationOutput', () => {
         areaId: 'area-2',
         areaName: 'Sala silenciosa',
         localityId: 'locality-2',
-        localityName: 'Sede Norte',
+        localityName: 'La Plata',
       }),
     );
 

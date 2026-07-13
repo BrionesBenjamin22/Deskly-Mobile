@@ -6,6 +6,8 @@ Gestion de reservas sobre escritorios disponibles.
 
 Cada reserva pertenece obligatoriamente a un miembro activo. En el alta, `memberId` se obtiene del JWT y no se acepta desde el cliente. Un miembro puede tener cero o muchas reservas. La respuesta incluye el identificador del miembro y su nombre completo cuando esta disponible.
 
+La ubicacion se resuelve mediante `Reservation -> Desk -> WorkArea -> Locality`. `Locality` representa una localidad geografica generica, como Chascomus o La Plata. La direccion, la referencia y las coordenadas pertenecen al area de trabajo concreta; no se duplican en la reserva ni se almacenan en la localidad.
+
 ## Endpoints
 
 ```http
@@ -39,6 +41,12 @@ El alta y el listado requieren JWT. Los miembros solo pueden crear reservas prop
   "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
   "memberFullName": "Nombre Apellido",
   "deskCode": "D-01",
+  "location": {
+    "areaId": "30000000-0000-4000-8000-000000000001",
+    "areaName": "Area abierta",
+    "localityId": "20000000-0000-4000-8000-000000000001",
+    "localityName": "Chascomus"
+  },
   "date": "2026-06-01",
   "startTime": "09:00",
   "endTime": "13:00",
@@ -58,6 +66,12 @@ Listado:
       "memberFullName": "Nombre Apellido",
       "deskCode": "D-01",
       "deskName": "Escritorio 1",
+      "location": {
+        "areaId": "30000000-0000-4000-8000-000000000001",
+        "areaName": "Area abierta",
+        "localityId": "20000000-0000-4000-8000-000000000001",
+        "localityName": "Chascomus"
+      },
       "date": "2026-06-01",
       "startTime": "09:00",
       "endTime": "13:00",
