@@ -43,7 +43,7 @@ describe('WorkAreasScreen', () => {
     render(<WorkAreasScreen onSelectWorkArea={jest.fn()} />);
 
     expect(await screen.findByText('Sala Norte')).toBeOnTheScreen();
-    expect(screen.getByText('Sede Centro')).toBeOnTheScreen();
+    expect(screen.getAllByText('Sede Centro')).toHaveLength(2);
     expect(screen.getAllByText('2 disponibles')).toHaveLength(2);
   });
 

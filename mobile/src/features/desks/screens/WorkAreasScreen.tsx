@@ -11,6 +11,7 @@ import { UserRole } from '../../auth/types/auth.types';
 import { CalendarPicker } from '../components/CalendarPicker';
 import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
 import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
+import { LocalityFilter } from '../components/LocalityFilter';
 import { LocalitySection } from '../components/LocalitySection';
 import {
   DeskServiceError,
@@ -89,6 +90,7 @@ export function WorkAreasScreen({
   );
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [areas, setAreas] = useState<WorkArea[]>([]);
+  const [selectedLocalityId, setSelectedLocalityId] = useState<string | null>(null);
   const [expandedAreaId, setExpandedAreaId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -159,11 +161,17 @@ export function WorkAreasScreen({
 
   useEffect(() => loadAreas(), [loadAreas, refreshKey]);
 
-  const groupedLocalities = localities.map((locality) => ({
+  const visibleLocalities = selectedLocalityId
+    ? localities.filter((locality) => locality.id === selectedLocalityId)
+    : localities;
+  const visibleAreas = selectedLocalityId
+    ? areas.filter((area) => area.localityId === selectedLocalityId)
+    : areas;
+  const groupedLocalities = visibleLocalities.map((locality) => ({
     locality,
-    areas: areas.filter((area) => area.localityId === locality.id),
+    areas: visibleAreas.filter((area) => area.localityId === locality.id),
   }));
-  const totalAvailableAreas = areas.filter(
+  const totalAvailableAreas = visibleAreas.filter(
     (area) => (area.availableDeskCount ?? 0) > 0,
   ).length;
 
@@ -177,6 +185,11 @@ export function WorkAreasScreen({
       startTime,
       endTime,
     });
+  };
+
+  const handleSelectLocality = (localityId: string | null) => {
+    setSelectedLocalityId(localityId);
+    setExpandedAreaId(null);
   };
 
   return (
@@ -310,6 +323,17 @@ export function WorkAreasScreen({
               </View>
             </View>
           ) : null}
+
+          <View style={styles.localityFilterSection}>
+            <AppText variant="caption" color={colors.blackOverlay} style={styles.timeLabel}>
+              Filtrar por localidad
+            </AppText>
+            <LocalityFilter
+              localities={localities}
+              selectedLocalityId={selectedLocalityId}
+              onSelect={handleSelectLocality}
+            />
+          </View>
 
           <View style={styles.separator} />
 
@@ -477,6 +501,9 @@ const styles = StyleSheet.create({
   },
   timeChipText: {
     fontWeight: '800',
+  },
+  localityFilterSection: {
+    gap: spacing.sm,
   },
   separator: {
     backgroundColor: colors.border,
