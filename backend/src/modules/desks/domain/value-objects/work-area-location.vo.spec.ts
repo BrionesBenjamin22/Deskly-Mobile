@@ -1,14 +1,12 @@
 import { WorkAreaLocation } from './work-area-location.vo';
 
 describe('WorkAreaLocation', () => {
-  it('accepts optional address and location reference without coordinates', () => {
+  it('accepts an optional address without coordinates', () => {
     const location = WorkAreaLocation.create({
       address: 'Av. Costanera Espana 120',
-      locationReference: 'Frente a la laguna',
     });
 
     expect(location.address).toBe('Av. Costanera Espana 120');
-    expect(location.locationReference).toBe('Frente a la laguna');
     expect(location.latitude).toBeUndefined();
     expect(location.longitude).toBeUndefined();
   });

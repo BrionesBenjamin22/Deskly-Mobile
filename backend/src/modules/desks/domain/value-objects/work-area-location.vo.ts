@@ -1,6 +1,5 @@
 export type WorkAreaLocationProperties = {
   address?: string;
-  locationReference?: string;
   latitude?: number;
   longitude?: number;
 };
@@ -37,11 +36,7 @@ export class WorkAreaLocation {
     }
 
     return new WorkAreaLocation({
-      ...WorkAreaLocation.optionalText('address', properties.address),
-      ...WorkAreaLocation.optionalText(
-        'locationReference',
-        properties.locationReference,
-      ),
+      ...WorkAreaLocation.optionalAddress(properties.address),
       ...(hasLatitude && hasLongitude
         ? {
             latitude: properties.latitude,
@@ -53,10 +48,6 @@ export class WorkAreaLocation {
 
   get address(): string | undefined {
     return this.properties.address;
-  }
-
-  get locationReference(): string | undefined {
-    return this.properties.locationReference;
   }
 
   get latitude(): number | undefined {
@@ -71,14 +62,11 @@ export class WorkAreaLocation {
     return { ...this.properties };
   }
 
-  private static optionalText<Key extends 'address' | 'locationReference'>(
-    key: Key,
+  private static optionalAddress(
     value: string | undefined,
-  ): Partial<Pick<WorkAreaLocationProperties, Key>> {
+  ): Pick<WorkAreaLocationProperties, 'address'> | Record<string, never> {
     const normalizedValue = value?.trim();
 
-    return normalizedValue
-      ? ({ [key]: normalizedValue } as Pick<WorkAreaLocationProperties, Key>)
-      : {};
+    return normalizedValue ? { address: normalizedValue } : {};
   }
 }
