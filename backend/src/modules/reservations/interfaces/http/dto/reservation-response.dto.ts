@@ -10,7 +10,7 @@ export class ReservationLocationResponseDto {
   @ApiProperty({ example: '20000000-0000-4000-8000-000000000001' })
   localityId!: string;
 
-  @ApiProperty({ example: 'Sede Centro' })
+  @ApiProperty({ example: 'Chascomus' })
   localityName!: string;
 }
 
