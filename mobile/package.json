@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "expo": "~54.0.33",
@@ -21,7 +23,10 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
+    "jest-expo": "~54.0.17",
     "typescript": "~5.9.2"
   },
   "private": true
