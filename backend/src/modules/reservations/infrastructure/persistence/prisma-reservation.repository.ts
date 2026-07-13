@@ -24,6 +24,9 @@ const reservationRelationsInclude = {
         select: {
           id: true,
           name: true,
+          address: true,
+          latitude: true,
+          longitude: true,
           locality: { select: { id: true, name: true } },
         },
       },
@@ -50,6 +53,9 @@ type ReservationPersistenceRecord = {
     area: {
       id: string;
       name: string;
+      address: string | null;
+      latitude: number | null;
+      longitude: number | null;
       locality: { id: string; name: string };
     };
   };
@@ -257,6 +263,9 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       areaName: reservation.desk.area.name,
       localityId: reservation.desk.area.locality.id,
       localityName: reservation.desk.area.locality.name,
+      address: reservation.desk.area.address,
+      latitude: reservation.desk.area.latitude,
+      longitude: reservation.desk.area.longitude,
       date: this.fromDate(reservation.date),
       startTime: this.fromTime(reservation.startTime),
       endTime: this.fromTime(reservation.endTime),

@@ -12,6 +12,24 @@ export class ReservationLocationResponseDto {
 
   @ApiProperty({ example: 'Chascomus' })
   localityName!: string;
+
+  @ApiProperty({
+    example: 'Av. Costanera Espana 120',
+    required: false,
+    description: 'Direccion especifica del area de trabajo.',
+  })
+  address?: string;
+
+  @ApiProperty({ example: -35.577, minimum: -90, maximum: 90, required: false })
+  latitude?: number;
+
+  @ApiProperty({
+    example: -57.997,
+    minimum: -180,
+    maximum: 180,
+    required: false,
+  })
+  longitude?: number;
 }
 
 export class ReservationResponseDto {

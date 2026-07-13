@@ -15,6 +15,9 @@ export type ReservationProperties = {
   areaName?: string;
   localityId?: string;
   localityName?: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   date: string;
   startTime: string;
   endTime: string;
@@ -66,6 +69,18 @@ export class Reservation {
 
   get localityName(): string | undefined {
     return this.properties.localityName;
+  }
+
+  get address(): string | null | undefined {
+    return this.properties.address;
+  }
+
+  get latitude(): number | null | undefined {
+    return this.properties.latitude;
+  }
+
+  get longitude(): number | null | undefined {
+    return this.properties.longitude;
   }
 
   get date(): string {

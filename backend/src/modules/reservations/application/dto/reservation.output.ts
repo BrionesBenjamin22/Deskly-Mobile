@@ -5,6 +5,9 @@ export type ReservationLocationOutput = {
   areaName: string;
   localityId: string;
   localityName: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type ReservationOutput = {
