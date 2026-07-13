@@ -17,6 +17,19 @@ export function toReservationOutput(
       : {}),
     deskCode: reservation.deskCode,
     ...(reservation.deskName ? { deskName: reservation.deskName } : {}),
+    ...(reservation.areaId &&
+    reservation.areaName &&
+    reservation.localityId &&
+    reservation.localityName
+      ? {
+          location: {
+            areaId: reservation.areaId,
+            areaName: reservation.areaName,
+            localityId: reservation.localityId,
+            localityName: reservation.localityName,
+          },
+        }
+      : {}),
     date: reservation.date,
     startTime: reservation.startTime,
     endTime: reservation.endTime,

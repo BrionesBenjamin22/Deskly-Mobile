@@ -11,6 +11,10 @@ export type ReservationProperties = {
   memberFullName?: string;
   deskCode?: string;
   deskName?: string | null;
+  areaId?: string;
+  areaName?: string;
+  localityId?: string;
+  localityName?: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -46,6 +50,22 @@ export class Reservation {
 
   get deskName(): string | null | undefined {
     return this.properties.deskName;
+  }
+
+  get areaId(): string | undefined {
+    return this.properties.areaId;
+  }
+
+  get areaName(): string | undefined {
+    return this.properties.areaName;
+  }
+
+  get localityId(): string | undefined {
+    return this.properties.localityId;
+  }
+
+  get localityName(): string | undefined {
+    return this.properties.localityName;
   }
 
   get date(): string {

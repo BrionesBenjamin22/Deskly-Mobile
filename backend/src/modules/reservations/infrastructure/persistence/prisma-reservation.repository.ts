@@ -15,6 +15,47 @@ import {
   UpdateReservationParams,
 } from '../../domain/ports/reservation-repository.port';
 
+const reservationRelationsInclude = {
+  desk: {
+    select: {
+      code: true,
+      name: true,
+      area: {
+        select: {
+          id: true,
+          name: true,
+          locality: { select: { id: true, name: true } },
+        },
+      },
+    },
+  },
+  member: { select: { fullName: true } },
+} as const;
+
+type ReservationPersistenceRecord = {
+  id: string;
+  deskId: string;
+  memberId: string;
+  date: Date;
+  startTime: Date;
+  endTime: Date;
+  status: ReservationStatusValue;
+  createdAt: Date;
+  updatedAt: Date;
+  cancelledAt: Date | null;
+  checkedInAt: Date | null;
+  desk: {
+    code: string;
+    name: string | null;
+    area: {
+      id: string;
+      name: string;
+      locality: { id: string; name: string };
+    };
+  };
+  member: { fullName: string };
+};
+
 @Injectable()
 export class PrismaReservationRepository implements ReservationRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
@@ -72,15 +113,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     const [reservations, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({
         where,
-        include: {
-          desk: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-          member: { select: { fullName: true } },
-        },
+        include: reservationRelationsInclude,
         orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -102,15 +135,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       where: {
         id,
       },
-      include: {
-        desk: {
-          select: {
-            code: true,
-            name: true,
-          },
-        },
-        member: { select: { fullName: true } },
-      },
+      include: reservationRelationsInclude,
     });
 
     return reservation ? this.toDomain(reservation) : null;
@@ -131,15 +156,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
         status: ReservationStatus.CANCELLED,
         cancelledAt,
       },
-      include: {
-        desk: {
-          select: {
-            code: true,
-            name: true,
-          },
-        },
-        member: { select: { fullName: true } },
-      },
+      include: reservationRelationsInclude,
     });
 
     return this.toDomain(reservation);
@@ -161,24 +178,9 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     return new Date(`${value}T00:00:00.000Z`);
   }
 
-  private async createReservation(reservation: Reservation): Promise<{
-    id: string;
-    deskId: string;
-    memberId: string;
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-    status: ReservationStatusValue;
-    createdAt: Date;
-    updatedAt: Date;
-    cancelledAt: Date | null;
-    checkedInAt: Date | null;
-    desk: {
-      code: string;
-      name: string | null;
-    };
-    member: { fullName: string };
-  }> {
+  private async createReservation(
+    reservation: Reservation,
+  ): Promise<ReservationPersistenceRecord> {
     try {
       return await this.prisma.reservation.create({
         data: {
@@ -189,15 +191,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
           endTime: this.toTime(reservation.endTime),
           status: ReservationStatus.RESERVED,
         },
-        include: {
-          desk: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-          member: { select: { fullName: true } },
-        },
+        include: reservationRelationsInclude,
       });
     } catch (error) {
       if (
@@ -211,24 +205,9 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     }
   }
 
-  private async updateReservation(params: UpdateReservationParams): Promise<{
-    id: string;
-    deskId: string;
-    memberId: string;
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-    status: ReservationStatusValue;
-    createdAt: Date;
-    updatedAt: Date;
-    cancelledAt: Date | null;
-    checkedInAt: Date | null;
-    desk: {
-      code: string;
-      name: string | null;
-    };
-    member: { fullName: string };
-  }> {
+  private async updateReservation(
+    params: UpdateReservationParams,
+  ): Promise<ReservationPersistenceRecord> {
     try {
       return await this.prisma.reservation.update({
         where: {
@@ -240,15 +219,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
           startTime: this.toTime(params.startTime),
           endTime: this.toTime(params.endTime),
         },
-        include: {
-          desk: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-          member: { select: { fullName: true } },
-        },
+        include: reservationRelationsInclude,
       });
     } catch (error) {
       if (
@@ -274,24 +245,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     return value.toISOString().slice(11, 16);
   }
 
-  private toDomain(reservation: {
-    id: string;
-    deskId: string;
-    memberId: string;
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-    status: ReservationStatusValue;
-    createdAt: Date;
-    updatedAt: Date;
-    cancelledAt: Date | null;
-    checkedInAt: Date | null;
-    desk: {
-      code: string;
-      name: string | null;
-    };
-    member: { fullName: string };
-  }): Reservation {
+  private toDomain(reservation: ReservationPersistenceRecord): Reservation {
     return new Reservation({
       id: reservation.id,
       deskId: reservation.deskId,
@@ -299,6 +253,10 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       memberFullName: reservation.member.fullName,
       deskCode: reservation.desk.code,
       deskName: reservation.desk.name,
+      areaId: reservation.desk.area.id,
+      areaName: reservation.desk.area.name,
+      localityId: reservation.desk.area.locality.id,
+      localityName: reservation.desk.area.locality.name,
       date: this.fromDate(reservation.date),
       startTime: this.fromTime(reservation.startTime),
       endTime: this.fromTime(reservation.endTime),

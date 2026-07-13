@@ -1,5 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class ReservationLocationResponseDto {
+  @ApiProperty({ example: '30000000-0000-4000-8000-000000000001' })
+  areaId!: string;
+
+  @ApiProperty({ example: 'Area abierta' })
+  areaName!: string;
+
+  @ApiProperty({ example: '20000000-0000-4000-8000-000000000001' })
+  localityId!: string;
+
+  @ApiProperty({ example: 'Sede Centro' })
+  localityName!: string;
+}
+
 export class ReservationResponseDto {
   @ApiProperty({ example: '2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4' })
   reservationId!: string;
@@ -18,6 +32,14 @@ export class ReservationResponseDto {
 
   @ApiProperty({ example: 'Escritorio 1', required: false })
   deskName?: string;
+
+  @ApiProperty({
+    type: ReservationLocationResponseDto,
+    required: false,
+    description:
+      'Area de trabajo y localidad cargadas junto con la reserva. Puede omitirse en respuestas de transicion.',
+  })
+  location?: ReservationLocationResponseDto;
 
   @ApiProperty({ example: '2026-06-01' })
   date!: string;
