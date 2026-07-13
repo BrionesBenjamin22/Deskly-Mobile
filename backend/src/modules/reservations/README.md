@@ -8,6 +8,8 @@ Cada reserva pertenece obligatoriamente a un miembro activo. En el alta, `member
 
 La ubicacion se resuelve mediante `Reservation -> Desk -> WorkArea -> Locality`. `Locality` representa una localidad geografica generica, como Chascomus o La Plata. La direccion y las coordenadas pertenecen al area de trabajo concreta; no se duplican en la reserva ni se almacenan en la localidad.
 
+El repositorio carga escritorio, area y localidad en la misma consulta de cada operacion de reserva. No se realizan consultas adicionales por elemento. `location` es opcional para conservar compatibilidad con respuestas de transicion; dentro de una ubicacion cargada, `address`, `latitude` y `longitude` tambien son opcionales.
+
 ## Endpoints
 
 ```http
@@ -45,7 +47,10 @@ El alta y el listado requieren JWT. Los miembros solo pueden crear reservas prop
     "areaId": "30000000-0000-4000-8000-000000000001",
     "areaName": "Area abierta",
     "localityId": "20000000-0000-4000-8000-000000000001",
-    "localityName": "Chascomus"
+    "localityName": "Chascomus",
+    "address": "Av. Costanera Espana 120",
+    "latitude": -35.577,
+    "longitude": -57.997
   },
   "date": "2026-06-01",
   "startTime": "09:00",
@@ -70,7 +75,10 @@ Listado:
         "areaId": "30000000-0000-4000-8000-000000000001",
         "areaName": "Area abierta",
         "localityId": "20000000-0000-4000-8000-000000000001",
-        "localityName": "Chascomus"
+        "localityName": "Chascomus",
+        "address": "Av. Costanera Espana 120",
+        "latitude": -35.577,
+        "longitude": -57.997
       },
       "date": "2026-06-01",
       "startTime": "09:00",
@@ -113,6 +121,11 @@ Cancelacion:
 - Las reservas `ACTIVE` pasan a `COMPLETED` al superar su horario de fin.
 - `DELETE /reservations/:id` no elimina fisicamente la reserva; ejecuta cancelacion logica.
 - Los listados usan paginacion con 9 items por defecto.
+- `location.areaId` y `location.areaName` identifican el area de trabajo concreta.
+- `location.localityId` y `location.localityName` identifican la localidad generica del area.
+- `location.address` se normaliza y se omite cuando esta vacia o no es valida.
+- `location.latitude` y `location.longitude` solo se exponen juntas cuando ambas son numeros finitos y estan dentro de los rangos geograficos validos.
+- No se expone una referencia de ubicacion adicional ni se ejecuta geocodificacion.
 
 ## Validaciones de entrada
 
@@ -141,6 +154,13 @@ Listado:
 - `page`: entero mayor o igual a 1.
 - `limit`: entero entre 1 y 50.
 - `status`: opcional, restringido a `RESERVED`, `ACTIVE`, `COMPLETED` o `CANCELLED`.
+
+Salida de ubicacion:
+
+- `address`: texto opcional perteneciente al area de trabajo.
+- `latitude`: numero opcional entre -90 y 90.
+- `longitude`: numero opcional entre -180 y 180.
+- latitud y longitud se omiten si falta una de ellas o si algun valor es invalido.
 
 Los errores previsibles de formulario deben mostrarse en frontend junto al campo y no deben disparar una peticion. El backend conserva las validaciones como barrera de seguridad, con mensajes especificos por campo para integraciones externas.
 

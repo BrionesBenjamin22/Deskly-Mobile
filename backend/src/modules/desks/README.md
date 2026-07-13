@@ -4,6 +4,8 @@
 
 Gestion de escritorios, areas de trabajo, localidades y consulta de disponibilidad para una fecha y franja horaria determinada.
 
+Cada area de trabajo puede almacenar su direccion concreta y un par opcional de coordenadas. La localidad representa solamente la ciudad o localidad generica, por ejemplo Chascomus o La Plata. La direccion no se persiste en `Locality` ni se duplica en los escritorios o reservas.
+
 ## Endpoints
 
 ```http
@@ -180,6 +182,10 @@ Escritorio ocupado:
 - La descripcion del escritorio es reutilizable y agrupa informacion descriptiva del tipo de escritorio.
 - Cada escritorio pertenece a un area de trabajo mediante `areaId`.
 - Cada area de trabajo pertenece a una localidad.
+- La direccion pertenece al area de trabajo concreta y puede omitirse.
+- Las coordenadas del area son opcionales, pero latitud y longitud deben persistirse juntas.
+- La base de datos valida latitud entre -90 y 90 y longitud entre -180 y 180.
+- No existe un campo de referencia de ubicacion; la direccion postal y las coordenadas son suficientes para identificar el edificio.
 - Las areas y localidades poseen estado `active`.
 - La disponibilidad de un area se calcula a partir de sus escritorios disponibles.
 - Las areas sin escritorios disponibles no se devuelven en `/work-areas/availability`.
