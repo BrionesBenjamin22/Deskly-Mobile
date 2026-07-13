@@ -19,6 +19,9 @@ const relatedReservation = {
     area: {
       id: 'area-1',
       name: 'Area abierta',
+      address: 'Av. Costanera Espana 120',
+      latitude: -35.577,
+      longitude: -57.997,
       locality: {
         id: 'locality-1',
         name: 'Chascomus',
@@ -63,6 +66,9 @@ describe('PrismaReservationRepository related location persistence', () => {
                 select: {
                   id: true,
                   name: true,
+                  address: true,
+                  latitude: true,
+                  longitude: true,
                   locality: { select: { id: true, name: true } },
                 },
               },
@@ -78,6 +84,9 @@ describe('PrismaReservationRepository related location persistence', () => {
         areaName: 'Area abierta',
         localityId: 'locality-1',
         localityName: 'Chascomus',
+        address: 'Av. Costanera Espana 120',
+        latitude: -35.577,
+        longitude: -57.997,
       },
     });
     expect(prisma.desk.findUnique).not.toHaveBeenCalled();
@@ -104,6 +113,9 @@ describe('PrismaReservationRepository related location persistence', () => {
               select: {
                 id: true,
                 name: true,
+                address: true,
+                latitude: true,
+                longitude: true,
                 locality: { select: { id: true, name: true } },
               },
             },
@@ -118,6 +130,9 @@ describe('PrismaReservationRepository related location persistence', () => {
         areaName: 'Area abierta',
         localityId: 'locality-1',
         localityName: 'Chascomus',
+        address: 'Av. Costanera Espana 120',
+        latitude: -35.577,
+        longitude: -57.997,
       },
     });
     expect(prisma.desk.findUnique).not.toHaveBeenCalled();
