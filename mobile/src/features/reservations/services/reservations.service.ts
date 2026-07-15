@@ -1,5 +1,9 @@
 import { API_BASE_URL } from '../../../config/api';
-import { Reservation, ReservationStatus } from '../types/reservation.types';
+import {
+  Reservation,
+  ReservationLocation,
+  ReservationStatus,
+} from '../types/reservation.types';
 
 type ApiErrorBody = {
   error?: string;
@@ -24,6 +28,7 @@ type ReservationResponse = {
   status: ApiReservationStatus;
   cancelledAt?: string;
   checkedInAt?: string;
+  location?: ReservationLocation;
 };
 
 type ListReservationsResponse = {
@@ -49,6 +54,7 @@ export class ReservationServiceError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ReservationServiceError';
+    Object.setPrototypeOf(this, ReservationServiceError.prototype);
   }
 }
 
@@ -142,6 +148,7 @@ function mapReservation(reservation: ReservationResponse): Reservation {
     endTime: reservation.endTime,
     status: getReservationStatus(reservation),
     checkedInAt: reservation.checkedInAt,
+    location: reservation.location ? { ...reservation.location } : undefined,
   };
 }
 

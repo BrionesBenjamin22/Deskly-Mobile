@@ -4,6 +4,16 @@ export type ReservationStatus =
   | 'completed'
   | 'cancelled';
 
+export type ReservationLocation = {
+  areaId: string;
+  areaName: string;
+  localityId: string;
+  localityName: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
 export interface Reservation {
   id: string;
   deskId: string;
@@ -16,4 +26,5 @@ export interface Reservation {
   endTime: string;
   status: ReservationStatus;
   checkedInAt?: string;
+  location?: ReservationLocation;
 }
