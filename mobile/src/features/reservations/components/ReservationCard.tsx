@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
@@ -7,6 +8,7 @@ import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { Reservation } from '../types/reservation.types';
 import { ReservationStatusBadge } from './ReservationStatusBadge';
+import { ReservationLocationDetails } from './ReservationLocationDetails';
 
 type ReservationCardProps = {
   reservation: Reservation;
@@ -21,6 +23,7 @@ export function ReservationCard({
   onValidateArrival,
   managerView = false,
 }: ReservationCardProps) {
+  const [locationExpanded, setLocationExpanded] = useState(false);
   const isCurrent = ['reserved', 'active'].includes(
     reservation.status,
   );
@@ -74,6 +77,14 @@ export function ReservationCard({
             {reservation.memberFullName}
           </AppText>
         </View>
+      ) : null}
+
+      {reservation.location ? (
+        <ReservationLocationDetails
+          location={reservation.location}
+          expanded={locationExpanded}
+          onToggle={() => setLocationExpanded((value) => !value)}
+        />
       ) : null}
 
       {managerView && reservation.status === 'active' && isCheckedIn ? (
