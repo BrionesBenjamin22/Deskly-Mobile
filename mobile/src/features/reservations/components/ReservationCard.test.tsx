@@ -20,6 +20,7 @@ describe('ReservationCard location details', () => {
     expect(screen.getByText('Chascomus')).toBeOnTheScreen();
     expect(screen.getByText('Av. Costanera Espana 120')).toBeOnTheScreen();
     expect(screen.getByText('-35.577, -57.997')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Mapa de Area abierta')).toBeOnTheScreen();
 
     fireEvent.press(screen.getByRole('button', { name: 'Ocultar detalles de ubicación' }));
     expect(screen.queryByText('Area abierta')).not.toBeOnTheScreen();
@@ -29,6 +30,7 @@ describe('ReservationCard location details', () => {
     const { unmount } = render(<ReservationCard reservation={buildReservationWithPartialLocation()} />);
     fireEvent.press(screen.getByRole('button', { name: 'Ver detalles de ubicación' }));
     expect(screen.queryByText('Coordenadas')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText(/Mapa de/)).not.toBeOnTheScreen();
     expect(screen.queryByText(/undefined|null/)).not.toBeOnTheScreen();
     unmount();
 

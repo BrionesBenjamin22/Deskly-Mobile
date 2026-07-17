@@ -38,6 +38,9 @@ const deskRelations = {
       name: true,
       description: true,
       localityId: true,
+      address: true,
+      latitude: true,
+      longitude: true,
       active: true,
       locality: {
         select: {
@@ -153,6 +156,9 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
         name: true,
         description: true,
         localityId: true,
+        address: true,
+        latitude: true,
+        longitude: true,
         active: true,
         locality: {
           select: {
@@ -175,6 +181,9 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
         name: true,
         description: true,
         localityId: true,
+        address: true,
+        latitude: true,
+        longitude: true,
         active: true,
         locality: {
           select: {

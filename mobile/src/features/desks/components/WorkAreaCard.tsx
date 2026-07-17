@@ -8,6 +8,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { WorkArea } from '../types/desk.types';
+import { LocationMap } from './LocationMap';
 
 type WorkAreaCardProps = {
   area: WorkArea;
@@ -75,6 +76,22 @@ export function WorkAreaCard({
                 {availableDeskCount} de {totalDeskCount} escritorios disponibles
               </AppText>
             </View>
+
+            {area.address ? (
+              <View style={styles.detailRow}>
+                <Icon name="mapPin" size={16} color={colors.primaryLight} />
+                <AppText variant="caption" color={colors.primaryLight} style={styles.detailText}>
+                  {area.address}
+                </AppText>
+              </View>
+            ) : null}
+
+            <LocationMap
+              latitude={area.latitude}
+              longitude={area.longitude}
+              title={area.name}
+              description={area.address ?? area.locality?.name}
+            />
 
             <Button
               title="Reservar"

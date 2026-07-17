@@ -2,12 +2,14 @@
 
 ## Funcionalidad
 
-Consulta de escritorios disponibles, filtros funcionales por fecha, horario, zona, localidad y area de trabajo, y gestion basica de escritorios desde la pantalla de configuracion.
+Consulta de escritorios disponibles, filtros funcionales por fecha, horario, zona, localidad y area de trabajo, ubicacion interactiva de establecimientos y gestion basica de escritorios desde la pantalla de configuracion.
 
 ## Vistas
 
 - `DesksScreen`: lista escritorios disponibles y mantiene el flujo de reserva sobre escritorio concreto.
 - `DeskSettingsScreen`: permite crear, editar, habilitar o dar de baja escritorios, y asignarles un area de trabajo.
+- `WorkAreaCard`: muestra el detalle desplegable del establecimiento y su disponibilidad.
+- `LocationMap`: mapa compacto reutilizable con un marcador para las coordenadas del establecimiento. No solicita la ubicacion del dispositivo.
 
 ## Services
 
@@ -33,6 +35,9 @@ Un escritorio puede incluir:
     id: string;
     name: string;
     localityId: string;
+    address?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
     active: boolean;
     locality?: {
       id: string;
@@ -53,6 +58,7 @@ La reserva se realiza con token de usuario autenticado segun el contrato de rese
 - Los filtros por localidad y area se envian solo cuando el usuario selecciona una opcion distinta de `Todas`.
 - El formulario de escritorios envia solo diferencias reales en edicion.
 - El campo `areaId` se envia como UUID cuando se asigna un area.
+- El mapa se renderiza solo cuando latitud y longitud son numeros finitos dentro de los rangos geograficos validos.
 
 ## Errores
 

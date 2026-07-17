@@ -4,6 +4,7 @@ import { AppText } from '../../../components/ui/AppText';
 import { Icon } from '../../../components/ui/Icon';
 import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { LocationMap } from '../../desks/components/LocationMap';
 import type { ReservationLocation } from '../types/reservation.types';
 
 type ReservationLocationDetailsProps = {
@@ -39,6 +40,12 @@ export function ReservationLocationDetails({ location, expanded, onToggle }: Res
           <Detail label="Localidad" value={location.localityName} />
           {location.address ? <Detail label="Dirección" value={location.address} /> : null}
           {showCoordinates ? <Detail label="Coordenadas" value={`${location.latitude}, ${location.longitude}`} /> : null}
+          <LocationMap
+            latitude={location.latitude}
+            longitude={location.longitude}
+            title={location.areaName}
+            description={location.address ?? location.localityName}
+          />
         </View>
       ) : null}
     </View>

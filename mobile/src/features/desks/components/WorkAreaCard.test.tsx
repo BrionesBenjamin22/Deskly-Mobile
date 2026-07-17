@@ -20,6 +20,7 @@ describe('WorkAreaCard', () => {
     expect(screen.getByText('Sede Centro')).toBeOnTheScreen();
     expect(screen.getByText('2 disponibles')).toBeOnTheScreen();
     expect(screen.getByText('2 de 4 escritorios disponibles')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Mapa de Sala Norte')).toBeOnTheScreen();
   });
 
   it('permite iniciar la reserva del area seleccionada', () => {
@@ -38,5 +39,18 @@ describe('WorkAreaCard', () => {
 
     expect(onReserve).toHaveBeenCalledTimes(1);
     expect(onReserve).toHaveBeenCalledWith(workArea);
+  });
+
+  it('omite el mapa cuando el area no tiene coordenadas completas', () => {
+    render(
+      <WorkAreaCard
+        area={buildWorkArea({ latitude: undefined, longitude: undefined })}
+        expanded
+        onToggle={jest.fn()}
+        onReserve={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Mapa de Sala Norte')).not.toBeOnTheScreen();
   });
 });

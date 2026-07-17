@@ -6,6 +6,8 @@ Gestion de escritorios, areas de trabajo, localidades y consulta de disponibilid
 
 Cada area de trabajo puede almacenar su direccion concreta y un par opcional de coordenadas. La localidad representa solamente la ciudad o localidad generica, por ejemplo Chascomus o La Plata. La direccion no se persiste en `Locality` ni se duplica en los escritorios o reservas.
 
+Las ubicaciones iniciales de las areas operativas se asignan mediante la migracion `20260717000000_assign_work_area_locations`. La relacion se define por UUID para que el orden de consulta o un cambio del nombre visible no alteren el punto mostrado en el mapa.
+
 ## Endpoints
 
 ```http

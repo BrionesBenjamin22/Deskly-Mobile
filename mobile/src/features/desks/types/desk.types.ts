@@ -26,6 +26,9 @@ export interface WorkArea {
   description?: string | null;
   localityId: string;
   locality?: Locality;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   active: boolean;
   availableDeskCount?: number;
   totalDeskCount?: number;

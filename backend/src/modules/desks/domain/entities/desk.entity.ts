@@ -24,6 +24,9 @@ export type WorkAreaProperties = {
   description?: string | null;
   localityId: string;
   locality?: LocalityProperties;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   active: boolean;
 };
 

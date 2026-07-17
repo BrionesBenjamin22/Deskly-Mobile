@@ -9,7 +9,7 @@ Listado de reservas propias o administradas, filtros operativos para gestores, c
 - `MyReservationsScreen`: coordina carga, estados vacio/error, filtros y acciones segun rol.
 - `ReservationList`: representa colecciones sin compartir estado visual entre tarjetas.
 - `ReservationCard`: muestra el resumen, acciones permitidas y mantiene el estado expandido de su ubicacion.
-- `ReservationLocationDetails`: presenta area, localidad y datos geograficos opcionales con una accion accesible.
+- `ReservationLocationDetails`: presenta area, localidad, datos geograficos opcionales y el mapa compacto reutilizado desde `features/desks`, con una accion accesible.
 
 ## Service, hook y contrato
 
@@ -26,6 +26,7 @@ El detalle de ubicacion se muestra a miembros y gestores cuando el backend lo en
 - Una reserva sin `location` conserva el resumen y no muestra el control expandible.
 - Direccion se muestra solo cuando contiene un valor.
 - Coordenadas se muestran solo cuando latitud y longitud son numeros finitos.
+- El mapa interactivo usa esas mismas coordenadas y muestra un unico marcador del establecimiento, sin solicitar ubicacion del dispositivo.
 - Carga, error, vacio, respuestas parciales y aislamiento entre tarjetas estan cubiertos por pruebas.
 
 ## Errores
