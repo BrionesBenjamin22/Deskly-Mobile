@@ -1,0 +1,44 @@
+export class InvalidPaymentAmountError extends Error {
+  constructor() {
+    super('El monto del pago debe expresarse en centavos enteros positivos.');
+    this.name = 'InvalidPaymentAmountError';
+  }
+}
+
+export class InvalidPaymentTransitionError extends Error {
+  constructor(from: string, to: string) {
+    super(`No se puede cambiar el pago de ${from} a ${to}.`);
+    this.name = 'InvalidPaymentTransitionError';
+  }
+}
+
+export class InvalidPaymentAttemptError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidPaymentAttemptError';
+  }
+}
+
+export class PaymentIdempotencyConflictError extends Error {
+  constructor() {
+    super('La clave de idempotencia ya fue utilizada para otra operacion.');
+    this.name = 'PaymentIdempotencyConflictError';
+  }
+}
+
+export class PaymentGatewayError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = 'PaymentGatewayError';
+  }
+}
+
+export class InvalidWebhookSignatureError extends Error {
+  constructor() {
+    super('La firma de la notificacion no es valida.');
+    this.name = 'InvalidWebhookSignatureError';
+  }
+}
