@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash, randomUUID } from 'crypto';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { Payment } from '../../domain/entities/payment.entity';
@@ -13,11 +14,31 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(payment: Payment): Promise<Payment> {
+    const reservation = await this.prisma.reservation.findUniqueOrThrow({
+      where: { id: payment.reservationId },
+      select: { memberId: true },
+    });
+    const id = payment.id ?? randomUUID();
+    const amountMinorUnits = this.majorToMinorUnits(payment.amount);
     const savedPayment = await this.prisma.payment.create({
       data: {
+        id,
         reservationId: payment.reservationId,
+        memberId: reservation.memberId,
         date: this.stringToDate(payment.date),
-        amount: payment.amount,
+        amountMinorUnits: BigInt(amountMinorUnits),
+        currency: 'ARS',
+        option: 'FULL',
+        pricingVersion: 'LEGACY_V1',
+        provider: 'LEGACY',
+        status: 'APPROVED',
+        idempotencyKey: `legacy:${id}`,
+        operationFingerprint: createHash('sha256')
+          .update(`legacy:${id}`)
+          .digest('hex'),
+        externalReference: `legacy:${id}`,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        approvedAt: new Date(),
       },
     });
 
@@ -25,7 +46,7 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
       id: savedPayment.id,
       reservationId: savedPayment.reservationId,
       date: this.dateToString(savedPayment.date),
-      amount: savedPayment.amount,
+      amount: this.minorToMajorUnits(savedPayment.amountMinorUnits),
       createdAt: savedPayment.createdAt,
       updatedAt: savedPayment.updatedAt,
     });
@@ -57,7 +78,7 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
             id: p.id,
             reservationId: p.reservationId,
             date: this.dateToString(p.date),
-            amount: p.amount,
+            amount: this.minorToMajorUnits(p.amountMinorUnits),
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,
           }),
@@ -79,7 +100,7 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
       id: payment.id,
       reservationId: payment.reservationId,
       date: this.dateToString(payment.date),
-      amount: payment.amount,
+      amount: this.minorToMajorUnits(payment.amountMinorUnits),
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
     });
@@ -97,7 +118,7 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
           id: p.id,
           reservationId: p.reservationId,
           date: this.dateToString(p.date),
-          amount: p.amount,
+          amount: this.minorToMajorUnits(p.amountMinorUnits),
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
         }),
@@ -119,5 +140,21 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
 
   private stringToDate(date: string): Date {
     return new Date(`${date}T00:00:00.000Z`);
+  }
+
+  private majorToMinorUnits(amount: number): number {
+    const minorUnits = amount * 100;
+    if (!Number.isSafeInteger(minorUnits) || minorUnits <= 0) {
+      throw new Error('El monto debe tener como maximo dos decimales.');
+    }
+    return minorUnits;
+  }
+
+  private minorToMajorUnits(amount: bigint): number {
+    const minorUnits = Number(amount);
+    if (!Number.isSafeInteger(minorUnits)) {
+      throw new Error('El monto persistido excede el rango entero seguro.');
+    }
+    return minorUnits / 100;
   }
 }

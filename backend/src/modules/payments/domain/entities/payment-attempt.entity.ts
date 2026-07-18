@@ -15,7 +15,7 @@ export const PAYMENT_STATUSES = [
   'REFUNDED',
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
-export type PaymentProvider = 'FAKE' | 'MERCADO_PAGO';
+export type PaymentProvider = 'LEGACY' | 'FAKE' | 'MERCADO_PAGO';
 
 const ALLOWED_TRANSITIONS: Record<PaymentStatus, readonly PaymentStatus[]> = {
   PENDING: ['PROCESSING', 'APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'],
@@ -49,6 +49,7 @@ export type PaymentAttemptProperties = {
   refundedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
+  version?: number;
 };
 
 export class PaymentAttempt {
@@ -126,6 +127,19 @@ export class PaymentAttempt {
     return this.refundedAtValue
       ? new Date(this.refundedAtValue)
       : this.refundedAtValue;
+  }
+  get createdAt() {
+    return this.properties.createdAt
+      ? new Date(this.properties.createdAt)
+      : undefined;
+  }
+  get updatedAt() {
+    return this.properties.updatedAt
+      ? new Date(this.properties.updatedAt)
+      : undefined;
+  }
+  get version() {
+    return this.properties.version ?? 0;
   }
 
   canTransitionTo(next: PaymentStatus): boolean {

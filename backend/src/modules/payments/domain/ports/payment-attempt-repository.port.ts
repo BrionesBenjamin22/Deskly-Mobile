@@ -1,5 +1,6 @@
 import {
   PaymentAttempt,
+  PaymentProvider,
   PaymentStatus,
 } from '../entities/payment-attempt.entity';
 
@@ -9,6 +10,7 @@ export type PaymentEventRecord = {
   eventId: string;
   paymentId: string;
   externalEventId: string;
+  provider: PaymentProvider;
   previousStatus: PaymentStatus;
   newStatus: PaymentStatus;
   occurredAt: Date;
@@ -18,8 +20,12 @@ export type PaymentEventRecord = {
 export interface PaymentAttemptRepositoryPort {
   create(payment: PaymentAttempt): Promise<PaymentAttempt>;
   findById(id: string): Promise<PaymentAttempt | null>;
-  findByIdempotencyKey(key: string): Promise<PaymentAttempt | null>;
+  findByIdempotencyKey(
+    provider: PaymentProvider,
+    key: string,
+  ): Promise<PaymentAttempt | null>;
   findByExternalPaymentId(
+    provider: PaymentProvider,
     externalPaymentId: string,
   ): Promise<PaymentAttempt | null>;
   listByReservationId(reservationId: string): Promise<PaymentAttempt[]>;
@@ -27,5 +33,8 @@ export interface PaymentAttemptRepositoryPort {
     payment: PaymentAttempt,
     event?: PaymentEventRecord,
   ): Promise<PaymentAttempt>;
-  externalEventExists(externalEventId: string): Promise<boolean>;
+  externalEventExists(
+    provider: PaymentProvider,
+    externalEventId: string,
+  ): Promise<boolean>;
 }

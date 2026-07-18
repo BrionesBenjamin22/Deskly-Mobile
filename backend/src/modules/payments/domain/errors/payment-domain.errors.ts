@@ -26,6 +26,13 @@ export class PaymentIdempotencyConflictError extends Error {
   }
 }
 
+export class ConcurrentPaymentUpdateError extends Error {
+  constructor() {
+    super('El pago fue actualizado por otra operacion. Intente nuevamente.');
+    this.name = 'ConcurrentPaymentUpdateError';
+  }
+}
+
 export class PaymentGatewayError extends Error {
   constructor(
     message: string,

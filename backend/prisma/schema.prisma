@@ -12,10 +12,36 @@ datasource db {
 }
 
 enum ReservationStatus {
+  PENDING_PAYMENT
   RESERVED
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  LEGACY
+  FAKE
+  MERCADO_PAGO
+}
+
+enum PaymentCurrency {
+  ARS
+}
+
+enum PaymentOption {
+  DEPOSIT
+  FULL
 }
 
 enum DeskZone {
@@ -88,6 +114,7 @@ model Member {
   user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   reservations Reservation[]
   penalties    Penalty[]
+  payments     Payment[]
 
   @@index([active])
   @@map("members")
@@ -210,6 +237,7 @@ model Reservation {
   updatedAt   DateTime          @updatedAt @map("updated_at")
   cancelledAt DateTime?         @map("cancelled_at")
   checkedInAt DateTime?         @map("checked_in_at")
+  holdExpiresAt DateTime?       @map("hold_expires_at")
   desk        Desk              @relation(fields: [deskId], references: [id], onDelete: Restrict)
   payments    Payment[]
   member      Member            @relation(fields: [memberId], references: [id], onDelete: Restrict)
@@ -241,15 +269,55 @@ model Penalty {
 }
 
 model Payment {
-  id            String      @id @default(uuid()) @db.Uuid
-  reservationId String      @map("reservation_id") @db.Uuid
-  date          DateTime    @map("payment_date") @db.Date
-  amount        Float
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  id                   String          @id @default(uuid()) @db.Uuid
+  reservationId        String          @map("reservation_id") @db.Uuid
+  memberId             String          @map("member_id") @db.Uuid
+  date                 DateTime        @map("payment_date") @db.Date
+  amountMinorUnits     BigInt          @map("amount_minor_units")
+  currency             PaymentCurrency @default(ARS)
+  option               PaymentOption
+  pricingVersion       String          @map("pricing_version") @db.VarChar(80)
+  provider             PaymentProvider
+  status               PaymentStatus   @default(PENDING)
+  idempotencyKey       String          @map("idempotency_key") @db.VarChar(160)
+  operationFingerprint String          @map("operation_fingerprint") @db.VarChar(128)
+  externalPaymentId    String?         @map("external_payment_id") @db.VarChar(160)
+  externalReference    String          @map("external_reference") @db.VarChar(160)
+  checkoutUrl          String?         @map("checkout_url") @db.VarChar(2048)
+  failureReason        String?         @map("failure_reason") @db.VarChar(500)
+  expiresAt            DateTime        @map("expires_at")
+  approvedAt           DateTime?       @map("approved_at")
+  cancelledAt          DateTime?       @map("cancelled_at")
+  refundedAt           DateTime?       @map("refunded_at")
+  version              Int             @default(0)
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+  reservation          Reservation     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  member               Member          @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  events               PaymentEvent[]
 
   @@index([reservationId])
+  @@index([memberId, createdAt])
   @@index([date])
+  @@index([status, expiresAt])
+  @@unique([provider, idempotencyKey])
+  @@unique([provider, externalPaymentId])
   @@map("payments")
+}
+
+model PaymentEvent {
+  id              String          @id @default(uuid()) @db.Uuid
+  paymentId       String          @map("payment_id") @db.Uuid
+  provider        PaymentProvider
+  externalEventId String          @map("external_event_id") @db.VarChar(160)
+  previousStatus  PaymentStatus   @map("previous_status")
+  newStatus       PaymentStatus   @map("new_status")
+  occurredAt      DateTime        @map("occurred_at")
+  processedAt     DateTime        @default(now()) @map("processed_at")
+  metadata        Json?
+  payment         Payment         @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, externalEventId])
+  @@index([paymentId, occurredAt])
+  @@map("payment_events")
 }
