@@ -39,6 +39,7 @@ export interface ReservationRepositoryPort {
   save(reservation: Reservation): Promise<Reservation>;
   list(params: ListReservationsParams): Promise<ListReservationsResult>;
   findById(id: string): Promise<Reservation | null>;
+  putOnPaymentHold(id: string, expiresAt: Date): Promise<Reservation | null>;
   update(params: UpdateReservationParams): Promise<Reservation>;
   cancel(id: string, cancelledAt: Date): Promise<Reservation>;
   validateArrival(id: string, checkedInAt: Date): Promise<Reservation | null>;

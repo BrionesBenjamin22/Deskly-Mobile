@@ -1,26 +1,23 @@
 import { Module } from '@nestjs/common';
-
+import { AuthModule } from '../auth/auth.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { CreatePaymentUseCase } from './application/use-cases/create-payment.use-case';
-import { DeletePaymentUseCase } from './application/use-cases/delete-payment.use-case';
-import { GetPaymentByIdUseCase } from './application/use-cases/get-payment-by-id.use-case';
-import { ListPaymentsUseCase } from './application/use-cases/list-payments.use-case';
-import { PAYMENT_REPOSITORY } from './domain/ports/payment-repository.port';
-import { PrismaPaymentRepository } from './infrastructure/persistence/prisma-payment.repository';
+import { PAYMENT_ATTEMPT_REPOSITORY } from './domain/ports/payment-attempt-repository.port';
+import { PAYMENT_GATEWAY } from './domain/ports/payment-gateway.port';
+import { FakePaymentGateway } from './infrastructure/gateways/fake-payment.gateway';
+import { PrismaPaymentAttemptRepository } from './infrastructure/persistence/prisma-payment-attempt.repository';
 import { PaymentsController } from './interfaces/http/payments.controller';
 
 @Module({
-  imports: [ReservationsModule],
+  imports: [AuthModule, ReservationsModule],
   controllers: [PaymentsController],
   providers: [
     CreatePaymentUseCase,
-    ListPaymentsUseCase,
-    GetPaymentByIdUseCase,
-    DeletePaymentUseCase,
     {
-      provide: PAYMENT_REPOSITORY,
-      useClass: PrismaPaymentRepository,
+      provide: PAYMENT_ATTEMPT_REPOSITORY,
+      useClass: PrismaPaymentAttemptRepository,
     },
+    { provide: PAYMENT_GATEWAY, useClass: FakePaymentGateway },
   ],
 })
 export class PaymentsModule {}

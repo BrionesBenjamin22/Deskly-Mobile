@@ -142,6 +142,25 @@ export class PaymentAttempt {
     return this.properties.version ?? 0;
   }
 
+  attachCheckout(input: {
+    externalPaymentId: string;
+    checkoutUrl: string;
+  }): void {
+    if (this.properties.externalPaymentId || this.properties.checkoutUrl) {
+      if (
+        this.properties.externalPaymentId !== input.externalPaymentId ||
+        this.properties.checkoutUrl !== input.checkoutUrl
+      ) {
+        throw new InvalidPaymentAttemptError(
+          'El intento de pago ya posee un checkout diferente.',
+        );
+      }
+      return;
+    }
+    this.properties.externalPaymentId = input.externalPaymentId;
+    this.properties.checkoutUrl = input.checkoutUrl;
+  }
+
   canTransitionTo(next: PaymentStatus): boolean {
     return (
       this.statusValue === next ||

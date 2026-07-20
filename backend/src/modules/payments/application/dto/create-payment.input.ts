@@ -1,5 +1,8 @@
+import { PaymentOption } from '../../domain/services/payment-pricing-policy';
+
 export type CreatePaymentInput = {
   reservationId: string;
-  date: string;
-  amount: number;
+  memberId: string;
+  option: PaymentOption;
+  idempotencyKey: string;
 };

@@ -19,6 +19,7 @@ export type PaymentEventRecord = {
 
 export interface PaymentAttemptRepositoryPort {
   create(payment: PaymentAttempt): Promise<PaymentAttempt>;
+  saveCheckout(payment: PaymentAttempt): Promise<PaymentAttempt>;
   findById(id: string): Promise<PaymentAttempt | null>;
   findByIdempotencyKey(
     provider: PaymentProvider,

@@ -1,16 +1,10 @@
-import { IsDateString, IsNumber, IsUUID, Matches, Min } from 'class-validator';
+import { IsIn, IsUUID } from 'class-validator';
+import type { PaymentOption } from '../../../domain/services/payment-pricing-policy';
 
 export class CreatePaymentBodyDto {
   @IsUUID()
   reservationId: string;
 
-  @IsDateString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'La fecha debe tener formato YYYY-MM-DD.',
-  })
-  date: string;
-
-  @IsNumber()
-  @Min(0.01)
-  amount: number;
+  @IsIn(['DEPOSIT', 'FULL'])
+  option: PaymentOption;
 }

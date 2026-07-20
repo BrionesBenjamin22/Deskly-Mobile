@@ -68,6 +68,28 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
     }
   }
 
+  async saveCheckout(payment: PaymentAttempt): Promise<PaymentAttempt> {
+    if (!payment.id || !payment.externalPaymentId || !payment.checkoutUrl)
+      throw new ConcurrentPaymentUpdateError();
+    const updated = await this.prisma.payment.updateMany({
+      where: { id: payment.id, externalPaymentId: null, checkoutUrl: null },
+      data: {
+        externalPaymentId: payment.externalPaymentId,
+        checkoutUrl: payment.checkoutUrl,
+      },
+    });
+    if (updated.count !== 1) {
+      const existing = await this.findById(payment.id);
+      if (
+        existing?.externalPaymentId === payment.externalPaymentId &&
+        existing.checkoutUrl === payment.checkoutUrl
+      )
+        return existing;
+      throw new ConcurrentPaymentUpdateError();
+    }
+    return (await this.findById(payment.id))!;
+  }
+
   async findById(id: string): Promise<PaymentAttempt | null> {
     const payment = await this.prisma.payment.findUnique({ where: { id } });
     return payment ? this.toDomain(payment) : null;

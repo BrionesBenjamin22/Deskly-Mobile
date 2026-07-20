@@ -1,131 +1,119 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { CreatePaymentUseCase } from './create-payment.use-case';
-import {
-  PAYMENT_REPOSITORY,
-  PaymentRepositoryPort,
-} from '../../domain/ports/payment-repository.port';
-import {
-  RESERVATION_REPOSITORY,
-  ReservationRepositoryPort,
-} from '../../../reservations/domain/ports/reservation-repository.port';
-import { Payment } from '../../domain/entities/payment.entity';
-import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
 import { Reservation } from '../../../reservations/domain/entities/reservation.entity';
-
-type PaymentRepositoryMock = jest.Mocked<Pick<PaymentRepositoryPort, 'save'>>;
-type ReservationRepositoryMock = jest.Mocked<
-  Pick<ReservationRepositoryPort, 'findById'>
->;
+import { PaymentAttempt } from '../../domain/entities/payment-attempt.entity';
+import {
+  InvalidPaymentAttemptError,
+  PaymentIdempotencyConflictError,
+} from '../../domain/errors/payment-domain.errors';
+import { FakePaymentGateway } from '../../infrastructure/gateways/fake-payment.gateway';
+import { CreatePaymentUseCase } from './create-payment.use-case';
 
 describe('CreatePaymentUseCase', () => {
+  const memberId = '550e8400-e29b-41d4-a716-446655440003';
+  const reservationId = '550e8400-e29b-41d4-a716-446655440001';
+  let stored: PaymentAttempt | null;
   let useCase: CreatePaymentUseCase;
-  let paymentRepositoryMock: PaymentRepositoryMock;
-  let reservationRepositoryMock: ReservationRepositoryMock;
+  let gateway: FakePaymentGateway;
+  let reservations: { findById: jest.Mock; putOnPaymentHold: jest.Mock };
 
-  beforeEach(async () => {
-    paymentRepositoryMock = {
-      save: jest.fn(),
+  beforeEach(() => {
+    stored = null;
+    gateway = new FakePaymentGateway();
+    reservations = {
+      findById: jest
+        .fn()
+        .mockResolvedValue(
+          new Reservation({
+            id: reservationId,
+            deskId: 'desk-1',
+            memberId,
+            date: '2026-07-25',
+            startTime: '09:00',
+            endTime: '13:00',
+            status: 'RESERVED',
+          }),
+        ),
+      putOnPaymentHold: jest
+        .fn()
+        .mockImplementation(async () => reservations.findById()),
     };
-
-    reservationRepositoryMock = {
-      findById: jest.fn(),
+    const payments = {
+      findByIdempotencyKey: jest.fn(async () => stored),
+      create: jest.fn(async (payment: PaymentAttempt) => (stored = payment)),
+      saveCheckout: jest.fn(
+        async (payment: PaymentAttempt) => (stored = payment),
+      ),
     };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CreatePaymentUseCase,
-        {
-          provide: PAYMENT_REPOSITORY,
-          useValue: paymentRepositoryMock,
-        },
-        {
-          provide: RESERVATION_REPOSITORY,
-          useValue: reservationRepositoryMock,
-        },
-      ],
-    }).compile();
-
-    useCase = module.get<CreatePaymentUseCase>(CreatePaymentUseCase);
+    useCase = new CreatePaymentUseCase(
+      payments as never,
+      reservations as never,
+      gateway,
+    );
   });
 
-  describe('execute', () => {
-    it('should create a payment when reservation exists', async () => {
-      const reservationId = '550e8400-e29b-41d4-a716-446655440001';
-      const paymentId = '550e8400-e29b-41d4-a716-446655440000';
-      const mockReservation = createReservation(reservationId);
-      const mockPayment = new Payment({
-        id: paymentId,
-        reservationId,
-        date: '2026-06-22',
-        amount: 100.5,
-      });
-
-      reservationRepositoryMock.findById.mockResolvedValue(mockReservation);
-      paymentRepositoryMock.save.mockResolvedValue(mockPayment);
-
-      const result = await useCase.execute({
-        reservationId,
-        date: '2026-06-22',
-        amount: 100.5,
-      });
-
-      expect(result).toEqual({
-        paymentId,
-        reservationId,
-        date: '2026-06-22',
-        amount: 100.5,
-      });
-      expect(reservationRepositoryMock.findById).toHaveBeenCalledWith(
-        reservationId,
-      );
-      expect(paymentRepositoryMock.save).toHaveBeenCalled();
+  it('calcula la seña en backend, crea hold y checkout sin aprobar la reserva', async () => {
+    const result = await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'DEPOSIT',
+      idempotencyKey: 'checkout-001',
     });
+    expect(result.amountMinorUnits).toBe(180_000);
+    expect(result.status).toBe('PENDING');
+    expect(result.checkoutUrl).toContain(
+      'https://fake-payments.test/checkout/',
+    );
+    expect(reservations.putOnPaymentHold).toHaveBeenCalledTimes(1);
+  });
 
-    it('should throw ReservationNotFoundError when reservation does not exist', async () => {
-      const reservationId = '550e8400-e29b-41d4-a716-446655440001';
-
-      reservationRepositoryMock.findById.mockResolvedValue(null);
-
-      await expect(
-        useCase.execute({
-          reservationId,
-          date: '2026-06-22',
-          amount: 100.5,
-        }),
-      ).rejects.toThrow(ReservationNotFoundError);
+  it('calcula el pago total en backend', async () => {
+    const result = await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'FULL',
+      idempotencyKey: 'checkout-002',
     });
+    expect(result.amountMinorUnits).toBe(600_000);
+  });
 
-    it('should throw error if payment is not persisted correctly', async () => {
-      const reservationId = '550e8400-e29b-41d4-a716-446655440001';
-      const mockReservation = createReservation(reservationId);
-      const mockPayment = new Payment({
+  it('reutiliza el checkout con la misma clave y datos', async () => {
+    const input = {
+      reservationId,
+      memberId,
+      option: 'FULL' as const,
+      idempotencyKey: 'checkout-003',
+    };
+    const first = await useCase.execute(input);
+    const second = await useCase.execute(input);
+    expect(second).toEqual(first);
+    expect(gateway.createdPaymentCount).toBe(1);
+  });
+
+  it('rechaza una clave usada con otra opcion', async () => {
+    await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'FULL',
+      idempotencyKey: 'checkout-004',
+    });
+    await expect(
+      useCase.execute({
         reservationId,
-        date: '2026-06-22',
-        amount: 100.5,
-      });
+        memberId,
+        option: 'DEPOSIT',
+        idempotencyKey: 'checkout-004',
+      }),
+    ).rejects.toBeInstanceOf(PaymentIdempotencyConflictError);
+  });
 
-      reservationRepositoryMock.findById.mockResolvedValue(mockReservation);
-      paymentRepositoryMock.save.mockResolvedValue(mockPayment);
-
-      await expect(
-        useCase.execute({
-          reservationId,
-          date: '2026-06-22',
-          amount: 100.5,
-        }),
-      ).rejects.toThrow('Payment was not persisted correctly.');
-    });
+  it('rechaza una reserva ajena', async () => {
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId: 'otro-miembro',
+        option: 'FULL',
+        idempotencyKey: 'checkout-005',
+      }),
+    ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
+    expect(gateway.createdPaymentCount).toBe(0);
   });
 });
-
-function createReservation(id: string): Reservation {
-  return new Reservation({
-    id,
-    deskId: '550e8400-e29b-41d4-a716-446655440002',
-    memberId: '550e8400-e29b-41d4-a716-446655440003',
-    date: '2026-06-25',
-    startTime: '09:00',
-    endTime: '13:00',
-    status: 'ACTIVE',
-  });
-}
