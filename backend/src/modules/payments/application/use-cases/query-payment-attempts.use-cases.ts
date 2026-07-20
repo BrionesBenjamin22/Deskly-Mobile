@@ -14,6 +14,7 @@ export class PaymentAccessDeniedError extends Error {
   constructor() {
     super('El usuario no puede consultar pagos de otro miembro.');
     this.name = 'PaymentAccessDeniedError';
+    Object.setPrototypeOf(this, PaymentAccessDeniedError.prototype);
   }
 }
 

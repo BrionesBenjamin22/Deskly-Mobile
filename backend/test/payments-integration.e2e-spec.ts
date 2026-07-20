@@ -4,6 +4,11 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
+import { PaymentAttempt } from '../src/modules/payments/domain/entities/payment-attempt.entity';
+import {
+  PAYMENT_ATTEMPT_REPOSITORY,
+  PaymentAttemptRepositoryPort,
+} from '../src/modules/payments/domain/ports/payment-attempt-repository.port';
 
 describe('Payments autenticados (e2e PostgreSQL)', () => {
   let app: INestApplication;
@@ -11,6 +16,8 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
   let token: string;
   let otherToken: string;
   let reservationId: string;
+  let memberId: string;
+  let deskId: string;
   let fixture: string;
 
   beforeAll(async () => {
@@ -35,6 +42,7 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
     const desk = await prisma.desk.create({
       data: { name: fixture, areaId: area.id },
     });
+    deskId = desk.id;
     const user = await prisma.user.create({
       data: {
         email: `${fixture}@deskly.test`,
@@ -74,6 +82,7 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
         endTime: new Date('1970-01-01T13:00:00.000Z'),
       },
     });
+    memberId = user.member!.id;
     reservationId = reservation.id;
     const jwt = app.get(JwtService);
     token = await jwt.signAsync({}, { subject: user.id });
@@ -172,5 +181,43 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(own.body).toHaveLength(1);
+  });
+
+  it('revierte el pago si el hold local no puede crearse', async () => {
+    const cancelled = await prisma.reservation.create({
+      data: {
+        deskId,
+        memberId,
+        date: new Date('2026-07-26T00:00:00.000Z'),
+        startTime: new Date('1970-01-01T09:00:00.000Z'),
+        endTime: new Date('1970-01-01T10:00:00.000Z'),
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+      },
+    });
+    const repository = app.get<PaymentAttemptRepositoryPort>(
+      PAYMENT_ATTEMPT_REPOSITORY,
+    );
+    const attempt = new PaymentAttempt({
+      reservationId: cancelled.id,
+      memberId,
+      amountMinorUnits: 150_000,
+      currency: 'ARS',
+      option: 'FULL',
+      pricingVersion: 'ARS_1500_HOUR_DEPOSIT_30_V1',
+      provider: 'FAKE',
+      status: 'PENDING',
+      idempotencyKey: `rollback-${fixture}`,
+      operationFingerprint: 'rollback-fingerprint',
+      externalReference: `reservation:${cancelled.id}`,
+      expiresAt: new Date(Date.now() + 15 * 60_000),
+    });
+
+    await expect(repository.createWithReservationHold(attempt)).rejects.toThrow(
+      'La reserva no pudo bloquearse para el pago.',
+    );
+    await expect(
+      prisma.payment.count({ where: { reservationId: cancelled.id } }),
+    ).resolves.toBe(0);
   });
 });

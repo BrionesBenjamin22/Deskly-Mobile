@@ -83,7 +83,10 @@ export class PaymentsController {
         idempotencyKey: key,
       });
     } catch (error) {
-      if (error instanceof ReservationNotFoundError)
+      if (
+        error instanceof ReservationNotFoundError ||
+        hasErrorName(error, 'ReservationNotFoundError')
+      )
         throw new NotFoundException({
           message: error.message,
           error:
@@ -91,14 +94,19 @@ export class PaymentsController {
         });
       if (
         error instanceof InvalidPaymentAttemptError ||
-        error instanceof PaymentIdempotencyConflictError
+        hasErrorName(error, 'InvalidPaymentAttemptError') ||
+        error instanceof PaymentIdempotencyConflictError ||
+        hasErrorName(error, 'PaymentIdempotencyConflictError')
       )
         throw new ConflictException({
           message: error.message,
           error:
             'Lo sentimos, no pudimos iniciar el pago. Revise la reserva y vuelva a intentarlo.',
         });
-      if (error instanceof PaymentGatewayError)
+      if (
+        error instanceof PaymentGatewayError ||
+        hasErrorName(error, 'PaymentGatewayError')
+      )
         throw new ConflictException({
           message: 'No fue posible crear el checkout.',
           error:
@@ -150,18 +158,27 @@ export class ReservationPaymentsController {
 function handleQueryError(error: unknown): never {
   if (
     error instanceof PaymentNotFoundError ||
-    error instanceof ReservationNotFoundError
+    hasErrorName(error, 'PaymentNotFoundError') ||
+    error instanceof ReservationNotFoundError ||
+    hasErrorName(error, 'ReservationNotFoundError')
   )
     throw new NotFoundException({
       message: error.message,
       error:
         'Lo sentimos, no pudimos recuperar la informacion solicitada. Verifique los datos e intente nuevamente.',
     });
-  if (error instanceof PaymentAccessDeniedError)
+  if (
+    error instanceof PaymentAccessDeniedError ||
+    hasErrorName(error, 'PaymentAccessDeniedError')
+  )
     throw new ForbiddenException({
       message: error.message,
       error:
         'Lo sentimos, no tiene permisos para consultar estos pagos. Seleccione una reserva propia e intente nuevamente.',
     });
   throw error;
+}
+
+function hasErrorName(error: unknown, name: string): error is Error {
+  return error instanceof Error && error.name === name;
 }

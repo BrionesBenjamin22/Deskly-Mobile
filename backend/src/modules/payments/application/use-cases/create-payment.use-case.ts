@@ -106,7 +106,7 @@ export class CreatePaymentUseCase {
       new Date(Date.now() + PAYMENT_HOLD_DURATION_MINUTES * 60_000);
     const payment =
       prior ??
-      (await this.payments.create(
+      (await this.payments.createWithReservationHold(
         new PaymentAttempt({
           id: randomUUID(),
           reservationId: input.reservationId,
@@ -123,7 +123,6 @@ export class CreatePaymentUseCase {
           expiresAt,
         }),
       ));
-    await this.reservations.putOnPaymentHold(input.reservationId, expiresAt);
     let checkout;
     try {
       checkout = await this.gateway.createPayment({
@@ -139,7 +138,11 @@ export class CreatePaymentUseCase {
         pendingUrl: 'https://deskly.app/payments/pending',
       });
     } catch (error) {
-      if (error instanceof PaymentGatewayError && !error.retryable) {
+      if (
+        (error instanceof PaymentGatewayError ||
+          (error instanceof Error && error.name === 'PaymentGatewayError')) &&
+        !(error as PaymentGatewayError).retryable
+      ) {
         payment.transitionTo(
           'REJECTED',
           new Date(),

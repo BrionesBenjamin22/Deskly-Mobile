@@ -6,6 +6,7 @@ import {
   PaymentIdempotencyConflictError,
 } from '../../domain/errors/payment-domain.errors';
 import { FakePaymentGateway } from '../../infrastructure/gateways/fake-payment.gateway';
+import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
 import { CreatePaymentUseCase } from './create-payment.use-case';
 
 describe('CreatePaymentUseCase', () => {
@@ -45,7 +46,9 @@ describe('CreatePaymentUseCase', () => {
     const payments = {
       findByIdempotencyKey: jest.fn(async () => stored),
       listByReservationId: jest.fn(async () => (stored ? [stored] : [])),
-      create: jest.fn(async (payment: PaymentAttempt) => (stored = payment)),
+      createWithReservationHold: jest.fn(
+        async (payment: PaymentAttempt) => (stored = payment),
+      ),
       saveCheckout: jest.fn(
         async (payment: PaymentAttempt) => (stored = payment),
       ),
@@ -60,7 +63,7 @@ describe('CreatePaymentUseCase', () => {
     );
   });
 
-  it('calcula la seña en backend, crea hold y checkout sin aprobar la reserva', async () => {
+  it('calcula la seña en backend y crea checkout sin aprobar la reserva', async () => {
     const result = await useCase.execute({
       reservationId,
       memberId,
@@ -72,7 +75,6 @@ describe('CreatePaymentUseCase', () => {
     expect(result.checkoutUrl).toContain(
       'https://fake-payments.test/checkout/',
     );
-    expect(reservations.putOnPaymentHold).toHaveBeenCalledTimes(1);
   });
 
   it('calcula el pago total en backend', async () => {
@@ -142,6 +144,75 @@ describe('CreatePaymentUseCase', () => {
     expect(gateway.createdPaymentCount).toBe(0);
   });
 
+  it('rechaza una reserva inexistente', async () => {
+    reservations.findById.mockResolvedValueOnce(null);
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId,
+        option: 'FULL',
+        idempotencyKey: 'checkout-inexistente',
+      }),
+    ).rejects.toBeInstanceOf(ReservationNotFoundError);
+  });
+
+  it('rechaza una reserva cancelada', async () => {
+    reservations.findById.mockResolvedValueOnce(
+      new Reservation({
+        id: reservationId,
+        deskId: 'desk-1',
+        memberId,
+        date: '2026-07-25',
+        startTime: '09:00',
+        endTime: '13:00',
+        status: 'CANCELLED',
+      }),
+    );
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId,
+        option: 'FULL',
+        idempotencyKey: 'checkout-cancelada',
+      }),
+    ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
+  });
+
+  it('rechaza una reserva con pago aprobado', async () => {
+    await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'FULL',
+      idempotencyKey: 'checkout-aprobado-original',
+    });
+    stored!.transitionTo('APPROVED', new Date());
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId,
+        option: 'FULL',
+        idempotencyKey: 'checkout-aprobado-nuevo',
+      }),
+    ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
+  });
+
+  it('rechaza otro checkout mientras existe uno vigente', async () => {
+    await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'DEPOSIT',
+      idempotencyKey: 'checkout-vigente-original',
+    });
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId,
+        option: 'FULL',
+        idempotencyKey: 'checkout-vigente-nuevo',
+      }),
+    ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
+  });
+
   it('libera el hold ante un fallo definitivo del gateway', async () => {
     jest
       .spyOn(gateway, 'createPayment')
@@ -158,5 +229,50 @@ describe('CreatePaymentUseCase', () => {
     ).rejects.toBeInstanceOf(PaymentGatewayError);
     expect(stored?.status).toBe('REJECTED');
     expect(reservations.releasePaymentHold).toHaveBeenCalledWith(reservationId);
+  });
+
+  it('reutiliza el intento tras un timeout anterior a la creacion externa', async () => {
+    jest
+      .spyOn(gateway, 'createPayment')
+      .mockRejectedValueOnce(new PaymentGatewayError('timeout', true));
+    const input = {
+      reservationId,
+      memberId,
+      option: 'FULL' as const,
+      idempotencyKey: 'checkout-timeout-previo',
+    };
+
+    await expect(useCase.execute(input)).rejects.toBeInstanceOf(
+      PaymentGatewayError,
+    );
+    const recovered = await useCase.execute(input);
+
+    expect(recovered.checkoutUrl).toContain('fake-payments.test/checkout');
+    expect(gateway.createdPaymentCount).toBe(1);
+    expect(reservations.releasePaymentHold).not.toHaveBeenCalled();
+  });
+
+  it('recupera el mismo checkout tras un timeout posterior a la creacion externa', async () => {
+    const originalCreate = gateway.createPayment.bind(gateway);
+    jest
+      .spyOn(gateway, 'createPayment')
+      .mockImplementationOnce(async (input) => {
+        await originalCreate(input);
+        throw new PaymentGatewayError('timeout posterior', true);
+      });
+    const input = {
+      reservationId,
+      memberId,
+      option: 'DEPOSIT' as const,
+      idempotencyKey: 'checkout-timeout-posterior',
+    };
+
+    await expect(useCase.execute(input)).rejects.toBeInstanceOf(
+      PaymentGatewayError,
+    );
+    const recovered = await useCase.execute(input);
+
+    expect(recovered.checkoutUrl).toContain('fake-payment-1');
+    expect(gateway.createdPaymentCount).toBe(1);
   });
 });

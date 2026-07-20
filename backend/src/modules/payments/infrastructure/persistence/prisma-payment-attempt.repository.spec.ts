@@ -65,10 +65,12 @@ describe('PrismaPaymentAttemptRepository', () => {
   };
   const paymentEvent = { findUnique: jest.fn() };
   const transactionPayment = {
+    create: jest.fn(),
     updateMany: jest.fn(),
     findUniqueOrThrow: jest.fn(),
   };
   const transactionPaymentEvent = { create: jest.fn() };
+  const transactionReservation = { updateMany: jest.fn() };
   const prisma = {
     payment,
     paymentEvent,
@@ -76,6 +78,7 @@ describe('PrismaPaymentAttemptRepository', () => {
       callback({
         payment: transactionPayment,
         paymentEvent: transactionPaymentEvent,
+        reservation: transactionReservation,
       }),
     ),
   };
@@ -98,6 +101,27 @@ describe('PrismaPaymentAttemptRepository', () => {
     });
     expect(result.amount.minorUnits).toBe(45_000);
     expect(result.amount.currency).toBe('ARS');
+  });
+
+  it('crea el intento y el hold de reserva en una unica transaccion', async () => {
+    transactionPayment.create.mockResolvedValue(persistedPayment());
+    transactionReservation.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await repository.createWithReservationHold(attempt());
+
+    expect(transactionPayment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amountMinorUnits: 45_000n }),
+      }),
+    );
+    expect(transactionReservation.updateMany).toHaveBeenCalledWith({
+      where: { id: 'reservation-1', status: 'RESERVED' },
+      data: {
+        status: 'PENDING_PAYMENT',
+        holdExpiresAt: new Date('2026-07-18T12:15:00.000Z'),
+      },
+    });
+    expect(result.id).toBe(attempt().id);
   });
 
   it('devuelve la operacion original ante una clave repetida compatible', async () => {

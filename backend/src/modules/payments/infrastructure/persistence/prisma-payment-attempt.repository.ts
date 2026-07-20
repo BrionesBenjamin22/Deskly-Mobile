@@ -12,6 +12,7 @@ import {
 } from '../../domain/entities/payment-attempt.entity';
 import {
   ConcurrentPaymentUpdateError,
+  InvalidPaymentAttemptError,
   PaymentIdempotencyConflictError,
 } from '../../domain/errors/payment-domain.errors';
 import {
@@ -26,28 +27,7 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
   async create(payment: PaymentAttempt): Promise<PaymentAttempt> {
     try {
       const saved = await this.prisma.payment.create({
-        data: {
-          reservationId: payment.reservationId,
-          memberId: payment.memberId,
-          date: payment.createdAt ?? new Date(),
-          amountMinorUnits: BigInt(payment.amount.minorUnits),
-          currency: payment.amount.currency,
-          option: payment.option,
-          pricingVersion: payment.pricingVersion,
-          provider: payment.provider,
-          status: payment.status,
-          idempotencyKey: payment.idempotencyKey,
-          operationFingerprint: payment.operationFingerprint,
-          externalPaymentId: payment.externalPaymentId,
-          externalReference: payment.externalReference,
-          checkoutUrl: payment.checkoutUrl,
-          failureReason: payment.failureReason,
-          expiresAt: payment.expiresAt,
-          approvedAt: payment.approvedAt,
-          cancelledAt: payment.cancelledAt,
-          refundedAt: payment.refundedAt,
-          version: payment.version,
-        },
+        data: this.toCreateData(payment),
       });
       return this.toDomain(saved);
     } catch (error) {
@@ -60,6 +40,44 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
           existing &&
           existing.operationFingerprint === payment.operationFingerprint
         ) {
+          return existing;
+        }
+        throw new PaymentIdempotencyConflictError();
+      }
+      throw error;
+    }
+  }
+
+  async createWithReservationHold(
+    payment: PaymentAttempt,
+  ): Promise<PaymentAttempt> {
+    try {
+      const saved = await this.prisma.$transaction(async (transaction) => {
+        const created = await transaction.payment.create({
+          data: this.toCreateData(payment),
+        });
+        const held = await transaction.reservation.updateMany({
+          where: { id: payment.reservationId, status: 'RESERVED' },
+          data: {
+            status: 'PENDING_PAYMENT',
+            holdExpiresAt: payment.expiresAt,
+          },
+        });
+        if (held.count !== 1) {
+          throw new InvalidPaymentAttemptError(
+            'La reserva no pudo bloquearse para el pago.',
+          );
+        }
+        return created;
+      });
+      return this.toDomain(saved);
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        const existing = await this.findByIdempotencyKey(
+          payment.provider,
+          payment.idempotencyKey,
+        );
+        if (existing?.operationFingerprint === payment.operationFingerprint) {
           return existing;
         }
         throw new PaymentIdempotencyConflictError();
@@ -223,6 +241,34 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
       updatedAt: payment.updatedAt,
       version: payment.version,
     });
+  }
+
+  private toCreateData(
+    payment: PaymentAttempt,
+  ): Prisma.PaymentUncheckedCreateInput {
+    return {
+      id: payment.id,
+      reservationId: payment.reservationId,
+      memberId: payment.memberId,
+      date: payment.createdAt ?? new Date(),
+      amountMinorUnits: BigInt(payment.amount.minorUnits),
+      currency: payment.amount.currency,
+      option: payment.option,
+      pricingVersion: payment.pricingVersion,
+      provider: payment.provider,
+      status: payment.status,
+      idempotencyKey: payment.idempotencyKey,
+      operationFingerprint: payment.operationFingerprint,
+      externalPaymentId: payment.externalPaymentId,
+      externalReference: payment.externalReference,
+      checkoutUrl: payment.checkoutUrl,
+      failureReason: payment.failureReason,
+      expiresAt: payment.expiresAt,
+      approvedAt: payment.approvedAt,
+      cancelledAt: payment.cancelledAt,
+      refundedAt: payment.refundedAt,
+      version: payment.version,
+    };
   }
 
   private isUniqueViolation(error: unknown): boolean {
