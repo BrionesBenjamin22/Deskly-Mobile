@@ -2,6 +2,7 @@ import { Reservation } from '../../../reservations/domain/entities/reservation.e
 import { PaymentAttempt } from '../../domain/entities/payment-attempt.entity';
 import {
   InvalidPaymentAttemptError,
+  PaymentGatewayError,
   PaymentIdempotencyConflictError,
 } from '../../domain/errors/payment-domain.errors';
 import { FakePaymentGateway } from '../../infrastructure/gateways/fake-payment.gateway';
@@ -13,33 +14,42 @@ describe('CreatePaymentUseCase', () => {
   let stored: PaymentAttempt | null;
   let useCase: CreatePaymentUseCase;
   let gateway: FakePaymentGateway;
-  let reservations: { findById: jest.Mock; putOnPaymentHold: jest.Mock };
+  let reservations: {
+    findById: jest.Mock;
+    putOnPaymentHold: jest.Mock;
+    releasePaymentHold: jest.Mock;
+  };
 
   beforeEach(() => {
     stored = null;
     gateway = new FakePaymentGateway();
     reservations = {
-      findById: jest
-        .fn()
-        .mockResolvedValue(
-          new Reservation({
-            id: reservationId,
-            deskId: 'desk-1',
-            memberId,
-            date: '2026-07-25',
-            startTime: '09:00',
-            endTime: '13:00',
-            status: 'RESERVED',
-          }),
-        ),
+      findById: jest.fn().mockResolvedValue(
+        new Reservation({
+          id: reservationId,
+          deskId: 'desk-1',
+          memberId,
+          date: '2026-07-25',
+          startTime: '09:00',
+          endTime: '13:00',
+          status: 'RESERVED',
+        }),
+      ),
       putOnPaymentHold: jest
+        .fn()
+        .mockImplementation(async () => reservations.findById()),
+      releasePaymentHold: jest
         .fn()
         .mockImplementation(async () => reservations.findById()),
     };
     const payments = {
       findByIdempotencyKey: jest.fn(async () => stored),
+      listByReservationId: jest.fn(async () => (stored ? [stored] : [])),
       create: jest.fn(async (payment: PaymentAttempt) => (stored = payment)),
       saveCheckout: jest.fn(
+        async (payment: PaymentAttempt) => (stored = payment),
+      ),
+      saveStatus: jest.fn(
         async (payment: PaymentAttempt) => (stored = payment),
       ),
     };
@@ -88,6 +98,21 @@ describe('CreatePaymentUseCase', () => {
     expect(gateway.createdPaymentCount).toBe(1);
   });
 
+  it('coordina solicitudes concurrentes con una sola creacion externa', async () => {
+    const input = {
+      reservationId,
+      memberId,
+      option: 'FULL' as const,
+      idempotencyKey: 'checkout-concurrente',
+    };
+    const [first, second] = await Promise.all([
+      useCase.execute(input),
+      useCase.execute(input),
+    ]);
+    expect(second).toEqual(first);
+    expect(gateway.createdPaymentCount).toBe(1);
+  });
+
   it('rechaza una clave usada con otra opcion', async () => {
     await useCase.execute({
       reservationId,
@@ -115,5 +140,23 @@ describe('CreatePaymentUseCase', () => {
       }),
     ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
     expect(gateway.createdPaymentCount).toBe(0);
+  });
+
+  it('libera el hold ante un fallo definitivo del gateway', async () => {
+    jest
+      .spyOn(gateway, 'createPayment')
+      .mockRejectedValue(
+        new PaymentGatewayError('fallo interno sensible', false),
+      );
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId,
+        option: 'FULL',
+        idempotencyKey: 'checkout-fallo-definitivo',
+      }),
+    ).rejects.toBeInstanceOf(PaymentGatewayError);
+    expect(stored?.status).toBe('REJECTED');
+    expect(reservations.releasePaymentHold).toHaveBeenCalledWith(reservationId);
   });
 });

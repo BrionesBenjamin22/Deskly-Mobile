@@ -2,17 +2,26 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { CreatePaymentUseCase } from './application/use-cases/create-payment.use-case';
+import {
+  GetPaymentAttemptUseCase,
+  ListReservationPaymentsUseCase,
+} from './application/use-cases/query-payment-attempts.use-cases';
 import { PAYMENT_ATTEMPT_REPOSITORY } from './domain/ports/payment-attempt-repository.port';
 import { PAYMENT_GATEWAY } from './domain/ports/payment-gateway.port';
 import { FakePaymentGateway } from './infrastructure/gateways/fake-payment.gateway';
 import { PrismaPaymentAttemptRepository } from './infrastructure/persistence/prisma-payment-attempt.repository';
-import { PaymentsController } from './interfaces/http/payments.controller';
+import {
+  PaymentsController,
+  ReservationPaymentsController,
+} from './interfaces/http/payments.controller';
 
 @Module({
   imports: [AuthModule, ReservationsModule],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, ReservationPaymentsController],
   providers: [
     CreatePaymentUseCase,
+    GetPaymentAttemptUseCase,
+    ListReservationPaymentsUseCase,
     {
       provide: PAYMENT_ATTEMPT_REPOSITORY,
       useClass: PrismaPaymentAttemptRepository,

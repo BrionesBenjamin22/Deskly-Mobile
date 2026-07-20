@@ -162,6 +162,14 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     return this.findById(id);
   }
 
+  async releasePaymentHold(id: string): Promise<Reservation | null> {
+    await this.prisma.reservation.updateMany({
+      where: { id, status: ReservationStatus.PENDING_PAYMENT },
+      data: { status: ReservationStatus.RESERVED, holdExpiresAt: null },
+    });
+    return this.findById(id);
+  }
+
   async update(params: UpdateReservationParams): Promise<Reservation> {
     const reservation = await this.updateReservation(params);
 

@@ -5,6 +5,7 @@ import type { ReservationRepositoryPort } from '../../../reservations/domain/por
 import { PaymentAttempt } from '../../domain/entities/payment-attempt.entity';
 import {
   InvalidPaymentAttemptError,
+  PaymentGatewayError,
   PaymentIdempotencyConflictError,
 } from '../../domain/errors/payment-domain.errors';
 import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
@@ -14,6 +15,7 @@ import { PAYMENT_GATEWAY } from '../../domain/ports/payment-gateway.port';
 import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
 import {
   PAYMENT_HOLD_DURATION_MINUTES,
+  PAYMENT_PRICING_VERSION,
   PaymentPricingPolicy,
 } from '../../domain/services/payment-pricing-policy';
 import { CreatePaymentInput } from '../dto/create-payment.input';
@@ -21,6 +23,13 @@ import { CreatePaymentInput } from '../dto/create-payment.input';
 @Injectable()
 export class CreatePaymentUseCase {
   private readonly pricing = new PaymentPricingPolicy();
+  private readonly inFlight = new Map<
+    string,
+    {
+      fingerprint: string;
+      promise: Promise<ReturnType<CreatePaymentUseCase['output']>>;
+    }
+  >();
   constructor(
     @Inject(PAYMENT_ATTEMPT_REPOSITORY)
     private readonly payments: PaymentAttemptRepositoryPort,
@@ -30,6 +39,25 @@ export class CreatePaymentUseCase {
   ) {}
 
   async execute(input: CreatePaymentInput) {
+    const key = `FAKE:${input.idempotencyKey}`;
+    const fingerprint = this.fingerprint(input);
+    const current = this.inFlight.get(key);
+    if (current) {
+      if (current.fingerprint !== fingerprint)
+        throw new PaymentIdempotencyConflictError();
+      return current.promise;
+    }
+    const promise = this.executeOnce(input);
+    this.inFlight.set(key, { fingerprint, promise });
+    try {
+      return await promise;
+    } finally {
+      if (this.inFlight.get(key)?.promise === promise)
+        this.inFlight.delete(key);
+    }
+  }
+
+  private async executeOnce(input: CreatePaymentInput) {
     const reservation = await this.reservations.findById(input.reservationId);
     if (!reservation) throw new ReservationNotFoundError();
     if (reservation.memberId !== input.memberId)
@@ -40,6 +68,23 @@ export class CreatePaymentUseCase {
       throw new InvalidPaymentAttemptError(
         'La reserva no se encuentra en un estado pagable.',
       );
+    const reservationPayments = await this.payments.listByReservationId(
+      input.reservationId,
+    );
+    if (reservationPayments.some((payment) => payment.status === 'APPROVED'))
+      throw new InvalidPaymentAttemptError(
+        'La reserva ya posee un pago aprobado.',
+      );
+    const incompatibleCheckout = reservationPayments.find(
+      (payment) =>
+        ['PENDING', 'PROCESSING'].includes(payment.status) &&
+        payment.expiresAt > new Date() &&
+        payment.idempotencyKey !== input.idempotencyKey,
+    );
+    if (incompatibleCheckout)
+      throw new InvalidPaymentAttemptError(
+        'La reserva ya posee un checkout vigente.',
+      );
     const toMinutes = (value: string) => {
       const [h, m] = value.split(':').map(Number);
       return h * 60 + m;
@@ -48,16 +93,7 @@ export class CreatePaymentUseCase {
       toMinutes(reservation.endTime) - toMinutes(reservation.startTime),
       input.option,
     );
-    const fingerprint = createHash('sha256')
-      .update(
-        [
-          input.memberId,
-          input.reservationId,
-          input.option,
-          quote.pricingVersion,
-        ].join(':'),
-      )
-      .digest('hex');
+    const fingerprint = this.fingerprint(input);
     const prior = await this.payments.findByIdempotencyKey(
       'FAKE',
       input.idempotencyKey,
@@ -88,23 +124,50 @@ export class CreatePaymentUseCase {
         }),
       ));
     await this.reservations.putOnPaymentHold(input.reservationId, expiresAt);
-    const checkout = await this.gateway.createPayment({
-      paymentId: payment.id!,
-      externalReference: payment.externalReference,
-      amountMinorUnits: payment.amount.minorUnits,
-      currency: 'ARS',
-      description: `Reserva ${input.reservationId}`,
-      expiresAt,
-      idempotencyKey: input.idempotencyKey,
-      successUrl: 'https://deskly.app/payments/success',
-      failureUrl: 'https://deskly.app/payments/failure',
-      pendingUrl: 'https://deskly.app/payments/pending',
-    });
+    let checkout;
+    try {
+      checkout = await this.gateway.createPayment({
+        paymentId: payment.id!,
+        externalReference: payment.externalReference,
+        amountMinorUnits: payment.amount.minorUnits,
+        currency: 'ARS',
+        description: `Reserva ${input.reservationId}`,
+        expiresAt,
+        idempotencyKey: input.idempotencyKey,
+        successUrl: 'https://deskly.app/payments/success',
+        failureUrl: 'https://deskly.app/payments/failure',
+        pendingUrl: 'https://deskly.app/payments/pending',
+      });
+    } catch (error) {
+      if (error instanceof PaymentGatewayError && !error.retryable) {
+        payment.transitionTo(
+          'REJECTED',
+          new Date(),
+          'Fallo definitivo del proveedor.',
+        );
+        await this.payments.saveStatus(payment);
+        await this.reservations.releasePaymentHold(input.reservationId);
+      }
+      throw error;
+    }
     payment.attachCheckout({
       externalPaymentId: checkout.externalPaymentId,
       checkoutUrl: checkout.checkoutUrl,
     });
     return this.output(await this.payments.saveCheckout(payment));
+  }
+
+  private fingerprint(input: CreatePaymentInput): string {
+    return createHash('sha256')
+      .update(
+        [
+          input.memberId,
+          input.reservationId,
+          input.option,
+          PAYMENT_PRICING_VERSION,
+        ].join(':'),
+      )
+      .digest('hex');
   }
 
   private output(payment: PaymentAttempt) {

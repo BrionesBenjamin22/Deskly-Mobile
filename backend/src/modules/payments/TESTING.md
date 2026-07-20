@@ -1,160 +1,53 @@
-# Testing del Modulo Payments
+# Pruebas del modulo Payments
 
-## Estructura de Tests
+## Alcance
 
-Los tests están organizados en diferentes niveles:
+La etapa 3 se valida en tres niveles:
 
-### 1. Tests Unitarios de Use Cases
+- Dominio: dinero, politica de precios, transiciones e idempotencia.
+- Aplicacion e infraestructura: propiedad, estados pagables, concurrencia, repositorio y gateway fake.
+- E2E con PostgreSQL: autenticacion, whitelist del payload, idempotencia persistida y permisos.
 
-- `create-payment.use-case.spec.ts`: Valida la lógica de creación de pagos
-  - Creación exitosa de pago
-  - Validación de existencia de reserva
-  - Persistencia correcta
+## Casos cubiertos
 
-- `list-payments.use-case.spec.ts`: Valida la paginación y filtrado
-  - Retorno de pagos paginados
-  - Cálculo correcto de totalPages
-  - Filtrado por reservationId
+- Seña del 30% y pago total calculados exclusivamente en backend.
+- Rechazo de `amount` y otros campos no permitidos.
+- Reserva inexistente, ajena, no pagable o con pago aprobado.
+- Reutilizacion secuencial de la misma clave.
+- Coordinacion concurrente con una sola creacion externa.
+- Conflicto al reutilizar la clave con otros datos.
+- Hold de 15 minutos sin confirmar la reserva.
+- Liberacion del hold ante fallo definitivo.
+- Conservacion del intento ante errores reintentables.
+- Consulta por propietario y acceso operativo de ADMIN/GESTOR.
+- Rechazo sin JWT y respuesta segura ante errores del proveedor.
 
-- `get-payment-by-id.use-case.spec.ts`: Valida obtención de detalle
-  - Obtención exitosa de pago
-  - Manejo de pago no encontrado
+## Comandos
 
-- `delete-payment.use-case.spec.ts`: Valida eliminación de pagos
-  - Eliminación exitosa
-  - Validación de existencia antes de eliminar
+Desde `/backend`:
 
-### 2. Tests de Controller
-
-- `payments.controller.spec.ts`: Valida endpoints HTTP
-  - POST /payments - crear pago
-  - GET /payments - listar pagos
-  - GET /payments/:id - obtener detalle
-  - DELETE /payments/:id - eliminar pago
-  - Manejo de errores en cada endpoint
-
-## Ejecución de Tests
-
-### Ejecutar todos los tests del módulo:
 ```bash
-cd backend
-pnpm test -- payments
+npm run build
+npm test -- --runInBand
+npm run test:e2e -- --runInBand test/payments-integration.e2e-spec.ts
 ```
 
-### Ejecutar tests con coverage:
+La prueba E2E crea usuarios, miembros, localidad, area, escritorio y reserva aislados. Al finalizar elimina pagos, eventos y todos los datos auxiliares creados por la prueba.
+
+Antes de ejecutar contra una base local, aplicar las migraciones versionadas:
+
 ```bash
-cd backend
-pnpm test -- payments --coverage
+npx prisma migrate deploy
 ```
 
-### Ejecutar tests en watch mode:
+## Prueba manual
+
 ```bash
-cd backend
-pnpm test -- payments --watch
-```
-
-### Ejecutar un test específico:
-```bash
-cd backend
-pnpm test -- create-payment.use-case.spec
-```
-
-## Escenarios Probados
-
-### CreatePaymentUseCase
-✓ Crear pago con datos válidos
-✓ Falla si la reserva no existe
-✓ Falla si el pago no se persiste correctamente
-
-### ListPaymentsUseCase
-✓ Retorna pagos paginados correctamente
-✓ Calcula totalPages correctamente (15 items, limit 9 = 2 páginas)
-✓ Filtra por reservationId cuando se proporciona
-
-### GetPaymentByIdUseCase
-✓ Retorna detalle de pago existente
-✓ Lanza PaymentNotFoundError si no existe
-
-### DeletePaymentUseCase
-✓ Elimina pago existente
-✓ Lanza PaymentNotFoundError si no existe
-
-### PaymentsController
-✓ POST /payments crea pago correctamente
-✓ POST /payments maneja ReservationNotFoundError
-✓ GET /payments retorna listado paginado
-✓ GET /payments/:id retorna detalle
-✓ GET /payments/:id maneja PaymentNotFoundError
-✓ DELETE /payments/:id elimina pago
-✓ DELETE /payments/:id maneja PaymentNotFoundError
-
-## Cobertura Esperada
-
-- Use Cases: 100%
-- Controller: 100%
-- Errores: 100%
-- Mapper: 100%
-- Repository: Cubierto por tests de integración
-
-## Testing Manual con cURL
-
-### Crear pago
-```bash
-curl -X POST http://localhost:3000/payments \
+curl -X POST http://localhost:3000/payments/checkout \
+  -H "Authorization: Bearer <token>" \
+  -H "Idempotency-Key: checkout-reserva-001" \
   -H "Content-Type: application/json" \
-  -d '{
-    "reservationId": "550e8400-e29b-41d4-a716-446655440001",
-    "date": "2026-06-22",
-    "amount": 100.50
-  }'
+  -d '{"reservationId":"550e8400-e29b-41d4-a716-446655440001","option":"DEPOSIT"}'
 ```
 
-### Listar pagos
-```bash
-curl http://localhost:3000/payments?page=1&limit=9
-```
-
-### Listar pagos de una reserva específica
-```bash
-curl "http://localhost:3000/payments?page=1&limit=9&reservationId=550e8400-e29b-41d4-a716-446655440001"
-```
-
-### Obtener detalle de pago
-```bash
-curl http://localhost:3000/payments/550e8400-e29b-41d4-a716-446655440000
-```
-
-### Eliminar pago
-```bash
-curl -X DELETE http://localhost:3000/payments/550e8400-e29b-41d4-a716-446655440000
-```
-
-## Datos de Prueba
-
-Para facilitar las pruebas, se recomienda crear primero una reserva:
-
-```bash
-curl -X POST http://localhost:3000/reservations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "deskId": "550e8400-e29b-41d4-a716-446655440001",
-    "date": "2026-06-22",
-    "startTime": "09:00",
-    "endTime": "13:00"
-  }'
-```
-
-Luego usar el `reservationId` retornado para crear pagos.
-
-## Validaciones Testeadas
-
-### Validaciones de Input (class-validator)
-- UUID válido para reservationId
-- Fecha en formato YYYY-MM-DD
-- Monto > 0
-- Paginación válida (page >= 1, limit entre 1 y 50)
-
-### Validaciones de Negocio
-- Reserva debe existir
-- Pago debe ser persistido correctamente
-- Pago debe existir antes de deletar
+Repetir exactamente la solicitud debe devolver el mismo `paymentId` y la misma `checkoutUrl`.

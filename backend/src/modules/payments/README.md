@@ -2,89 +2,66 @@
 
 ## Funcionalidad
 
-Gestion de pagos asociados a reservas de escritorios.
+Gestiona intentos de pago autenticados para reservas. El backend calcula importes, conserva el snapshot de precios y coordina la idempotencia antes de invocar al proveedor.
 
-Los pagos son registros financieros vinculados a una reserva específica, permitiendo rastrear todas las transacciones de dinero relacionadas con una reserva.
+## Contratos HTTP
 
-## Endpoints
+Todos los endpoints requieren JWT.
 
 ```http
-POST /payments
-GET /payments?page=1&limit=9&reservationId=<uuid>
+POST /payments/checkout
 GET /payments/:id
-DELETE /payments/:id
+GET /reservations/:id/payments
 ```
 
-## Payload
+`POST /payments/checkout` exige el header `Idempotency-Key` de 8 a 160 caracteres y acepta solamente:
 
 ```json
 {
   "reservationId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
-  "date": "2026-06-22",
-  "amount": 100.50
+  "option": "DEPOSIT"
 }
 ```
 
-## Respuesta
+`option` admite `DEPOSIT` para una seña del 30% o `FULL` para el total. No se aceptan monto, moneda, estado, precio, fecha de pago ni identificador de miembro.
+
+## Reglas de negocio
+
+- El miembro se obtiene del JWT y debe ser propietario de la reserva.
+- La reserva debe estar en `RESERVED` o `PENDING_PAYMENT`.
+- El precio es ARS 1.500 por hora bajo la version `ARS_1500_HOUR_DEPOSIT_30_V1`.
+- El checkout crea un hold de 15 minutos y mantiene la reserva en `PENDING_PAYMENT`.
+- La creacion del checkout no confirma la reserva ni aprueba el pago.
+- Una clave repetida con los mismos datos reutiliza el intento; con datos diferentes devuelve conflicto.
+- Un pago aprobado o un checkout vigente incompatible impiden otro intento.
+- Un fallo definitivo del proveedor rechaza el intento y libera el hold. Un timeout reintentable conserva la operacion.
+- No existe listado global publico ni borrado fisico de pagos.
+
+## Permisos
+
+- `MIEMBRO`: solo pagos de sus propias reservas.
+- `ADMIN` y `GESTOR`: consulta operativa de cualquier pago.
+
+## Respuesta de checkout
 
 ```json
 {
   "paymentId": "2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4",
   "reservationId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
-  "date": "2026-06-22",
-  "amount": 100.50
+  "status": "PENDING",
+  "option": "DEPOSIT",
+  "amountMinorUnits": 180000,
+  "currency": "ARS",
+  "pricingVersion": "ARS_1500_HOUR_DEPOSIT_30_V1",
+  "checkoutUrl": "https://fake-payments.test/checkout/fake-payment-1",
+  "expiresAt": "2026-07-20T15:15:00.000Z"
 }
 ```
-
-Listado:
-
-```json
-{
-  "payments": [
-    {
-      "paymentId": "2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4",
-      "reservationId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
-      "date": "2026-06-22",
-      "amount": 100.50,
-      "createdAt": "2026-06-22T10:30:00.000Z",
-      "updatedAt": "2026-06-22T10:30:00.000Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 9,
-    "total": 1,
-    "totalPages": 1
-  }
-}
-```
-
-## Reglas de negocio
-
-- La reserva debe existir.
-- El monto debe ser mayor a 0.
-- La fecha debe tener formato `YYYY-MM-DD`.
-- Un pago puede estar asociado a múltiples transacciones en el futuro.
-- El pago es un registro de auditoria que no se puede editar, solo crear o eliminar.
-- Los listados usan paginacion con 9 items por defecto.
-
-## Validaciones de entrada
-
-Alta de pago:
-
-- `reservationId`: obligatorio y debe ser UUID v4.
-- `date`: obligatoria con formato `YYYY-MM-DD` y fecha real.
-- `amount`: obligatorio y debe ser mayor a 0.
-
-Listado:
-
-- `page`: entero mayor o igual a 1.
-- `limit`: entero entre 1 y 50.
-- `reservationId`: opcional, debe ser UUID v4.
-
-Los errores previsibles de formulario deben mostrarse en frontend junto al campo y no deben disparar una peticion. El backend conserva las validaciones como barrera de seguridad, con mensajes especificos por campo para integraciones externas.
 
 ## Errores
 
-- `400`: datos invalidos.
-- `404`: pago o reserva no encontrada.
+- `400`: payload, UUID o clave de idempotencia invalidos.
+- `401`: sesion ausente o invalida.
+- `403`: pago o reserva ajenos.
+- `404`: pago o reserva inexistentes.
+- `409`: reserva no pagable, checkout incompatible, clave reutilizada o proveedor no disponible.

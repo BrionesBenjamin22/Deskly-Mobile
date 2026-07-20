@@ -13,7 +13,10 @@ describe('PaymentsController', () => {
 
   beforeEach(() => {
     execute = jest.fn().mockResolvedValue(output);
-    controller = new PaymentsController({ execute } as never);
+    controller = new PaymentsController(
+      { execute } as never,
+      { execute: jest.fn() } as never,
+    );
   });
 
   it('propaga miembro autenticado y clave de idempotencia', async () => {

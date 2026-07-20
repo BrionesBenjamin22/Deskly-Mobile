@@ -3,8 +3,12 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
+  Get,
   Headers,
   NotFoundException,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   UseGuards,
@@ -21,11 +25,17 @@ import type { AuthenticatedRequest } from '../../../auth/interfaces/http/auth-re
 import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
 import { CreatePaymentUseCase } from '../../application/use-cases/create-payment.use-case';
 import {
+  GetPaymentAttemptUseCase,
+  ListReservationPaymentsUseCase,
+  PaymentAccessDeniedError,
+} from '../../application/use-cases/query-payment-attempts.use-cases';
+import {
   InvalidPaymentAttemptError,
   PaymentGatewayError,
   PaymentIdempotencyConflictError,
 } from '../../domain/errors/payment-domain.errors';
 import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
+import { PaymentNotFoundError } from '../../domain/errors/payment-not-found.error';
 import { CreatePaymentBodyDto } from './dto/create-payment-body.dto';
 
 @ApiTags('Payments')
@@ -33,7 +43,10 @@ import { CreatePaymentBodyDto } from './dto/create-payment-body.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly createPayment: CreatePaymentUseCase) {}
+  constructor(
+    private readonly createPayment: CreatePaymentUseCase,
+    private readonly getPayment: GetPaymentAttemptUseCase,
+  ) {}
 
   @Post('checkout')
   @ApiCreatedResponse({
@@ -94,4 +107,61 @@ export class PaymentsController {
       throw error;
     }
   }
+
+  @Get(':id')
+  async findById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    try {
+      return await this.getPayment.execute(id, {
+        role: request.user.role,
+        memberId: request.user.member?.id,
+      });
+    } catch (error) {
+      handleQueryError(error);
+    }
+  }
+}
+
+@ApiTags('Payments')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('reservations')
+export class ReservationPaymentsController {
+  constructor(private readonly listPayments: ListReservationPaymentsUseCase) {}
+
+  @Get(':id/payments')
+  async listByReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    try {
+      return await this.listPayments.execute(id, {
+        role: request.user.role,
+        memberId: request.user.member?.id,
+      });
+    } catch (error) {
+      handleQueryError(error);
+    }
+  }
+}
+
+function handleQueryError(error: unknown): never {
+  if (
+    error instanceof PaymentNotFoundError ||
+    error instanceof ReservationNotFoundError
+  )
+    throw new NotFoundException({
+      message: error.message,
+      error:
+        'Lo sentimos, no pudimos recuperar la informacion solicitada. Verifique los datos e intente nuevamente.',
+    });
+  if (error instanceof PaymentAccessDeniedError)
+    throw new ForbiddenException({
+      message: error.message,
+      error:
+        'Lo sentimos, no tiene permisos para consultar estos pagos. Seleccione una reserva propia e intente nuevamente.',
+    });
+  throw error;
 }
