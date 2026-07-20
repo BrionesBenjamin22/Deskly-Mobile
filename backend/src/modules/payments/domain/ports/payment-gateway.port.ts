@@ -14,9 +14,6 @@ export type CreateGatewayPaymentInput = {
   description: string;
   expiresAt: Date;
   idempotencyKey: string;
-  successUrl: string;
-  failureUrl: string;
-  pendingUrl: string;
 };
 
 export type GatewayPaymentSnapshot = {
@@ -45,11 +42,21 @@ export type GatewayNotification = {
   eventType: string;
 };
 
+export type GatewayPaymentExpectation = {
+  externalReference: string;
+  amountMinorUnits: number;
+  currency: Currency;
+};
+
 export interface PaymentGatewayPort {
+  readonly provider: PaymentProvider;
   createPayment(
     input: CreateGatewayPaymentInput,
   ): Promise<CreateGatewayPaymentResult>;
-  getPayment(externalPaymentId: string): Promise<GatewayPaymentSnapshot>;
+  getPayment(
+    externalPaymentId: string,
+    expectation?: GatewayPaymentExpectation,
+  ): Promise<GatewayPaymentSnapshot>;
   verifyAndParseWebhook(
     request: GatewayWebhookRequest,
   ): Promise<GatewayNotification>;

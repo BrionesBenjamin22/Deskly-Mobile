@@ -17,9 +17,6 @@ function input(
     description: 'Reserva Deskly',
     expiresAt: new Date('2026-07-17T15:15:00.000Z'),
     idempotencyKey: 'idempotency-key-1',
-    successUrl: 'https://deskly.test/payments/success',
-    failureUrl: 'https://deskly.test/payments/failure',
-    pendingUrl: 'https://deskly.test/payments/pending',
     ...overrides,
   };
 }

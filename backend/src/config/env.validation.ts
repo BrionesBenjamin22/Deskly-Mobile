@@ -5,6 +5,7 @@ type EnvironmentVariables = {
   DATABASE_URL: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
+  PAYMENT_GATEWAY: 'FAKE' | 'MERCADO_PAGO';
 };
 
 export function validateEnvironment(
@@ -28,6 +29,14 @@ export function validateEnvironment(
     return value;
   };
 
+  const paymentGateway = getString('PAYMENT_GATEWAY', 'FAKE');
+  if (!['FAKE', 'MERCADO_PAGO'].includes(paymentGateway)) {
+    throw new Error('PAYMENT_GATEWAY must be FAKE or MERCADO_PAGO');
+  }
+  if (paymentGateway === 'MERCADO_PAGO') {
+    validateMercadoPagoEnvironment(config);
+  }
+
   return {
     NODE_ENV: getString('NODE_ENV', 'development'),
     PORT: Number(config.PORT ?? 3000),
@@ -35,7 +44,23 @@ export function validateEnvironment(
     DATABASE_URL: getString('DATABASE_URL'),
     JWT_SECRET: getString('JWT_SECRET'),
     JWT_EXPIRES_IN: validateJwtExpiration(getString('JWT_EXPIRES_IN', '1h')),
+    PAYMENT_GATEWAY: paymentGateway as 'FAKE' | 'MERCADO_PAGO',
   };
+}
+
+function validateMercadoPagoEnvironment(config: Record<string, unknown>): void {
+  const required = [
+    'MERCADO_PAGO_ACCESS_TOKEN',
+    'MERCADO_PAGO_WEBHOOK_SECRET',
+    'MERCADO_PAGO_SUCCESS_URL',
+    'MERCADO_PAGO_FAILURE_URL',
+    'MERCADO_PAGO_PENDING_URL',
+    'MERCADO_PAGO_ALLOWED_RETURN_ORIGINS',
+  ];
+  for (const key of required) {
+    if (typeof config[key] !== 'string' || !config[key].trim())
+      throw new Error(`Missing required environment variable: ${key}`);
+  }
 }
 
 function validateJwtExpiration(value: string): string {

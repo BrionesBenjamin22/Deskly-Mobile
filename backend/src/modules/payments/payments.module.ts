@@ -9,6 +9,11 @@ import {
 import { PAYMENT_ATTEMPT_REPOSITORY } from './domain/ports/payment-attempt-repository.port';
 import { PAYMENT_GATEWAY } from './domain/ports/payment-gateway.port';
 import { FakePaymentGateway } from './infrastructure/gateways/fake-payment.gateway';
+import { MercadoPagoGateway } from './infrastructure/gateways/mercado-pago.gateway';
+import {
+  readMercadoPagoConfig,
+  readPaymentGatewayName,
+} from './infrastructure/gateways/mercado-pago.config';
 import { PrismaPaymentAttemptRepository } from './infrastructure/persistence/prisma-payment-attempt.repository';
 import {
   PaymentsController,
@@ -26,7 +31,13 @@ import {
       provide: PAYMENT_ATTEMPT_REPOSITORY,
       useClass: PrismaPaymentAttemptRepository,
     },
-    { provide: PAYMENT_GATEWAY, useClass: FakePaymentGateway },
+    {
+      provide: PAYMENT_GATEWAY,
+      useFactory: () =>
+        readPaymentGatewayName() === 'MERCADO_PAGO'
+          ? new MercadoPagoGateway(readMercadoPagoConfig())
+          : new FakePaymentGateway(),
+    },
   ],
 })
 export class PaymentsModule {}

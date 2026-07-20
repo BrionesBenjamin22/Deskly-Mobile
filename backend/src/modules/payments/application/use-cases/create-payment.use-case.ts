@@ -39,7 +39,7 @@ export class CreatePaymentUseCase {
   ) {}
 
   async execute(input: CreatePaymentInput) {
-    const key = `FAKE:${input.idempotencyKey}`;
+    const key = `${this.gateway.provider}:${input.idempotencyKey}`;
     const fingerprint = this.fingerprint(input);
     const current = this.inFlight.get(key);
     if (current) {
@@ -95,7 +95,7 @@ export class CreatePaymentUseCase {
     );
     const fingerprint = this.fingerprint(input);
     const prior = await this.payments.findByIdempotencyKey(
-      'FAKE',
+      this.gateway.provider,
       input.idempotencyKey,
     );
     if (prior && prior.operationFingerprint !== fingerprint)
@@ -115,7 +115,7 @@ export class CreatePaymentUseCase {
           currency: 'ARS',
           option: input.option,
           pricingVersion: quote.pricingVersion,
-          provider: 'FAKE',
+          provider: this.gateway.provider,
           status: 'PENDING',
           idempotencyKey: input.idempotencyKey,
           operationFingerprint: fingerprint,
@@ -133,9 +133,6 @@ export class CreatePaymentUseCase {
         description: `Reserva ${input.reservationId}`,
         expiresAt,
         idempotencyKey: input.idempotencyKey,
-        successUrl: 'https://deskly.app/payments/success',
-        failureUrl: 'https://deskly.app/payments/failure',
-        pendingUrl: 'https://deskly.app/payments/pending',
       });
     } catch (error) {
       if (

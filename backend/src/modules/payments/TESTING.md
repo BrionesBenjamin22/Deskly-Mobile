@@ -1,5 +1,15 @@
 # Pruebas del modulo Payments
 
+## Contrato Mercado Pago
+
+El adaptador se prueba con HTTP simulado, sin credenciales ni red externa. La matriz cubre preferencia, importe exacto, idempotencia, timeout, desconexion, 4xx, 429, 5xx, JSON invalido, estados, coherencia de datos, URL hospedada y firma HMAC.
+
+```bash
+npm test -- --runInBand modules/payments/infrastructure/gateways
+```
+
+La prueba manual con credenciales de prueba queda para el flujo frontend. El retorno del navegador nunca es evidencia de aprobacion.
+
 ## Alcance
 
 La etapa 3 se valida en tres niveles:

@@ -15,6 +15,7 @@ import {
 } from '../../domain/ports/payment-gateway.port';
 
 export class FakePaymentGateway implements PaymentGatewayPort {
+  readonly provider = 'FAKE' as const;
   private sequence = 0;
   private readonly payments = new Map<string, CreateGatewayPaymentResult>();
   private readonly creations = new Map<

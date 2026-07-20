@@ -1,5 +1,15 @@
 # Modulo Payments
 
+## Proveedores de checkout
+
+`PAYMENT_GATEWAY` selecciona el proveedor solo en backend: `FAKE` es el valor por defecto para desarrollo y pruebas; `MERCADO_PAGO` activa el adaptador HTTP de Checkout Pro y exige token, secreto de webhook, URLs de retorno y timeout validos.
+
+El dominio no importa tipos de Mercado Pago. Los secretos no forman parte de DTOs, respuestas ni errores. Las URLs provienen de configuracion backend y deben usar HTTPS en produccion. La preferencia recibe importe ARS calculado en backend, referencia interna, metadata minima, expiracion y `X-Idempotency-Key`.
+
+La consulta externa normaliza estados y compara referencia, importe y moneda contra el intento interno. Un estado desconocido queda `PROCESSING`, nunca `APPROVED`. El retorno visual tampoco aprueba pagos.
+
+Variables: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `MERCADO_PAGO_SUCCESS_URL`, `MERCADO_PAGO_FAILURE_URL`, `MERCADO_PAGO_PENDING_URL`, `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` y `MERCADO_PAGO_TIMEOUT_MS`. La allowlist contiene origenes separados por coma. Nunca versionar valores reales.
+
 ## Funcionalidad
 
 Gestiona intentos de pago autenticados para reservas. El backend calcula importes, conserva el snapshot de precios y coordina la idempotencia antes de invocar al proveedor.
