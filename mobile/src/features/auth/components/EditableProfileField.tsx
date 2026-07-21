@@ -13,7 +13,12 @@ type EditableProfileFieldProps = {
   value: string | number;
   onSave: (newValue: string | number) => Promise<void>;
   onSuccess: () => void;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'number-pad';
+  keyboardType?:
+    | 'default'
+    | 'email-address'
+    | 'numeric'
+    | 'number-pad'
+    | 'phone-pad';
   validate?: (value: string) => string | undefined;
   isLoading?: boolean;
 };

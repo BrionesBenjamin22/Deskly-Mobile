@@ -39,6 +39,12 @@ export function ReservationLocationDetails({ location, expanded, onToggle }: Res
           <Detail label="Área de trabajo" value={location.areaName} />
           <Detail label="Localidad" value={location.localityName} />
           {location.address ? <Detail label="Dirección" value={location.address} /> : null}
+          {showCoordinates ? (
+            <Detail
+              label="Coordenadas"
+              value={`${location.latitude}, ${location.longitude}`}
+            />
+          ) : null}
           <LocationMap
             latitude={location.latitude}
             longitude={location.longitude}
