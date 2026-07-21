@@ -37,7 +37,7 @@ function isPrivateNetworkDevelopmentOrigin(origin: string) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const logger = new Logger('HTTP');
 
   app.enableCors({

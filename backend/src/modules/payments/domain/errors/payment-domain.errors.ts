@@ -56,3 +56,19 @@ export class InvalidWebhookSignatureError extends Error {
     Object.setPrototypeOf(this, InvalidWebhookSignatureError.prototype);
   }
 }
+
+export class DuplicatePaymentEventError extends Error {
+  constructor() {
+    super('La notificacion de pago ya fue procesada.');
+    this.name = 'DuplicatePaymentEventError';
+    Object.setPrototypeOf(this, DuplicatePaymentEventError.prototype);
+  }
+}
+
+export class DuplicateReservationApprovalError extends Error {
+  constructor() {
+    super('La reserva ya fue confirmada por otro intento de pago.');
+    this.name = 'DuplicateReservationApprovalError';
+    Object.setPrototypeOf(this, DuplicateReservationApprovalError.prototype);
+  }
+}

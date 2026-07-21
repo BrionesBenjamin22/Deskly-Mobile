@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { CreatePaymentUseCase } from './application/use-cases/create-payment.use-case';
+import { ProcessPaymentWebhookUseCase } from './application/use-cases/process-payment-webhook.use-case';
 import {
   GetPaymentAttemptUseCase,
   ListReservationPaymentsUseCase,
@@ -19,12 +20,18 @@ import {
   PaymentsController,
   ReservationPaymentsController,
 } from './interfaces/http/payments.controller';
+import { PaymentWebhooksController } from './interfaces/http/payment-webhooks.controller';
 
 @Module({
   imports: [AuthModule, ReservationsModule],
-  controllers: [PaymentsController, ReservationPaymentsController],
+  controllers: [
+    PaymentsController,
+    ReservationPaymentsController,
+    PaymentWebhooksController,
+  ],
   providers: [
     CreatePaymentUseCase,
+    ProcessPaymentWebhookUseCase,
     GetPaymentAttemptUseCase,
     ListReservationPaymentsUseCase,
     {

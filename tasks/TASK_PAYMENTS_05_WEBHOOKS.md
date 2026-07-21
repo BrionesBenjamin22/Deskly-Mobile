@@ -4,7 +4,7 @@
 |---|---|
 | ID | `PAYMENTS-05` |
 | Modulo | Payments backend |
-| Estado | `PENDIENTE` |
+| Estado | `COMPLETADA` |
 | Dependencia | `PAYMENTS-04` completada |
 | Implementacion | `backend/src/modules/payments` |
 
@@ -93,4 +93,4 @@ Procesar notificaciones asincronas verificando firma y estado directamente con e
 
 ## Commit sugerido
 
-`feat(payments): process secure and idempotent payment webhooks`
+`feat(pagos): procesar webhooks seguros e idempotentes`

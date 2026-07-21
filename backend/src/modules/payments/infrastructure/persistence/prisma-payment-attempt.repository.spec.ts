@@ -84,7 +84,10 @@ describe('PrismaPaymentAttemptRepository', () => {
   };
   const repository = new PrismaPaymentAttemptRepository(prisma as never);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    transactionReservation.updateMany.mockResolvedValue({ count: 1 });
+  });
 
   it('persiste dinero como bigint y devuelve el intento creado', async () => {
     payment.create.mockResolvedValue(persistedPayment());
@@ -178,6 +181,10 @@ describe('PrismaPaymentAttemptRepository', () => {
       expect.objectContaining({ where: { id: changed.id, version: 0 } }),
     );
     expect(transactionPaymentEvent.create).toHaveBeenCalledTimes(1);
+    expect(transactionReservation.updateMany).toHaveBeenCalledWith({
+      where: { id: 'reservation-1', status: 'PENDING_PAYMENT' },
+      data: { status: 'RESERVED', holdExpiresAt: null },
+    });
     expect(result.status).toBe('APPROVED');
     expect(result.version).toBe(1);
   });

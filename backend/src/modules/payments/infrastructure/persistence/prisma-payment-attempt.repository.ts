@@ -12,6 +12,8 @@ import {
 } from '../../domain/entities/payment-attempt.entity';
 import {
   ConcurrentPaymentUpdateError,
+  DuplicatePaymentEventError,
+  DuplicateReservationApprovalError,
   InvalidPaymentAttemptError,
   PaymentIdempotencyConflictError,
 } from '../../domain/errors/payment-domain.errors';
@@ -184,6 +186,29 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
           });
         }
 
+        if (
+          event?.previousStatus !== 'APPROVED' &&
+          payment.status === 'APPROVED'
+        ) {
+          const confirmed = await transaction.reservation.updateMany({
+            where: {
+              id: payment.reservationId,
+              status: 'PENDING_PAYMENT',
+            },
+            data: { status: 'RESERVED', holdExpiresAt: null },
+          });
+          if (confirmed.count !== 1)
+            throw new DuplicateReservationApprovalError();
+        } else if (
+          payment.status === 'EXPIRED' ||
+          payment.status === 'CANCELLED'
+        ) {
+          await transaction.reservation.updateMany({
+            where: { id: payment.reservationId, status: 'PENDING_PAYMENT' },
+            data: { status: 'RESERVED', holdExpiresAt: null },
+          });
+        }
+
         const saved = await transaction.payment.findUniqueOrThrow({
           where: { id: paymentId },
         });
@@ -191,7 +216,7 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
       });
     } catch (error) {
       if (this.isUniqueViolation(error)) {
-        throw new PaymentIdempotencyConflictError();
+        throw new DuplicatePaymentEventError();
       }
       throw error;
     }

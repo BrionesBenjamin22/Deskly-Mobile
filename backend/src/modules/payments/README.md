@@ -1,5 +1,7 @@
 # Modulo Payments
 
+El contrato, los casos de uso y las validaciones de webhooks se detallan en [WEBHOOKS_IMPLEMENTATION.md](./WEBHOOKS_IMPLEMENTATION.md).
+
 ## Proveedores de checkout
 
 `PAYMENT_GATEWAY` selecciona el proveedor solo en backend: `FAKE` es el valor por defecto para desarrollo y pruebas; `MERCADO_PAGO` activa el adaptador HTTP de Checkout Pro y exige token, secreto de webhook, URLs de retorno y timeout validos.
