@@ -31,6 +31,12 @@ export interface PaymentAttemptRepositoryPort {
     externalPaymentId: string,
   ): Promise<PaymentAttempt | null>;
   listByReservationId(reservationId: string): Promise<PaymentAttempt[]>;
+  listStale(
+    provider: PaymentProvider,
+    statuses: PaymentStatus[],
+    updatedBefore: Date,
+    limit: number,
+  ): Promise<PaymentAttempt[]>;
   saveStatus(
     payment: PaymentAttempt,
     event?: PaymentEventRecord,

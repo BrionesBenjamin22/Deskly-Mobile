@@ -9,6 +9,8 @@ import {
   PAYMENT_ATTEMPT_REPOSITORY,
   PaymentAttemptRepositoryPort,
 } from '../src/modules/payments/domain/ports/payment-attempt-repository.port';
+import { PAYMENT_GATEWAY } from '../src/modules/payments/domain/ports/payment-gateway.port';
+import { FakePaymentGateway } from '../src/modules/payments/infrastructure/gateways/fake-payment.gateway';
 
 describe('Payments autenticados (e2e PostgreSQL)', () => {
   let app: INestApplication;
@@ -24,7 +26,7 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
     const module = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    app = module.createNestApplication();
+    app = module.createNestApplication({ rawBody: true });
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -145,7 +147,7 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
       .send({ reservationId, option: 'FULL', amount: 1 })
       .expect(400));
 
-  it('crea un unico checkout y reutiliza la respuesta', async () => {
+  it('crea un unico checkout ante diez solicitudes simultaneas', async () => {
     const call = () =>
       request(app.getHttpServer())
         .post('/payments/checkout')
@@ -153,15 +155,61 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
         .set('Idempotency-Key', 'e2e-checkout-003')
         .send({ reservationId, option: 'DEPOSIT' })
         .expect(201);
-    const first = await call();
-    const second = await call();
-    expect(second.body).toEqual(first.body);
+    const responses = await Promise.all(Array.from({ length: 10 }, call));
+    const first = responses[0];
+    expect(
+      responses.every((item) => item.body.paymentId === first.body.paymentId),
+    ).toBe(true);
     expect(first.body).toMatchObject({
       reservationId,
       amountMinorUnits: 180_000,
       status: 'PENDING',
     });
     expect(await prisma.payment.count({ where: { reservationId } })).toBe(1);
+  });
+
+  it('confirma una sola vez mediante webhook firmado y absorbe el replay', async () => {
+    const persisted = await prisma.payment.findFirstOrThrow({
+      where: { reservationId },
+    });
+    expect(persisted.status).toBe('PENDING');
+    const beforeReturn = await prisma.reservation.findUniqueOrThrow({
+      where: { id: reservationId },
+    });
+    expect(beforeReturn.status).toBe('PENDING_PAYMENT');
+
+    const gateway = app.get<FakePaymentGateway>(PAYMENT_GATEWAY);
+    gateway.setPaymentStatus(persisted.externalPaymentId!, 'APPROVED');
+    const notification = gateway.signWebhook({
+      eventId: `approved-${fixture}`,
+      externalPaymentId: persisted.externalPaymentId!,
+      eventType: 'payment',
+    });
+    const deliver = () =>
+      request(app.getHttpServer())
+        .post('/webhooks/payments')
+        .set('Content-Type', 'application/json')
+        .set('x-fake-signature', notification.headers['x-fake-signature']!)
+        .send(notification.rawBody)
+        .expect(200);
+
+    const concurrent = await Promise.all([deliver(), deliver()]);
+    expect(concurrent.filter((item) => item.body.applied === true)).toHaveLength(1);
+    expect(concurrent.filter((item) => item.body.duplicate === true)).toHaveLength(
+      1,
+    );
+    const replay = await deliver();
+    expect(replay.body).toMatchObject({ applied: false, duplicate: true });
+
+    await expect(
+      prisma.payment.findUniqueOrThrow({ where: { id: persisted.id } }),
+    ).resolves.toMatchObject({ status: 'APPROVED' });
+    await expect(
+      prisma.reservation.findUniqueOrThrow({ where: { id: reservationId } }),
+    ).resolves.toMatchObject({ status: 'RESERVED', holdExpiresAt: null });
+    await expect(
+      prisma.paymentEvent.count({ where: { paymentId: persisted.id } }),
+    ).resolves.toBe(1);
   });
 
   it('protege detalle y listado por propiedad', async () => {

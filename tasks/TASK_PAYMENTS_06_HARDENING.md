@@ -4,9 +4,10 @@
 |---|---|
 | ID | `PAYMENTS-06` |
 | Modulo | Payments backend |
-| Estado | `PENDIENTE` |
+| Estado | `COMPLETADA` |
 | Dependencia | `PAYMENTS-05` |
 | Implementacion | `backend/src/modules/payments` |
+| Validacion | Formato, build backend, unitarios Payments, suite backend completa, E2E autenticado con PostgreSQL y gateway fake, TypeScript mobile, Docker/migraciones y `git diff --check` |
 
 ## Objetivo
 
@@ -94,6 +95,22 @@ Auditar el flujo completo bajo fallos, ataques, concurrencia y regresiones antes
 - Logs y respuestas no contienen secretos.
 - Todos los riesgos heredados estan cerrados.
 
+## Evidencia automatizada de cierre (2026-07-21)
+
+- Formato de archivos modificados: aprobado.
+- Build backend: aprobado.
+- Unitarios Payments y observabilidad: 17 suites, 129 pruebas aprobadas.
+- Suite backend completa: 39 suites, 229 pruebas aprobadas.
+- E2E completo: 2 suites, 7 pruebas aprobadas.
+- E2E Payments con PostgreSQL y gateway fake: checkout concurrente, webhook firmado concurrente, replay y confirmacion unica aprobados.
+- Docker Compose: configuracion valida y PostgreSQL saludable.
+- Migraciones: 17 migraciones aplicadas desde cero en `deskly_stage6_validation_20260721`; base temporal eliminada.
+- TypeScript mobile: aprobado. Se alineo `EditableProfileField` con el `phone-pad` ya utilizado y se agrego una declaracion neutral para los componentes `LocationMap.native.tsx`/`LocationMap.web.tsx`.
+- Suite mobile completa: 7 suites, 27 pruebas aprobadas. Se restauro la presentacion de coordenadas requerida por una prueba existente.
+- Pruebas manuales: diferidas hasta `PAYMENTS-07`, cuando exista frontend de checkout.
+
+Todos los criterios automatizables de cierre fueron satisfechos. La prueba manual diferida no sustituye las pruebas unitarias, contractuales y E2E ya aprobadas.
+
 ## Commit sugerido
 
-`test(payments): strengthen payment security and concurrency coverage`
+`test(pagos): reforzar seguridad, conciliacion y concurrencia`

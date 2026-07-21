@@ -5,6 +5,10 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from './app.module';
 import { HttpExceptionLoggingFilter } from './common/filters/http-exception-logging.filter';
+import {
+  resolveCorrelationId,
+  sanitizeHttpPath,
+} from './common/http/request-observability';
 
 type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
 
@@ -66,7 +70,11 @@ async function bootstrap() {
 
   app.use((request: Request, response: Response, next: NextFunction) => {
     const startedAt = Date.now();
-    const requestLabel = `${request.method} ${request.originalUrl}`;
+    const correlationId = resolveCorrelationId(
+      request.header('x-correlation-id'),
+    );
+    response.setHeader('x-correlation-id', correlationId);
+    const requestLabel = `${request.method} ${sanitizeHttpPath(request.originalUrl)} correlation=${correlationId}`;
 
     logger.log(`--> ${requestLabel}`);
 

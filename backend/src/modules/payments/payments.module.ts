@@ -3,6 +3,7 @@ import { AuthModule } from '../auth/auth.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { CreatePaymentUseCase } from './application/use-cases/create-payment.use-case';
 import { ProcessPaymentWebhookUseCase } from './application/use-cases/process-payment-webhook.use-case';
+import { ReconcileStalePaymentsUseCase } from './application/use-cases/reconcile-stale-payments.use-case';
 import {
   GetPaymentAttemptUseCase,
   ListReservationPaymentsUseCase,
@@ -21,6 +22,7 @@ import {
   ReservationPaymentsController,
 } from './interfaces/http/payments.controller';
 import { PaymentWebhooksController } from './interfaces/http/payment-webhooks.controller';
+import { PaymentOperationsController } from './interfaces/http/payment-operations.controller';
 
 @Module({
   imports: [AuthModule, ReservationsModule],
@@ -28,10 +30,12 @@ import { PaymentWebhooksController } from './interfaces/http/payment-webhooks.co
     PaymentsController,
     ReservationPaymentsController,
     PaymentWebhooksController,
+    PaymentOperationsController,
   ],
   providers: [
     CreatePaymentUseCase,
     ProcessPaymentWebhookUseCase,
+    ReconcileStalePaymentsUseCase,
     GetPaymentAttemptUseCase,
     ListReservationPaymentsUseCase,
     {

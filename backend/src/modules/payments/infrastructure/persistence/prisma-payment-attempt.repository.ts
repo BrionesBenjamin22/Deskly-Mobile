@@ -9,6 +9,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import {
   PaymentAttempt,
   PaymentProvider,
+  PaymentStatus,
 } from '../../domain/entities/payment-attempt.entity';
 import {
   ConcurrentPaymentUpdateError,
@@ -143,6 +144,24 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
     const payments = await this.prisma.payment.findMany({
       where: { reservationId },
       orderBy: { createdAt: 'desc' },
+    });
+    return payments.map((payment) => this.toDomain(payment));
+  }
+
+  async listStale(
+    provider: PaymentProvider,
+    statuses: PaymentStatus[],
+    updatedBefore: Date,
+    limit: number,
+  ): Promise<PaymentAttempt[]> {
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        provider,
+        status: { in: statuses },
+        updatedAt: { lte: updatedBefore },
+      },
+      orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
+      take: limit,
     });
     return payments.map((payment) => this.toDomain(payment));
   }

@@ -214,4 +214,22 @@ describe('PrismaPaymentAttemptRepository', () => {
       select: { id: true },
     });
   });
+
+  it('lista pendientes envejecidos con orden y limite deterministas', async () => {
+    payment.findMany.mockResolvedValue([persistedPayment()]);
+    const before = new Date('2026-07-18T12:30:00.000Z');
+
+    await expect(
+      repository.listStale('FAKE', ['PENDING', 'PROCESSING'], before, 25),
+    ).resolves.toHaveLength(1);
+    expect(payment.findMany).toHaveBeenCalledWith({
+      where: {
+        provider: 'FAKE',
+        status: { in: ['PENDING', 'PROCESSING'] },
+        updatedAt: { lte: before },
+      },
+      orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
+      take: 25,
+    });
+  });
 });

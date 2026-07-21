@@ -1,6 +1,6 @@
 # Modulo Payments
 
-El contrato, los casos de uso y las validaciones de webhooks se detallan en [WEBHOOKS_IMPLEMENTATION.md](./WEBHOOKS_IMPLEMENTATION.md).
+El contrato, los casos de uso y las validaciones de webhooks se detallan en [WEBHOOKS_IMPLEMENTATION.md](./WEBHOOKS_IMPLEMENTATION.md). El endurecimiento, la conciliacion y su matriz de pruebas se documentan en [HARDENING_IMPLEMENTATION.md](./HARDENING_IMPLEMENTATION.md).
 
 ## Proveedores de checkout
 
