@@ -2,6 +2,21 @@
 
 El contrato, los casos de uso y las validaciones de webhooks se detallan en [WEBHOOKS_IMPLEMENTATION.md](./WEBHOOKS_IMPLEMENTATION.md). El endurecimiento y la conciliacion se documentan en [HARDENING_IMPLEMENTATION.md](./HARDENING_IMPLEMENTATION.md). La puesta en marcha, rotacion y diagnostico se describen en [OPERATIONS.md](./OPERATIONS.md). La corroboracion real se registra con [MANUAL_SANDBOX_CHECKLIST.md](./MANUAL_SANDBOX_CHECKLIST.md).
 
+## Entornos y tunel HTTPS local
+
+Nest y Prisma cargan configuracion con la siguiente precedencia: `.env.<entorno>.local`, `.env.<entorno>`, `.env.local` y `.env`. `NODE_ENV=test` utiliza el sufijo `testing`. El repositorio incluye plantillas para `development`, `testing` y `production`; todos los archivos reales y sus variantes locales permanecen ignorados por Git.
+
+Para probar Webhooks de Mercado Pago desde el backend local:
+
+1. Iniciar el backend en `http://localhost:3000`.
+2. Ejecutar `ngrok http 3000`.
+3. Consultar la URL HTTPS asignada en `http://127.0.0.1:4040/api/tunnels`.
+4. Registrar en Mercado Pago la URL `<HTTPS_NGROK>/webhooks/payments` para el evento Pagos.
+5. Guardar Access Token y secreto Webhook solo en `.env.development.local`, cambiar `PAYMENT_GATEWAY` a `MERCADO_PAGO` y reiniciar el backend.
+6. Actualizar también las URLs de retorno y `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` cada vez que cambie el dominio gratuito.
+
+Evidencia del 22 de julio de 2026: ngrok `3.39.10` expuso correctamente el backend local; `GET /docs` respondió HTTP 200 y `POST /webhooks/payments` sin firma respondió HTTP 403. Esto valida transporte HTTPS y rechazo de notificaciones no autenticadas, pero no reemplaza la compra sandbox firmada pendiente en `MANUAL_SANDBOX_CHECKLIST.md`. El dominio gratuito es efimero y no debe copiarse a produccion.
+
 ## Proveedores de checkout
 
 `PAYMENT_GATEWAY` selecciona el proveedor solo en backend: `FAKE` es el valor por defecto para desarrollo y pruebas; `MERCADO_PAGO` activa el adaptador Checkout Pro basado en el SDK oficial `mercadopago@3.2.0` y exige token, secreto de webhook, URLs de retorno y timeout validos.
