@@ -4,9 +4,10 @@
 |---|---|
 | ID | `PAYMENTS-07` |
 | Modulo | Payments mobile y documentacion |
-| Estado | `PENDIENTE` |
-| Dependencia | `PAYMENTS-06` |
+| Estado | `BLOQUEADA` |
+| Dependencia | `PAYMENTS-06` y prueba manual sandbox |
 | Implementacion | `mobile/src/features/payments` y `backend/src/modules/payments` |
+| Validacion | Formato, build backend, unitarios y E2E, suite mobile, TypeScript, export web, migraciones limpias, busqueda de secretos y prueba manual sandbox cuando existan credenciales de prueba |
 
 ## Objetivo
 
@@ -110,6 +111,28 @@ busqueda de secretos y datos sensibles
 - Todos los riesgos heredados estan cerrados.
 - Se entrega resumen final y mensajes de commit, sin ejecutar commits.
 
+## Evidencia automatizada (2026-07-21)
+
+- Backend completo: 40 suites, 231 pruebas aprobadas.
+- E2E PostgreSQL: 2 suites, 8 pruebas aprobadas, incluida cotizacion autenticada y rechazo de propietario incorrecto.
+- Mobile completo: 9 suites, 32 pruebas aprobadas.
+- TypeScript mobile: aprobado.
+- Build backend: aprobado.
+- Export web Expo: aprobado, 2101 modulos, bundle, `index.html` y assets; artefactos temporales eliminados.
+- Docker Compose: PostgreSQL saludable.
+- Migraciones: 17 aplicadas desde cero en base temporal y base eliminada.
+- `git diff --check`: aprobado.
+- Busqueda de secretos y contratos inseguros: sin credenciales versionadas, sin constantes monetarias mobile, sin monto personalizado y sin llamadas al CRUD anterior.
+- Contrato `Linking.openURL`: verificado contra documentacion oficial de React Native; se valida HTTPS antes de abrir.
+- SDK oficial Mercado Pago: `mercadopago@3.2.0` integrado en backend mediante `Preference`, `Payment` y `PaymentRefund`; el gateway fake permanece para pruebas deterministas.
+- Gateway Mercado Pago con SDK: 1 suite, 23 pruebas aprobadas, incluyendo payload, idempotencia, estados, errores sanitizados, HMAC y reembolso.
+- Revision posterior al SDK: backend completo 40 suites/231 pruebas, E2E 2 suites/8 pruebas, build, formato, lint focalizado y `git diff --check` aprobados.
+- Auditoria productiva `pnpm audit --prod`: fallo con 33 vulnerabilidades heredadas (8 altas, 23 moderadas y 2 bajas) en dependencias de Nest, Prisma, TypeORM y transitivas. `mercadopago@3.2.0` no incorpora dependencias transitivas. La remediacion se registro como `SECURITY-01` y bloquea el cierre estricto.
+
+## Validacion manual pendiente
+
+`sandbox_configured=False`: no hay credenciales sandbox configuradas en el entorno. La etapa permanece `BLOQUEADA` hasta ejecutar y registrar `backend/src/modules/payments/MANUAL_SANDBOX_CHECKLIST.md`. No se presenta la prueba manual como aprobada y no se propone commit de cierre.
+
 ## Commit sugerido
 
-`docs(payments): document payment flow and operational safeguards`
+Al completar la prueba manual: `feat(pagos): integrar checkout seguro y documentar su operacion`

@@ -1,72 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { listReservations } from '../../reservations/services/reservations.service';
-import { listPayments } from '../services/payments.service';
-import { ReservationPaymentSummary } from '../types/payment.types';
+import { listReservationPayments } from '../services/payments.service';
+import type { PaymentReservationItem } from '../types/payment.types';
 
-export function usePayments(accessToken: string, refreshKey = 0) {
-  const [summaries, setSummaries] = useState<ReservationPaymentSummary[]>([]);
+export function usePayments(accessToken: string, page = 1, refreshKey = 0) {
+  const [items, setItems] = useState<PaymentReservationItem[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
-
     try {
-      const [paymentsResult, reservationsResult] = await Promise.all([
-        listPayments(),
-        listReservations(accessToken, 1, 50),
-      ]);
-
-      const reservationMap = new Map(
-        reservationsResult.reservations.map((r) => [r.id, r]),
+      const reservations = await listReservations(accessToken, page, 9);
+      const attempts = await Promise.all(
+        reservations.reservations.map((reservation) =>
+          listReservationPayments(accessToken, reservation.id),
+        ),
       );
-
-      // Agrupar pagos por reservationId y sumar montos
-      const grouped = new Map<string, ReservationPaymentSummary>();
-
-      for (const p of paymentsResult.payments) {
-        const reservation = reservationMap.get(p.reservationId);
-        if (!reservation) continue;
-        const existing = grouped.get(p.reservationId);
-
-        if (existing) {
-          existing.totalAbonado += p.amount;
-          if (new Date(p.createdAt) > new Date(existing.lastPaymentDate)) {
-            existing.lastPaymentDate = p.createdAt;
-            existing.lastPaymentId = p.id;
-          }
-        } else {
-          grouped.set(p.reservationId, {
-            reservationId: p.reservationId,
-            deskCode: reservation?.deskCode ?? '—',
-            deskName: reservation?.deskName ?? `Escritorio ${reservation?.deskCode ?? '—'}`,
-            reservationDateLabel: reservation?.dateLabel ?? '—',
-            startTime: reservation?.startTime ?? '—',
-            endTime: reservation?.endTime ?? '—',
-            totalAbonado: p.amount,
-            lastPaymentDate: p.createdAt,
-            lastPaymentId: p.id,
-          });
-        }
-      }
-
-      const result = Array.from(grouped.values()).sort(
-        (a, b) => new Date(b.lastPaymentDate).getTime() - new Date(a.lastPaymentDate).getTime(),
+      setItems(
+        reservations.reservations.map((reservation, index) => ({
+          reservationId: reservation.id,
+          deskName: reservation.deskName,
+          dateLabel: reservation.dateLabel,
+          attempts: attempts[index],
+        })),
       );
-
-      setSummaries(result);
+      setTotalPages(Math.max(1, reservations.pagination.totalPages));
     } catch {
-      setErrorMessage('No pudimos cargar tus pagos. Revisa tu conexión e intenta nuevamente.');
+      setErrorMessage(
+        'Lo sentimos, no pudimos recuperar sus pagos. Intente nuevamente.',
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, page]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load, refreshKey]);
 
-  return { summaries, isLoading, errorMessage };
+  return { items, totalPages, isLoading, errorMessage, reload: load };
 }

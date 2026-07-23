@@ -21,7 +21,6 @@ import {
   listReservations,
   ReservationServiceError,
 } from '../../reservations/services/reservations.service';
-import { createPayment } from '../../payments/services/payments.service';
 import { UserRole } from '../../auth/types/auth.types';
 
 type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -384,7 +383,6 @@ export function DesksScreen({
     date: string;
     startTime: string;
     endTime: string;
-    amount: number;
   }) => {
     handleCloseReservation();
     setReservationStatus('loading');
@@ -413,16 +411,11 @@ export function DesksScreen({
         return;
       }
 
-      const reservation = await createReservation(accessToken, {
+      await createReservation(accessToken, {
         deskId: payload.desk.id,
         date: payload.date,
         startTime: payload.startTime,
         endTime: payload.endTime,
-      });
-      await createPayment({
-        reservationId: reservation.id,
-        date: payload.date,
-        amount: payload.amount,
       });
       setAvailabilityRefreshKey((current) => current + 1);
       onReservationCreated?.();

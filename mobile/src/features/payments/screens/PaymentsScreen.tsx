@@ -1,20 +1,30 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
 import { Button } from '../../../components/ui/Button';
-import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { Icon } from '../../../components/ui/Icon';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
-import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
+import { StatusModal } from '../../../components/ui/StatusModal';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import type { UserRole } from '../../auth/types/auth.types';
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
-import { UserRole } from '../../auth/types/auth.types';
-import { createPayment } from '../services/payments.service';
 import { usePayments } from '../hooks/usePayments';
-import { ReservationPaymentSummary } from '../types/payment.types';
+import {
+  createPaymentCheckout,
+  createPaymentOperationKey,
+  getPaymentAttempt,
+  getPaymentQuote,
+  PaymentServiceError,
+} from '../services/payments.service';
+import type {
+  PaymentOption,
+  PaymentQuote,
+  PaymentReservationItem,
+  PaymentStatus,
+} from '../types/payment.types';
 
 type PaymentsScreenProps = {
   accessToken: string;
@@ -30,447 +40,279 @@ type PaymentsScreenProps = {
   refreshKey?: number;
 };
 
-type PaymentActionStatus = 'idle' | 'loading' | 'success' | 'error';
+const TERMINAL_STATUSES: PaymentStatus[] = [
+  'APPROVED',
+  'REJECTED',
+  'CANCELLED',
+  'EXPIRED',
+  'REFUNDED',
+];
 
-const PRICE_PER_HOUR = 1500;
+const statusLabels: Record<PaymentStatus, string> = {
+  PENDING: 'Pendiente',
+  PROCESSING: 'Procesando',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+  CANCELLED: 'Cancelado',
+  EXPIRED: 'Vencido',
+  REFUNDED: 'Reembolsado',
+};
 
-function timeToMinutes(value: string) {
-  const [h, m] = value.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function calcularMontoTotal(startTime: string, endTime: string): number {
-  if (!startTime || !endTime || startTime === '—' || endTime === '—') return 0;
-  const diffMin = timeToMinutes(endTime) - timeToMinutes(startTime);
-  return Math.round((Math.max(0, diffMin) / 60) * PRICE_PER_HOUR);
-}
-
-function formatMoneda(amount: number): string {
+function formatMoney(minorUnits: number) {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(minorUnits / 100);
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function getDeskLocation(deskCode: string): string | null {
-  if (UUID_REGEX.test(deskCode) || deskCode === '—') return null;
-  const zone = deskCode.charAt(0).toUpperCase();
-  return ['A', 'B', 'C'].includes(zone) ? `Zona ${zone}` : deskCode;
-}
-
-function formatPaymentDate(dateValue: string) {
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return dateValue;
-  return new Intl.DateTimeFormat('es-AR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
-}
-
-type EstadoPago = 'pagado' | 'senado' | 'pendiente';
-
-function getEstado(abonado: number, total: number): EstadoPago {
-  if (total === 0) return 'pendiente';
-  if (abonado >= total) return 'pagado';
-  return 'senado';
-}
-
-function EstadoBadge({ estado }: { estado: EstadoPago }) {
-  if (estado === 'pagado') {
-    return (
-      <View style={[styles.badge, styles.badgePagado]}>
-        <Icon name="circleCheck" size={12} color={statusColors.success} />
-        <AppText variant="caption" style={styles.badgePagadoText}>Pagado</AppText>
-      </View>
-    );
-  }
-  if (estado === 'senado') {
-    return (
-      <View style={[styles.badge, styles.badgeSenado]}>
-        <Icon name="clock" size={12} color={statusColors.warning} />
-        <AppText variant="caption" style={styles.badgeSenadoText}>Seña pagada</AppText>
-      </View>
-    );
-  }
-  return (
-    <View style={[styles.badge, styles.badgePendiente]}>
-      <Icon name="clock" size={12} color={colors.blackOverlay} />
-      <AppText variant="caption" style={styles.badgePendienteText}>Pendiente</AppText>
-    </View>
+export function PaymentsScreen(props: PaymentsScreenProps) {
+  const [page, setPage] = useState(1);
+  const [localRefresh, setLocalRefresh] = useState(0);
+  const { items, totalPages, isLoading, errorMessage, reload } = usePayments(
+    props.accessToken,
+    page,
+    (props.refreshKey ?? 0) + localRefresh,
   );
-}
-
-type PaymentCardProps = {
-  summary: ReservationPaymentSummary;
-  onPagarSaldo: (summary: ReservationPaymentSummary, montoPendiente: number) => void;
-};
-
-function PaymentCard({ summary, onPagarSaldo }: PaymentCardProps) {
-  const montoTotal = calcularMontoTotal(summary.startTime, summary.endTime);
-  const montoPendiente = Math.max(0, montoTotal - summary.totalAbonado);
-  const estado = getEstado(summary.totalAbonado, montoTotal);
-  const location = getDeskLocation(summary.deskCode);
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <AppText variant="body" style={styles.deskName}>
-            {summary.deskName}
-          </AppText>
-          {location ? (
-            <View style={styles.cardMeta}>
-              <Icon name="mapPin" size={14} color={colors.primaryLight} />
-              <AppText variant="caption" color={colors.primaryLight}>
-                {location}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
-        <EstadoBadge estado={estado} />
-      </View>
-
-      <View style={styles.cardMeta}>
-        <Icon name="calendar" size={14} color={colors.primaryLight} />
-        <AppText variant="caption" color={colors.blackOverlay}>
-          {summary.reservationDateLabel}
-        </AppText>
-      </View>
-
-      <View style={styles.amountBlock}>
-        <View style={styles.amountRow}>
-          <AppText variant="caption" color={colors.blackOverlay}>Monto total</AppText>
-          <AppText variant="caption" style={styles.amountValue}>
-            {formatMoneda(montoTotal)}
-          </AppText>
-        </View>
-        <View style={styles.amountRow}>
-          <AppText variant="caption" color={colors.blackOverlay}>Abonado</AppText>
-          <AppText variant="caption" color={colors.blackOverlay}>
-            {formatMoneda(summary.totalAbonado)}
-          </AppText>
-        </View>
-        <View style={[styles.amountRow, styles.amountRowBorder]}>
-          <AppText variant="caption" color={colors.blackOverlay}>Saldo pendiente</AppText>
-          <AppText
-            variant="caption"
-            style={montoPendiente > 0 ? styles.pendientePositivo : styles.pendienteZero}
-          >
-            {formatMoneda(montoPendiente)}
-          </AppText>
-        </View>
-      </View>
-
-      {montoPendiente > 0 ? (
-        <Button
-          title={`Pagar saldo (${formatMoneda(montoPendiente)})`}
-          onPress={() => onPagarSaldo(summary, montoPendiente)}
-        >
-          <Icon name="chevronRight" size={18} color={colors.white} />
-        </Button>
-      ) : (
-        <AppText variant="caption" color={colors.primaryLight}>
-          Registrado el {formatPaymentDate(summary.lastPaymentDate)}
-        </AppText>
-      )}
-    </View>
-  );
-}
-
-const paymentStatusContent: Record<
-  Exclude<PaymentActionStatus, 'idle'>,
-  { type: StatusModalType; title: string; description: string }
-> = {
-  loading: {
-    type: 'loading',
-    title: 'Procesando pago...',
-    description: 'Estamos confirmando tu pago. Esto puede tomar unos segundos.',
-  },
-  success: {
-    type: 'success',
-    title: 'Pago confirmado',
-    description: 'Tu saldo fue pagado correctamente.',
-  },
-  error: {
-    type: 'error',
-    title: 'No pudimos procesar el pago',
-    description: 'Hubo un problema al procesar tu pago. Intenta nuevamente.',
-  },
-};
-
-export function PaymentsScreen({
-  accessToken,
-  onPressDesks,
-  onPressReservations,
-  onPressSettings,
-  onPressProfile,
-  onPressLogout,
-  onPressSwitchAccount,
-  onPressUserManagement,
-  onPressChangePassword,
-  userRole,
-  refreshKey = 0,
-}: PaymentsScreenProps) {
-  const [localRefreshKey, setLocalRefreshKey] = useState(0);
-  const { summaries, isLoading, errorMessage } = usePayments(
-    accessToken,
-    refreshKey + localRefreshKey,
-  );
-  const [paymentStatus, setPaymentStatus] = useState<PaymentActionStatus>('idle');
-  const [paymentErrorMessage, setPaymentErrorMessage] = useState(
-    paymentStatusContent.error.description,
-  );
-  const [pendingPayment, setPendingPayment] = useState<{
-    summary: ReservationPaymentSummary;
-    monto: number;
+  const [quote, setQuote] = useState<PaymentQuote | null>(null);
+  const [busyReservation, setBusyReservation] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: 'loading' | 'success' | 'error';
+    title: string;
+    description: string;
   } | null>(null);
+  const operationKeys = useRef(new Map<string, string>());
 
-  const summariesConDeuda = summaries.filter((s) => {
-    const montoTotal = calcularMontoTotal(s.startTime, s.endTime);
-    return montoTotal - s.totalAbonado > 0;
-  });
-
-  const totalAbonado = summariesConDeuda.reduce((acc, s) => acc + s.totalAbonado, 0);
-  const totalPendiente = summariesConDeuda.reduce((acc, s) => {
-    const montoTotal = calcularMontoTotal(s.startTime, s.endTime);
-    return acc + Math.max(0, montoTotal - s.totalAbonado);
-  }, 0);
-
-  const executePayment = async (
-    summary: ReservationPaymentSummary,
-    montoPendiente: number,
-  ) => {
-    setPaymentStatus('loading');
-    setPaymentErrorMessage(paymentStatusContent.error.description);
-
+  const requestQuote = async (reservationId: string) => {
+    setBusyReservation(reservationId);
     try {
-      const today = new Date().toISOString().split('T')[0];
-      await createPayment({
-        reservationId: summary.reservationId,
-        date: today,
-        amount: montoPendiente,
-      });
-
-      setPaymentStatus('success');
-      setTimeout(() => {
-        setLocalRefreshKey((k) => k + 1);
-        setPaymentStatus('idle');
-      }, 1500);
+      setQuote(await getPaymentQuote(props.accessToken, reservationId));
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'No pudimos procesar el pago.';
-      setPaymentErrorMessage(message);
-      setPaymentStatus('error');
+      showError(error);
+    } finally {
+      setBusyReservation(null);
     }
   };
 
-  const handlePagarSaldo = (
-    summary: ReservationPaymentSummary,
-    montoPendiente: number,
-  ) => {
-    setPendingPayment({ summary, monto: montoPendiente });
-  };
-
-  const handleConfirmPayment = () => {
-    if (pendingPayment) {
-      const { summary, monto } = pendingPayment;
-      setPendingPayment(null);
-      void executePayment(summary, monto);
+  const startCheckout = async (option: PaymentOption) => {
+    if (!quote) return;
+    const operationId = `${quote.reservationId}:${option}`;
+    const idempotencyKey =
+      operationKeys.current.get(operationId) ?? createPaymentOperationKey();
+    operationKeys.current.set(operationId, idempotencyKey);
+    setBusyReservation(quote.reservationId);
+    setFeedback({
+      type: 'loading',
+      title: 'Abriendo pago seguro',
+      description: 'Estamos preparando el checkout. No cierre la aplicacion.',
+    });
+    try {
+      const checkout = await createPaymentCheckout(props.accessToken, {
+        reservationId: quote.reservationId,
+        option,
+        idempotencyKey,
+      });
+      const url = new URL(checkout.checkoutUrl);
+      if (url.protocol !== 'https:') throw new PaymentServiceError('URL de pago invalida.');
+      await Linking.openURL(checkout.checkoutUrl);
+      setQuote(null);
+      setFeedback({
+        type: 'loading',
+        title: 'Esperando confirmacion',
+        description:
+          'Volver del checkout no confirma el pago. Consultamos el estado informado por Deskly.',
+      });
+      const status = await pollPayment(props.accessToken, checkout.paymentId);
+      setLocalRefresh((value) => value + 1);
+      if (status === 'APPROVED') {
+        operationKeys.current.delete(operationId);
+        setFeedback({
+          type: 'success',
+          title: 'Pago confirmado',
+          description: 'Deskly verifico el pago y actualizo la reserva.',
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          title: status ? statusLabels[status] : 'Pago aun pendiente',
+          description:
+            'No existe una aprobacion confirmada. Puede actualizar el estado o reintentar.',
+        });
+      }
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusyReservation(null);
     }
   };
 
-  const activeStatus =
-    paymentStatus === 'idle' ? null : paymentStatusContent[paymentStatus];
+  const showError = (error: unknown) => {
+    const known =
+      error instanceof PaymentServiceError ||
+      (error instanceof Error && error.name === 'PaymentServiceError');
+    setFeedback({
+      type: 'error',
+      title: 'No pudimos procesar el pago',
+      description: known
+        ? (error as Error).message
+        : 'Lo sentimos, ocurrio un problema. Intente nuevamente.',
+    });
+  };
 
   return (
     <ScreenContainer>
       <View style={styles.layout}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
-        >
+        <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.header}>
             <AppText variant="title">Pagos</AppText>
-            <AppText variant="caption" color={colors.primaryLight} style={styles.count}>
-              {summaries.length} pago{summaries.length !== 1 ? 's' : ''} registrado{summaries.length !== 1 ? 's' : ''}
-            </AppText>
+            <Button title="Actualizar estados" variant="ghost" onPress={() => void reload()} />
           </View>
-
-          {!isLoading && summaries.length > 0 ? (
-            totalPendiente > 0 ? (
-              <View style={styles.statsRow}>
-                <View style={styles.statCard}>
-                  <View style={styles.statLabel}>
-                    <Icon name="creditCard" size={16} color={colors.blackOverlay} />
-                    <AppText variant="caption" color={colors.blackOverlay} style={styles.statLabelText}>
-                      PENDIENTE A PAGAR
-                    </AppText>
-                  </View>
-                  <AppText variant="subtitle" style={styles.statValue}>
-                    {formatMoneda(totalPendiente)}
-                  </AppText>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.allPaidBanner}>
-                <Icon name="circleCheck" size={20} color={statusColors.success} />
-                <View style={styles.allPaidText}>
-                  <AppText variant="body" style={styles.allPaidTitle}>
-                    Todo al día
-                  </AppText>
-                  <AppText variant="caption" color={colors.primaryLight}>
-                    No tenés deudas pendientes
-                  </AppText>
-                </View>
-              </View>
-            )
-          ) : null}
-
           {isLoading ? (
             <DesksFeedbackCard
               icon="loader"
               title="Cargando pagos"
-              description="Estamos consultando tus pagos en Deskly."
+              description="Consultamos estados confirmados por Deskly."
             />
           ) : errorMessage ? (
             <DesksFeedbackCard
               icon="circleAlert"
-              title="No pudimos cargar tus pagos"
+              title="No pudimos cargar sus pagos"
               description={errorMessage}
             />
-          ) : summaries.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Icon name="wallet" size={32} color={colors.primaryLight} />
-              </View>
-              <AppText variant="body" color={colors.primaryLight} style={styles.emptyTitle}>
-                No tienes pagos todavía
-              </AppText>
-              <AppText variant="caption" color={colors.primaryLight} style={styles.emptySubtitle}>
-                Cada reserva genera un pago con su seña asociada
-              </AppText>
-            </View>
+          ) : items.length === 0 ? (
+            <DesksFeedbackCard
+              icon="wallet"
+              title="No hay reservas para pagar"
+              description="Cree una reserva para solicitar una cotizacion segura."
+            />
           ) : (
-            <View style={styles.list}>
-              {summaries.map((summary) => (
-                <PaymentCard
-                  key={summary.reservationId}
-                  summary={summary}
-                  onPagarSaldo={handlePagarSaldo}
+            items.map((item) => (
+              <PaymentCard
+                key={item.reservationId}
+                item={item}
+                busy={busyReservation === item.reservationId}
+                onQuote={() => void requestQuote(item.reservationId)}
+              />
+            ))
+          )}
+          {totalPages > 1 ? (
+            <View style={styles.pagination}>
+              <Button
+                title="Anterior"
+                variant="ghost"
+                disabled={page === 1}
+                onPress={() => setPage((value) => Math.max(1, value - 1))}
+              />
+              <AppText variant="caption">Pagina {page} de {totalPages}</AppText>
+              <Button
+                title="Siguiente"
+                variant="ghost"
+                disabled={page >= totalPages}
+                onPress={() => setPage((value) => Math.min(totalPages, value + 1))}
+              />
+            </View>
+          ) : null}
+          {quote ? (
+            <View style={styles.quote} accessibilityLabel="Cotizacion de pago">
+              <AppText variant="subtitle">Elija una opcion</AppText>
+              {quote.options.map((option) => (
+                <Button
+                  key={option.option}
+                  title={`${option.option === 'DEPOSIT' ? 'Pagar seña' : 'Pagar total'}: ${formatMoney(option.amountMinorUnits)}`}
+                  disabled={busyReservation === quote.reservationId}
+                  onPress={() => void startCheckout(option.option)}
                 />
               ))}
+              <Button title="Cancelar" variant="ghost" onPress={() => setQuote(null)} />
             </View>
-          )}
+          ) : null}
         </ScrollView>
-
         <BottomTabBar
           activeTab="payments"
-          onPressDesks={onPressDesks}
-          onPressReservations={onPressReservations}
-          onPressSettings={onPressSettings}
-          onPressProfile={onPressProfile}
-          onPressLogout={onPressLogout}
-          onPressSwitchAccount={onPressSwitchAccount}
-          onPressUserManagement={onPressUserManagement}
-          onPressChangePassword={onPressChangePassword}
-          userRole={userRole}
+          onPressDesks={props.onPressDesks}
+          onPressReservations={props.onPressReservations}
+          onPressSettings={props.onPressSettings}
+          onPressProfile={props.onPressProfile}
+          onPressLogout={props.onPressLogout}
+          onPressSwitchAccount={props.onPressSwitchAccount}
+          onPressUserManagement={props.onPressUserManagement}
+          onPressChangePassword={props.onPressChangePassword}
+          userRole={props.userRole}
         />
       </View>
-
-      <ConfirmModal
-        visible={pendingPayment !== null}
-        title="¿Confirmar pago?"
-        description={
-          pendingPayment
-            ? `¿Deseas pagar ${formatMoneda(pendingPayment.monto)} de tu saldo pendiente?`
-            : undefined
-        }
-        confirmLabel="Confirmar pago"
-        cancelLabel="Cancelar"
-        icon="creditCard"
-        onConfirm={handleConfirmPayment}
-        onCancel={() => setPendingPayment(null)}
-      />
-
-      {activeStatus ? (
+      {feedback ? (
         <StatusModal
           visible
-          type={activeStatus.type}
-          title={activeStatus.title}
-          description={
-            paymentStatus === 'error' ? paymentErrorMessage : activeStatus.description
-          }
-          onClose={paymentStatus === 'loading' ? undefined : () => setPaymentStatus('idle')}
+          type={feedback.type}
+          title={feedback.title}
+          description={feedback.description}
+          onClose={feedback.type === 'loading' ? undefined : () => setFeedback(null)}
         />
       ) : null}
     </ScreenContainer>
   );
 }
 
+function PaymentCard({
+  item,
+  busy,
+  onQuote,
+}: {
+  item: PaymentReservationItem;
+  busy: boolean;
+  onQuote: () => void;
+}) {
+  const latest = item.attempts[0];
+  const approved = item.attempts.some((attempt) => attempt.status === 'APPROVED');
+  return (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <View>
+          <AppText variant="body" style={styles.strong}>{item.deskName}</AppText>
+          <AppText variant="caption" color={colors.primaryLight}>{item.dateLabel}</AppText>
+        </View>
+        <AppText
+          variant="caption"
+          color={approved ? statusColors.success : colors.primaryLight}
+          style={styles.strong}
+        >
+          {latest ? statusLabels[latest.status] : 'Sin intento'}
+        </AppText>
+      </View>
+      {latest ? (
+        <AppText variant="body">
+          {formatMoney(latest.amountMinorUnits)} {latest.currency}
+        </AppText>
+      ) : null}
+      {!approved ? (
+        <Button
+          title={busy ? 'Consultando...' : 'Cotizar pago'}
+          disabled={busy}
+          onPress={onQuote}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+async function pollPayment(
+  accessToken: string,
+  paymentId: string,
+): Promise<PaymentStatus | null> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const payment = await getPaymentAttempt(accessToken, paymentId);
+    if (TERMINAL_STATUSES.includes(payment.status)) return payment.status;
+    if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return null;
+}
+
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    gap: spacing.md,
-  },
-  content: {
-    gap: spacing.lg,
-    paddingBottom: spacing.md,
-  },
+  layout: { flex: 1, gap: spacing.md },
+  content: { gap: spacing.md, paddingBottom: spacing.lg },
   header: {
-    gap: spacing.xs,
-  },
-  count: {
-    fontWeight: '700',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.md,
-  },
-  statLabel: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  statLabelText: {
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-  statValue: {
-    fontWeight: '800',
-  },
-  allPaidBanner: {
-    alignItems: 'center',
-    backgroundColor: statusColors.successSoft,
-    borderColor: statusColors.success,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.md,
-  },
-  allPaidText: {
-    gap: 2,
-  },
-  allPaidTitle: {
-    color: statusColors.success,
-    fontWeight: '700',
-  },
-  list: {
-    gap: spacing.md,
+    justifyContent: 'space-between',
   },
   card: {
     backgroundColor: colors.white,
@@ -478,98 +320,20 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     gap: spacing.md,
-    padding: spacing.lg,
-  },
-  cardHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cardHeaderLeft: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  deskName: {
-    fontWeight: '700',
-  },
-  cardMeta: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  badge: {
-    alignItems: 'center',
-    borderRadius: radii.pill,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  badgePagado: {
-    backgroundColor: statusColors.successSoft,
-  },
-  badgePagadoText: {
-    color: statusColors.success,
-    fontWeight: '600',
-  },
-  badgeSenado: {
-    backgroundColor: '#FEF3C7',
-  },
-  badgeSenadoText: {
-    color: statusColors.warning,
-    fontWeight: '600',
-  },
-  badgePendiente: {
-    backgroundColor: colors.background,
-  },
-  badgePendienteText: {
-    color: colors.blackOverlay,
-    fontWeight: '600',
-  },
-  amountBlock: {
-    backgroundColor: colors.background,
-    borderRadius: radii.md,
-    gap: spacing.sm,
     padding: spacing.md,
   },
-  amountRow: {
+  quote: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  pagination: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  amountRowBorder: {
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    paddingTop: spacing.sm,
-  },
-  amountValue: {
-    fontWeight: '700',
-  },
-  pendientePositivo: {
-    fontWeight: '700',
-  },
-  pendienteZero: {
-    color: statusColors.success,
-    fontWeight: '700',
-  },
-  emptyState: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 999,
-    height: 72,
-    justifyContent: 'center',
-    width: 72,
-  },
-  emptyTitle: {
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    textAlign: 'center',
-  },
+  strong: { fontWeight: '800' },
 });

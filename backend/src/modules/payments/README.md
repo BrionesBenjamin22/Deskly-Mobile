@@ -1,14 +1,34 @@
 # Modulo Payments
 
-El contrato, los casos de uso y las validaciones de webhooks se detallan en [WEBHOOKS_IMPLEMENTATION.md](./WEBHOOKS_IMPLEMENTATION.md). El endurecimiento, la conciliacion y su matriz de pruebas se documentan en [HARDENING_IMPLEMENTATION.md](./HARDENING_IMPLEMENTATION.md).
+El contrato, los casos de uso y las validaciones de webhooks se detallan en [WEBHOOKS_IMPLEMENTATION.md](./WEBHOOKS_IMPLEMENTATION.md). El endurecimiento y la conciliacion se documentan en [HARDENING_IMPLEMENTATION.md](./HARDENING_IMPLEMENTATION.md). La puesta en marcha, rotacion y diagnostico se describen en [OPERATIONS.md](./OPERATIONS.md). La corroboracion real se registra con [MANUAL_SANDBOX_CHECKLIST.md](./MANUAL_SANDBOX_CHECKLIST.md).
 
 ## Proveedores de checkout
 
-`PAYMENT_GATEWAY` selecciona el proveedor solo en backend: `FAKE` es el valor por defecto para desarrollo y pruebas; `MERCADO_PAGO` activa el adaptador HTTP de Checkout Pro y exige token, secreto de webhook, URLs de retorno y timeout validos.
+`PAYMENT_GATEWAY` selecciona el proveedor solo en backend: `FAKE` es el valor por defecto para desarrollo y pruebas; `MERCADO_PAGO` activa el adaptador Checkout Pro basado en el SDK oficial `mercadopago@3.2.0` y exige token, secreto de webhook, URLs de retorno y timeout validos.
 
 El dominio no importa tipos de Mercado Pago. Los secretos no forman parte de DTOs, respuestas ni errores. Las URLs provienen de configuracion backend y deben usar HTTPS en produccion. La preferencia recibe importe ARS calculado en backend, referencia interna, metadata minima, expiracion y `X-Idempotency-Key`.
 
 La consulta externa normaliza estados y compara referencia, importe y moneda contra el intento interno. Un estado desconocido queda `PROCESSING`, nunca `APPROVED`. El retorno visual tampoco aprueba pagos.
+
+### SDK oficial y clases integradas
+
+`MercadoPagoGateway` conserva la implementacion del puerto de dominio `PaymentGatewayPort` y encapsula tres clientes oficiales:
+
+- `MercadoPagoConfig`: mantiene el access token y el timeout exclusivamente en backend.
+- `Preference`: crea una preferencia de Checkout Pro por intento con importe, moneda, referencia, expiracion, URLs e idempotencia construidos por el backend.
+- `Payment`: obtiene el estado definitivo para webhooks, polling y conciliacion; su respuesta se contrasta contra referencia, importe y moneda internos.
+- `PaymentRefund`: ejecuta el reembolso total idempotente cuando la politica de concurrencia detecta una aprobacion duplicada.
+- `MercadoPagoSdkClients`: fachada inyectable del adaptador. Permite simular el SDK sin red ni credenciales y evita acoplar casos de uso o dominio a sus tipos.
+
+La verificacion del webhook no se delega al transporte: valida el cuerpo crudo, `x-signature` y `x-request-id` mediante HMAC SHA-256 y comparacion en tiempo constante antes de consultar el pago por SDK. Los errores del SDK se traducen a `PaymentGatewayError`; nunca se propagan bodies, tokens ni mensajes del proveedor. Los estados HTTP 408, 429 y 5xx se clasifican como reintentables; los 4xx restantes son definitivos.
+
+| Caso de uso | Cliente SDK | Validaciones automatizadas |
+|---|---|---|
+| Crear checkout | `Preference` | Payload autoritativo ARS, URLs backend, expiracion, idempotencia y allowlist HTTPS de la respuesta. |
+| Consultar o conciliar pago | `Payment` | Mapeo conservador de estados y coincidencia de referencia, importe y moneda. |
+| Procesar webhook | `Payment` luego de HMAC local | Firma valida, datos minimos, anti-replay transaccional y confirmacion solo con estado verificado. |
+| Reembolsar duplicado | `PaymentRefund` y `Payment` | Idempotencia del reembolso y lectura posterior del estado definitivo. |
+| Fallo externo | Todos | Timeout, desconexion, 408, 429 y 5xx reintentables; errores sanitizados sin secretos. |
 
 Variables: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `MERCADO_PAGO_SUCCESS_URL`, `MERCADO_PAGO_FAILURE_URL`, `MERCADO_PAGO_PENDING_URL`, `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` y `MERCADO_PAGO_TIMEOUT_MS`. La allowlist contiene origenes separados por coma. Nunca versionar valores reales.
 
@@ -24,6 +44,8 @@ Todos los endpoints requieren JWT.
 POST /payments/checkout
 GET /payments/:id
 GET /reservations/:id/payments
+GET /reservations/:id/payment-quote
+POST /payments/operations/reconcile
 ```
 
 `POST /payments/checkout` exige el header `Idempotency-Key` de 8 a 160 caracteres y acepta solamente:

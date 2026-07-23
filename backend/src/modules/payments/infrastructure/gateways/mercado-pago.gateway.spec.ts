@@ -1,7 +1,10 @@
 import { createHmac } from 'node:crypto';
 import { InvalidWebhookSignatureError } from '../../domain/errors/payment-domain.errors';
 import { MercadoPagoConfig } from './mercado-pago.config';
-import { MercadoPagoGateway } from './mercado-pago.gateway';
+import {
+  MercadoPagoGateway,
+  MercadoPagoSdkClients,
+} from './mercado-pago.gateway';
 
 const config: MercadoPagoConfig = {
   accessToken: 'APP_USR_super_secret_access_token',
@@ -22,8 +25,6 @@ const input = {
   expiresAt: new Date('2026-07-20T20:00:00Z'),
   idempotencyKey: 'checkout-key-1',
 };
-const response = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status });
 const payment = (status = 'approved', currency_id = 'ARS') => ({
   id: 123,
   external_reference: 'reservation:1',
@@ -32,39 +33,53 @@ const payment = (status = 'approved', currency_id = 'ARS') => ({
   currency_id,
   date_last_updated: '2026-07-20T19:00:00Z',
 });
+const sdk = (overrides: Partial<MercadoPagoSdkClients> = {}) => ({
+  createPreference: jest.fn(),
+  getPayment: jest.fn(),
+  refundPayment: jest.fn(),
+  ...overrides,
+});
 
 describe('MercadoPagoGateway', () => {
   it('crea preferencia exacta con URLs backend e idempotencia externa', async () => {
-    const http = jest.fn().mockResolvedValue(
-      response({
+    const clients = sdk({
+      createPreference: jest.fn().mockResolvedValue({
         id: 'pref-1',
         sandbox_init_point: 'https://sandbox.mercadopago.com/checkout/pref-1',
       }),
-    );
-    const result = await new MercadoPagoGateway(config, http).createPayment(
+    });
+    const result = await new MercadoPagoGateway(config, clients).createPayment(
       input,
     );
-    const request = http.mock.calls[0][1],
-      body = JSON.parse(request.body);
     expect(result).toMatchObject({
       provider: 'MERCADO_PAGO',
       status: 'PENDING',
       amountMinorUnits: 12345,
     });
-    expect(request.headers).toMatchObject({
-      Authorization: `Bearer ${config.accessToken}`,
-      'X-Idempotency-Key': input.idempotencyKey,
-    });
-    expect(body).toMatchObject({
-      items: [{ unit_price: 123.45, currency_id: 'ARS' }],
-      external_reference: input.externalReference,
-      metadata: { payment_id: input.paymentId },
-      back_urls: {
-        success: config.successUrl,
-        failure: config.failureUrl,
-        pending: config.pendingUrl,
+    expect(clients.createPreference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          {
+            id: input.paymentId,
+            title: input.description,
+            quantity: 1,
+            unit_price: 123.45,
+            currency_id: 'ARS',
+          },
+        ],
+        external_reference: input.externalReference,
+        metadata: { payment_id: input.paymentId },
+        back_urls: {
+          success: config.successUrl,
+          failure: config.failureUrl,
+          pending: config.pendingUrl,
+        },
+      }),
+      {
+        timeout: config.timeoutMs,
+        idempotencyKey: input.idempotencyKey,
       },
-    });
+    );
     expect(JSON.stringify(result)).not.toContain(config.accessToken);
   });
 
@@ -82,7 +97,7 @@ describe('MercadoPagoGateway', () => {
   ])('mapea %s a %s', async (external, expected) => {
     const gateway = new MercadoPagoGateway(
       config,
-      jest.fn().mockResolvedValue(response(payment(external))),
+      sdk({ getPayment: jest.fn().mockResolvedValue(payment(external)) }),
     );
     await expect(gateway.getPayment('123')).resolves.toMatchObject({
       status: expected,
@@ -97,12 +112,14 @@ describe('MercadoPagoGateway', () => {
     [429, true],
     [500, true],
     [503, true],
-  ])('clasifica HTTP %s', async (status, retryable) => {
+  ])('clasifica errores SDK con HTTP %s', async (status, retryable) => {
     const gateway = new MercadoPagoGateway(
       config,
-      jest
-        .fn()
-        .mockResolvedValue(response({ message: config.accessToken }, status)),
+      sdk({
+        getPayment: jest
+          .fn()
+          .mockRejectedValue({ status, message: config.accessToken }),
+      }),
     );
     await expect(gateway.getPayment('123')).rejects.toMatchObject({
       name: 'PaymentGatewayError',
@@ -116,50 +133,45 @@ describe('MercadoPagoGateway', () => {
   it('clasifica desconexion y timeout como reintentables', async () => {
     const disconnected = new MercadoPagoGateway(
       config,
-      jest.fn().mockRejectedValue(new Error('ECONNRESET')),
+      sdk({ getPayment: jest.fn().mockRejectedValue(new Error('ECONNRESET')) }),
     );
     await expect(disconnected.getPayment('1')).rejects.toMatchObject({
       retryable: true,
     });
-    const hanging = new MercadoPagoGateway(
+    const timedOut = new MercadoPagoGateway(
       config,
-      jest.fn(
-        (_url, init) =>
-          new Promise((_resolve, reject) =>
-            init.signal.addEventListener('abort', () =>
-              reject(new Error('aborted')),
-            ),
-          ),
-      ),
+      sdk({ getPayment: jest.fn().mockRejectedValue(new Error('aborted')) }),
     );
-    await expect(hanging.getPayment('1')).rejects.toMatchObject({
+    await expect(timedOut.getPayment('1')).rejects.toMatchObject({
       retryable: true,
     });
   });
 
-  it('rechaza JSON, moneda y checkout incoherentes', async () => {
-    const invalidJson = new MercadoPagoGateway(
+  it('rechaza respuesta, moneda y checkout incoherentes', async () => {
+    const invalidResponse = new MercadoPagoGateway(
       config,
-      jest.fn().mockResolvedValue(new Response('{', { status: 200 })),
+      sdk({ getPayment: jest.fn().mockResolvedValue('invalid') }),
     );
-    await expect(invalidJson.getPayment('1')).rejects.toMatchObject({
+    await expect(invalidResponse.getPayment('1')).rejects.toMatchObject({
       retryable: false,
     });
     await expect(
       new MercadoPagoGateway(
         config,
-        jest.fn().mockResolvedValue(response(payment('approved', 'USD'))),
+        sdk({
+          getPayment: jest.fn().mockResolvedValue(payment('approved', 'USD')),
+        }),
       ).getPayment('1'),
     ).rejects.toThrow('moneda');
     await expect(
       new MercadoPagoGateway(
         config,
-        jest.fn().mockResolvedValue(
-          response({
+        sdk({
+          createPreference: jest.fn().mockResolvedValue({
             id: 'pref',
             sandbox_init_point: 'https://evil.example',
           }),
-        ),
+        }),
       ).createPayment(input),
     ).rejects.toThrow('checkout invalido');
   });
@@ -184,7 +196,7 @@ describe('MercadoPagoGateway', () => {
     async (expectation) => {
       const gateway = new MercadoPagoGateway(
         config,
-        jest.fn().mockResolvedValue(response(payment())),
+        sdk({ getPayment: jest.fn().mockResolvedValue(payment()) }),
       );
       await expect(
         gateway.getPayment('123', expectation),
@@ -204,7 +216,7 @@ describe('MercadoPagoGateway', () => {
     const v1 = createHmac('sha256', config.webhookSecret)
       .update(`id:pay-123;request-id:${requestId};ts:${ts};`)
       .digest('hex');
-    const gateway = new MercadoPagoGateway(config, jest.fn());
+    const gateway = new MercadoPagoGateway(config, sdk());
     await expect(
       gateway.verifyAndParseWebhook({
         rawBody,
@@ -230,16 +242,22 @@ describe('MercadoPagoGateway', () => {
   });
 
   it('reembolsa con idempotencia y consulta el estado definitivo', async () => {
-    const http = jest
-      .fn()
-      .mockResolvedValueOnce(response({ id: 55 }))
-      .mockResolvedValueOnce(response(payment('refunded')));
+    const clients = sdk({
+      refundPayment: jest.fn().mockResolvedValue({ id: 55 }),
+      getPayment: jest.fn().mockResolvedValue(payment('refunded')),
+    });
     await expect(
-      new MercadoPagoGateway(config, http).refundPayment('123', 'refund-key'),
+      new MercadoPagoGateway(config, clients).refundPayment(
+        '123',
+        'refund-key',
+      ),
     ).resolves.toMatchObject({ status: 'REFUNDED' });
-    expect(http.mock.calls[0][1].headers['X-Idempotency-Key']).toBe(
-      'refund-key',
-    );
-    expect(http.mock.calls[1][0]).toContain('/v1/payments/123');
+    expect(clients.refundPayment).toHaveBeenCalledWith('123', {
+      timeout: config.timeoutMs,
+      idempotencyKey: 'refund-key',
+    });
+    expect(clients.getPayment).toHaveBeenCalledWith('123', {
+      timeout: config.timeoutMs,
+    });
   });
 });

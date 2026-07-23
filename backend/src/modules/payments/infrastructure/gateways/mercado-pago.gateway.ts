@@ -1,4 +1,10 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import {
+  MercadoPagoConfig as MercadoPagoSdkConfig,
+  Payment,
+  PaymentRefund,
+  Preference,
+} from 'mercadopago';
 import { PaymentStatus } from '../../domain/entities/payment-attempt.entity';
 import {
   InvalidWebhookSignatureError,
@@ -15,46 +21,85 @@ import {
 } from '../../domain/ports/payment-gateway.port';
 import { MercadoPagoConfig } from './mercado-pago.config';
 
-type HttpClient = typeof fetch;
 type JsonObject = Record<string, unknown>;
+type PreferenceBody = Parameters<Preference['create']>[0]['body'];
+type SdkRequestOptions = NonNullable<
+  Parameters<Preference['create']>[0]['requestOptions']
+>;
+
+export type MercadoPagoSdkClients = {
+  createPreference(
+    body: PreferenceBody,
+    requestOptions: SdkRequestOptions,
+  ): Promise<unknown>;
+  getPayment(id: string, requestOptions: SdkRequestOptions): Promise<unknown>;
+  refundPayment(
+    id: string,
+    requestOptions: SdkRequestOptions,
+  ): Promise<unknown>;
+};
+
+function createMercadoPagoSdkClients(
+  config: MercadoPagoConfig,
+): MercadoPagoSdkClients {
+  const client = new MercadoPagoSdkConfig({
+    accessToken: config.accessToken,
+    options: { timeout: config.timeoutMs },
+  });
+  const preference = new Preference(client);
+  const payment = new Payment(client);
+  const refund = new PaymentRefund(client);
+  return {
+    createPreference: (body, requestOptions) =>
+      preference.create({ body, requestOptions }),
+    getPayment: (id, requestOptions) => payment.get({ id, requestOptions }),
+    refundPayment: (id, requestOptions) =>
+      refund.total({ payment_id: id, requestOptions }),
+  };
+}
 
 export class MercadoPagoGateway implements PaymentGatewayPort {
   readonly provider = 'MERCADO_PAGO' as const;
-  private readonly baseUrl = 'https://api.mercadopago.com';
 
   constructor(
     private readonly config: MercadoPagoConfig,
-    private readonly http: HttpClient = fetch,
+    private readonly sdk: MercadoPagoSdkClients = createMercadoPagoSdkClients(
+      config,
+    ),
   ) {}
 
   async createPayment(
     input: CreateGatewayPaymentInput,
   ): Promise<CreateGatewayPaymentResult> {
-    const response = await this.request('/checkout/preferences', {
-      method: 'POST',
-      idempotencyKey: input.idempotencyKey,
-      body: {
-        items: [
-          {
-            id: input.paymentId,
-            title: input.description.slice(0, 120),
-            quantity: 1,
-            currency_id: input.currency,
-            unit_price: input.amountMinorUnits / 100,
+    const response = await this.callSdk(() =>
+      this.sdk.createPreference(
+        {
+          items: [
+            {
+              id: input.paymentId,
+              title: input.description.slice(0, 120),
+              quantity: 1,
+              currency_id: input.currency,
+              unit_price: input.amountMinorUnits / 100,
+            },
+          ],
+          external_reference: input.externalReference,
+          metadata: { payment_id: input.paymentId },
+          back_urls: {
+            success: this.config.successUrl,
+            failure: this.config.failureUrl,
+            pending: this.config.pendingUrl,
           },
-        ],
-        external_reference: input.externalReference,
-        metadata: { payment_id: input.paymentId },
-        back_urls: {
-          success: this.config.successUrl,
-          failure: this.config.failureUrl,
-          pending: this.config.pendingUrl,
+          auto_return: 'approved',
+          expires: true,
+          expiration_date_to: input.expiresAt.toISOString(),
         },
-        auto_return: 'approved',
-        expires: true,
-        expiration_date_to: input.expiresAt.toISOString(),
-      },
-    });
+        {
+          timeout: this.config.timeoutMs,
+          idempotencyKey: input.idempotencyKey,
+        },
+      ),
+    );
     const id = this.string(response, 'id');
     const checkoutUrl = this.string(
       response,
@@ -78,9 +123,10 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     externalPaymentId: string,
     expectation?: GatewayPaymentExpectation,
   ): Promise<GatewayPaymentSnapshot> {
-    const response = await this.request(
-      `/v1/payments/${encodeURIComponent(externalPaymentId)}`,
-      { method: 'GET' },
+    const response = await this.callSdk(() =>
+      this.sdk.getPayment(externalPaymentId, {
+        timeout: this.config.timeoutMs,
+      }),
     );
     const snapshot = this.paymentSnapshot(response);
     if (
@@ -100,13 +146,17 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     externalPaymentId: string,
     idempotencyKey: string,
   ): Promise<GatewayPaymentSnapshot> {
-    await this.request(
-      `/v1/payments/${encodeURIComponent(externalPaymentId)}/refunds`,
-      { method: 'POST', idempotencyKey, body: {} },
+    await this.callSdk(() =>
+      this.sdk.refundPayment(externalPaymentId, {
+        timeout: this.config.timeoutMs,
+        idempotencyKey,
+      }),
     );
     return this.getPayment(externalPaymentId);
   }
 
+  // La interfaz es asincrona para mantener intercambiables los gateways.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async verifyAndParseWebhook(
     request: GatewayWebhookRequest,
   ): Promise<GatewayNotification> {
@@ -125,20 +175,26 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     const eventType = this.safeIdentifier(event.type);
     if (!signature || !requestId || !dataId || !eventId || !eventType)
       throw new InvalidWebhookSignatureError();
-    const parts = Object.fromEntries(
-      signature.split(',').map((part) => part.trim().split('=', 2)),
-    );
+    const parts: Record<string, string> = {};
+    for (const part of signature.split(',')) {
+      const [key, value] = part.trim().split('=', 2);
+      if (key && value) parts[key] = value;
+    }
+    const timestamp = parts.ts;
+    const digest = parts.v1;
     if (
-      !/^\d{10,16}$/.test(parts.ts ?? '') ||
-      !/^[a-f0-9]{64}$/i.test(parts.v1 ?? '')
+      !timestamp ||
+      !digest ||
+      !/^\d{10,16}$/.test(timestamp) ||
+      !/^[a-f0-9]{64}$/i.test(digest)
     )
       throw new InvalidWebhookSignatureError();
-    const manifest = `id:${dataId.toLowerCase()};request-id:${requestId};ts:${parts.ts};`;
+    const manifest = `id:${dataId.toLowerCase()};request-id:${requestId};ts:${timestamp};`;
     const expected = createHmac('sha256', this.config.webhookSecret)
       .update(manifest)
       .digest('hex');
     const expectedBuffer = Buffer.from(expected, 'hex');
-    const actualBuffer = Buffer.from(parts.v1, 'hex');
+    const actualBuffer = Buffer.from(digest, 'hex');
     if (
       expectedBuffer.length !== actualBuffer.length ||
       !timingSafeEqual(expectedBuffer, actualBuffer)
@@ -147,60 +203,39 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     return { eventId, externalPaymentId: dataId, eventType };
   }
 
-  private async request(
-    path: string,
-    options: {
-      method: 'GET' | 'POST';
-      idempotencyKey?: string;
-      body?: JsonObject;
-    },
-  ): Promise<JsonObject> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+  private async callSdk(action: () => Promise<unknown>): Promise<JsonObject> {
     try {
-      const response = await this.http(`${this.baseUrl}${path}`, {
-        method: options.method,
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${this.config.accessToken}`,
-          Accept: 'application/json',
-          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-          ...(options.idempotencyKey
-            ? { 'X-Idempotency-Key': options.idempotencyKey }
-            : {}),
-        },
-        ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-      });
-      if (!response.ok)
-        throw new PaymentGatewayError(
-          'El proveedor de pagos no pudo completar la operacion.',
-          response.status === 408 ||
-            response.status === 429 ||
-            response.status >= 500,
-        );
-      let json: unknown;
-      try {
-        json = await response.json();
-      } catch {
-        throw new PaymentGatewayError(
-          'El proveedor de pagos devolvio una respuesta invalida.',
-          false,
-        );
-      }
-      return this.object(json);
+      return this.object(await action());
     } catch (error) {
       if (
         error instanceof PaymentGatewayError ||
         (error instanceof Error && error.name === 'PaymentGatewayError')
       )
         throw error;
+      const status = this.sdkStatus(error);
       throw new PaymentGatewayError(
-        'No fue posible comunicarse con el proveedor de pagos.',
-        true,
+        status === undefined
+          ? 'No fue posible comunicarse con el proveedor de pagos.'
+          : 'El proveedor de pagos no pudo completar la operacion.',
+        status === undefined ||
+          status === 408 ||
+          status === 429 ||
+          status >= 500,
       );
-    } finally {
-      clearTimeout(timeout);
     }
+  }
+
+  private sdkStatus(error: unknown): number | undefined {
+    if (!error || typeof error !== 'object') return undefined;
+    const value = error as Record<string, unknown>;
+    const direct = value.status ?? value.statusCode;
+    if (typeof direct === 'number') return direct;
+    const response = value.api_response;
+    if (response && typeof response === 'object') {
+      const status = (response as Record<string, unknown>).status;
+      if (typeof status === 'number') return status;
+    }
+    return undefined;
   }
 
   private paymentSnapshot(value: JsonObject): GatewayPaymentSnapshot {

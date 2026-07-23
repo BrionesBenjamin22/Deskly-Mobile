@@ -147,6 +147,28 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
       .send({ reservationId, option: 'FULL', amount: 1 })
       .expect(400));
 
+  it('cotiza seña y total desde backend para el propietario autenticado', async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/reservations/${reservationId}/payment-quote`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      reservationId,
+      currency: 'ARS',
+      pricingVersion: 'ARS_1500_HOUR_DEPOSIT_30_V1',
+      options: [
+        { option: 'DEPOSIT', amountMinorUnits: 180_000 },
+        { option: 'FULL', amountMinorUnits: 600_000 },
+      ],
+    });
+
+    await request(app.getHttpServer())
+      .get(`/reservations/${reservationId}/payment-quote`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect(403);
+  });
+
   it('crea un unico checkout ante diez solicitudes simultaneas', async () => {
     const call = () =>
       request(app.getHttpServer())
@@ -194,10 +216,12 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
         .expect(200);
 
     const concurrent = await Promise.all([deliver(), deliver()]);
-    expect(concurrent.filter((item) => item.body.applied === true)).toHaveLength(1);
-    expect(concurrent.filter((item) => item.body.duplicate === true)).toHaveLength(
-      1,
-    );
+    expect(
+      concurrent.filter((item) => item.body.applied === true),
+    ).toHaveLength(1);
+    expect(
+      concurrent.filter((item) => item.body.duplicate === true),
+    ).toHaveLength(1);
     const replay = await deliver();
     expect(replay.body).toMatchObject({ applied: false, duplicate: true });
 

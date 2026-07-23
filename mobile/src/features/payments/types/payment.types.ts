@@ -1,29 +1,44 @@
-export interface Payment {
-  id: string;
-  reservationId: string;
-  date: string;
-  amount: number;
-  createdAt: string;
-  updatedAt: string;
-}
+export type PaymentStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'REFUNDED';
 
-export interface EnrichedPayment extends Payment {
-  deskCode: string;
-  deskName: string;
-  reservationDate: string;
-  reservationDateLabel: string;
-  startTime: string;
-  endTime: string;
-}
+export type PaymentOption = 'DEPOSIT' | 'FULL';
 
-export interface ReservationPaymentSummary {
+export type PaymentQuote = {
   reservationId: string;
-  deskCode: string;
+  currency: 'ARS';
+  pricingVersion: string;
+  options: Array<{
+    option: PaymentOption;
+    amountMinorUnits: number;
+  }>;
+};
+
+export type PaymentAttempt = {
+  paymentId: string;
+  reservationId: string;
+  amountMinorUnits: number;
+  currency: 'ARS';
+  option: PaymentOption;
+  pricingVersion: string;
+  status: PaymentStatus;
+  checkoutUrl: string | null;
+  expiresAt: string;
+  createdAt?: string;
+};
+
+export type PaymentCheckout = PaymentAttempt & {
+  checkoutUrl: string;
+};
+
+export type PaymentReservationItem = {
+  reservationId: string;
   deskName: string;
-  reservationDateLabel: string;
-  startTime: string;
-  endTime: string;
-  totalAbonado: number;
-  lastPaymentDate: string;
-  lastPaymentId: string;
-}
+  dateLabel: string;
+  attempts: PaymentAttempt[];
+};

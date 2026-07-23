@@ -1,34 +1,14 @@
 import { API_BASE_URL } from '../../../config/api';
-import { Payment } from '../types/payment.types';
+import type {
+  PaymentAttempt,
+  PaymentCheckout,
+  PaymentOption,
+  PaymentQuote,
+} from '../types/payment.types';
 
 type ApiErrorBody = {
   error?: string;
   message?: string | string[];
-};
-
-type PaymentResponse = {
-  paymentId: string;
-  reservationId: string;
-  date: string;
-  amount: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type ListPaymentsResponse = {
-  payments: PaymentResponse[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-};
-
-export type CreatePaymentPayload = {
-  reservationId: string;
-  date: string;
-  amount: number;
 };
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -37,94 +17,98 @@ export class PaymentServiceError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'PaymentServiceError';
+    Object.setPrototypeOf(this, PaymentServiceError.prototype);
   }
+}
+
+export function createPaymentOperationKey(): string {
+  const random = Math.random().toString(36).slice(2, 14);
+  return `checkout-${Date.now().toString(36)}-${random}`;
 }
 
 function getErrorMessage(body: ApiErrorBody | null) {
-  if (Array.isArray(body?.message)) {
-    return body.message.join(' ');
-  }
-  if (body?.message) {
-    return body.message;
-  }
-  if (body?.error) {
-    return body.error;
-  }
+  if (body?.error) return body.error;
+  if (Array.isArray(body?.message)) return body.message.join(' ');
+  if (body?.message) return body.message;
   return 'Lo sentimos, no pudimos procesar el pago. Intente nuevamente.';
 }
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response;
+async function requestJson<T>(
+  path: string,
+  accessToken: string,
+  init?: RequestInit,
+): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
+  let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       headers: {
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
-      ...init,
     });
   } catch (error) {
-    const isTimeout =
-      error instanceof Error &&
-      (error.name === 'AbortError' || error.message.includes('aborted'));
-
+    const timeout = error instanceof Error && error.name === 'AbortError';
     throw new PaymentServiceError(
-      isTimeout
-        ? 'La conexión con Deskly está tardando más de lo esperado. Verificá que el backend esté encendido y que el celular esté en la misma red.'
-        : 'No pudimos conectar con Deskly. Verificá que el backend esté encendido y que tu celular esté en la misma red.',
+      timeout
+        ? 'Lo sentimos, la consulta esta tardando demasiado. Intente nuevamente.'
+        : 'Lo sentimos, no pudimos conectar con Deskly. Revise su conexion e intente nuevamente.',
     );
   } finally {
     clearTimeout(timeoutId);
   }
 
-  const body = (await response.json().catch(() => null)) as T | ApiErrorBody | null;
-
-  if (!response.ok) {
+  const body = (await response.json().catch(() => null)) as
+    | T
+    | ApiErrorBody
+    | null;
+  if (!response.ok)
     throw new PaymentServiceError(getErrorMessage(body as ApiErrorBody | null));
-  }
-
   return body as T;
 }
 
-function mapPayment(p: PaymentResponse): Payment {
-  return {
-    id: p.paymentId,
-    reservationId: p.reservationId,
-    date: p.date,
-    amount: p.amount,
-    createdAt: p.createdAt,
-    updatedAt: p.updatedAt,
-  };
+export function getPaymentQuote(accessToken: string, reservationId: string) {
+  return requestJson<PaymentQuote>(
+    `/reservations/${encodeURIComponent(reservationId)}/payment-quote`,
+    accessToken,
+  );
 }
 
-export async function createPayment(payload: CreatePaymentPayload): Promise<Payment> {
-  const response = await requestJson<PaymentResponse>('/payments', {
+export function createPaymentCheckout(
+  accessToken: string,
+  input: {
+    reservationId: string;
+    option: PaymentOption;
+    idempotencyKey: string;
+  },
+) {
+  return requestJson<PaymentCheckout>('/payments/checkout', accessToken, {
     method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
     body: JSON.stringify({
-      ...payload,
-      date: payload.date,
+      reservationId: input.reservationId,
+      option: input.option,
     }),
   });
-  return mapPayment(response);
 }
 
-export async function listPayments(page = 1, limit = 50): Promise<{
-  payments: Payment[];
-  pagination: ListPaymentsResponse['pagination'];
-}> {
-  const params = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-  });
+export function getPaymentAttempt(accessToken: string, paymentId: string) {
+  return requestJson<PaymentAttempt>(
+    `/payments/${encodeURIComponent(paymentId)}`,
+    accessToken,
+  );
+}
 
-  const response = await requestJson<ListPaymentsResponse>(`/payments?${params}`);
-
-  return {
-    payments: response.payments.map(mapPayment),
-    pagination: response.pagination,
-  };
+export function listReservationPayments(
+  accessToken: string,
+  reservationId: string,
+) {
+  return requestJson<PaymentAttempt[]>(
+    `/reservations/${encodeURIComponent(reservationId)}/payments`,
+    accessToken,
+  );
 }
