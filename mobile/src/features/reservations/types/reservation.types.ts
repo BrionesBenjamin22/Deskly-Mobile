@@ -1,8 +1,9 @@
 export type ReservationStatus =
-  | 'reserved'
-  | 'active'
-  | 'completed'
-  | 'cancelled';
+  | "pending_payment"
+  | "reserved"
+  | "active"
+  | "completed"
+  | "cancelled";
 
 export type ReservationLocation = {
   areaId: string;

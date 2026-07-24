@@ -1,9 +1,9 @@
-import { API_BASE_URL } from '../../../config/api';
+import { API_BASE_URL } from "../../../config/api";
 import {
   Reservation,
   ReservationLocation,
   ReservationStatus,
-} from '../types/reservation.types';
+} from "../types/reservation.types";
 
 type ApiErrorBody = {
   error?: string;
@@ -11,10 +11,11 @@ type ApiErrorBody = {
 };
 
 type ApiReservationStatus =
-  | 'RESERVED'
-  | 'ACTIVE'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  | "PENDING_PAYMENT"
+  | "RESERVED"
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CANCELLED";
 
 type ReservationResponse = {
   reservationId: string;
@@ -53,14 +54,14 @@ const REQUEST_TIMEOUT_MS = 8000;
 export class ReservationServiceError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ReservationServiceError';
+    this.name = "ReservationServiceError";
     Object.setPrototypeOf(this, ReservationServiceError.prototype);
   }
 }
 
 function getErrorMessage(body: ApiErrorBody | null) {
   if (Array.isArray(body?.message)) {
-    return body.message.join(' ');
+    return body.message.join(" ");
   }
 
   if (body?.message) {
@@ -71,7 +72,7 @@ function getErrorMessage(body: ApiErrorBody | null) {
     return body.error;
   }
 
-  return 'Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.';
+  return "Lo sentimos, no pudimos recuperar sus reservas. Intente nuevamente.";
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -83,7 +84,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
@@ -91,21 +92,26 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (error) {
     const isTimeout =
       error instanceof Error &&
-      (error.name === 'AbortError' || error.message.includes('aborted'));
+      (error.name === "AbortError" || error.message.includes("aborted"));
 
     throw new ReservationServiceError(
       isTimeout
-        ? 'La conexión con Deskly está tardando más de lo esperado. Verificá que el backend esté encendido y que el celular esté en la misma red.'
-        : 'No pudimos conectar con Deskly. Verificá que el backend esté encendido y que tu celular esté en la misma red.',
+        ? "La conexión con Deskly está tardando más de lo esperado. Verificá que el backend esté encendido y que el celular esté en la misma red."
+        : "No pudimos conectar con Deskly. Verificá que el backend esté encendido y que tu celular esté en la misma red.",
     );
   } finally {
     clearTimeout(timeoutId);
   }
 
-  const body = (await response.json().catch(() => null)) as T | ApiErrorBody | null;
+  const body = (await response.json().catch(() => null)) as
+    | T
+    | ApiErrorBody
+    | null;
 
   if (!response.ok) {
-    throw new ReservationServiceError(getErrorMessage(body as ApiErrorBody | null));
+    throw new ReservationServiceError(
+      getErrorMessage(body as ApiErrorBody | null),
+    );
   }
 
   return body as T;
@@ -118,19 +124,22 @@ function toDateLabel(dateValue: string) {
     return dateValue;
   }
 
-  return new Intl.DateTimeFormat('es-AR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   }).format(date);
 }
 
-function getReservationStatus(reservation: ReservationResponse): ReservationStatus {
+function getReservationStatus(
+  reservation: ReservationResponse,
+): ReservationStatus {
   const statusMap: Record<ApiReservationStatus, ReservationStatus> = {
-    RESERVED: 'reserved',
-    ACTIVE: 'active',
-    COMPLETED: 'completed',
-    CANCELLED: 'cancelled',
+    PENDING_PAYMENT: "pending_payment",
+    RESERVED: "reserved",
+    ACTIVE: "active",
+    COMPLETED: "completed",
+    CANCELLED: "cancelled",
   };
   return statusMap[reservation.status];
 }
@@ -181,7 +190,7 @@ export async function validateArrival(id: string, accessToken: string) {
   const response = await requestJson<ReservationResponse>(
     `/reservations/${id}/check-in`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
@@ -192,8 +201,8 @@ export async function createReservation(
   accessToken: string,
   payload: CreateReservationPayload,
 ) {
-  const response = await requestJson<ReservationResponse>('/reservations', {
-    method: 'POST',
+  const response = await requestJson<ReservationResponse>("/reservations", {
+    method: "POST",
     headers: { Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(payload),
   });
@@ -205,7 +214,7 @@ export async function cancelReservation(id: string, accessToken: string) {
   const response = await requestJson<ReservationResponse>(
     `/reservations/${id}/cancel`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       headers: { Authorization: `Bearer ${accessToken}` },
     },
   );

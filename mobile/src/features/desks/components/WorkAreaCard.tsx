@@ -1,14 +1,14 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText } from '../../../components/ui/AppText';
-import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
-import { Icon } from '../../../components/ui/Icon';
-import { colors } from '../../../theme/colors';
-import { spacing } from '../../../theme/spacing';
-import { WorkArea } from '../types/desk.types';
-import { LocationMap } from './LocationMap';
+import { AppText } from "../../../components/ui/AppText";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { Icon } from "../../../components/ui/Icon";
+import { colors } from "../../../theme/colors";
+import { spacing } from "../../../theme/spacing";
+import { WorkArea } from "../types/desk.types";
+import { LocationMap } from "./LocationMap";
 
 type WorkAreaCardProps = {
   area: WorkArea;
@@ -21,10 +21,10 @@ function getAvailabilityLabel(area: WorkArea) {
   const count = area.availableDeskCount ?? 0;
 
   if (count <= 0) {
-    return 'Sin disponibilidad';
+    return "Sin disponibilidad";
   }
 
-  return count === 1 ? '1 disponible' : `${count} disponibles`;
+  return count === 1 ? "1 disponible" : `${count} disponibles`;
 }
 
 export function WorkAreaCard({
@@ -47,17 +47,21 @@ export function WorkAreaCard({
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={styles.titleBlock}>
-            <AppText variant="subtitle" color={colors.primary} style={styles.title}>
+            <AppText
+              variant="subtitle"
+              color={colors.primary}
+              style={styles.title}
+            >
               {area.name}
             </AppText>
             <AppText variant="caption" color={colors.blackOverlay}>
-              {area.description ?? 'Area de trabajo disponible para reservas.'}
+              {area.description ?? "Area de trabajo disponible para reservas."}
             </AppText>
           </View>
 
           <Badge
             label={getAvailabilityLabel(area)}
-            tone={isAvailable ? 'success' : 'neutral'}
+            tone={isAvailable ? "success" : "neutral"}
           />
         </View>
 
@@ -65,14 +69,22 @@ export function WorkAreaCard({
           <View style={styles.details}>
             <View style={styles.detailRow}>
               <Icon name="mapPin" size={16} color={colors.primaryLight} />
-              <AppText variant="caption" color={colors.primaryLight} style={styles.detailText}>
-                {area.locality?.name ?? 'Localidad sin asignar'}
+              <AppText
+                variant="caption"
+                color={colors.primaryLight}
+                style={styles.detailText}
+              >
+                {area.locality?.name ?? "Localidad sin asignar"}
               </AppText>
             </View>
 
             <View style={styles.detailRow}>
               <Icon name="users" size={16} color={colors.primaryLight} />
-              <AppText variant="caption" color={colors.primaryLight} style={styles.detailText}>
+              <AppText
+                variant="caption"
+                color={colors.primaryLight}
+                style={styles.detailText}
+              >
                 {availableDeskCount} de {totalDeskCount} escritorios disponibles
               </AppText>
             </View>
@@ -80,7 +92,11 @@ export function WorkAreaCard({
             {area.address ? (
               <View style={styles.detailRow}>
                 <Icon name="mapPin" size={16} color={colors.primaryLight} />
-                <AppText variant="caption" color={colors.primaryLight} style={styles.detailText}>
+                <AppText
+                  variant="caption"
+                  color={colors.primaryLight}
+                  style={styles.detailText}
+                >
                   {area.address}
                 </AppText>
               </View>
@@ -94,7 +110,7 @@ export function WorkAreaCard({
             />
 
             <Button
-              title="Reservar"
+              title="Ver Escritorios"
               disabled={!isAvailable}
               onPress={() => onReserve(area)}
             />
@@ -110,17 +126,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   header: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
+    alignItems: "flex-start",
+    flexDirection: "row",
     gap: spacing.md,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   titleBlock: {
     flex: 1,
     gap: spacing.xs,
   },
   title: {
-    fontWeight: '800',
+    fontWeight: "800",
   },
   details: {
     borderTopColor: colors.border,
@@ -129,13 +145,13 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   detailRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: spacing.xs,
   },
   detailText: {
     flex: 1,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   pressed: {
     opacity: 0.75,

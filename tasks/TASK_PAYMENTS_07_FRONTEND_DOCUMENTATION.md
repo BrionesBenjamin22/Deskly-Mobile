@@ -1,13 +1,13 @@
 # Etapa 7: frontend, documentacion y cierre
 
-| Campo | Valor |
-|---|---|
-| ID | `PAYMENTS-07` |
-| Modulo | Payments mobile y documentacion |
-| Estado | `BLOQUEADA` |
-| Dependencia | `PAYMENTS-06` y prueba manual sandbox |
-| Implementacion | `mobile/src/features/payments` y `backend/src/modules/payments` |
-| Validacion | Formato, build backend, unitarios y E2E, suite mobile, TypeScript, export web, migraciones limpias, busqueda de secretos y prueba manual sandbox cuando existan credenciales de prueba |
+| Campo          | Valor                                                                                                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ID             | `PAYMENTS-07`                                                                                                                                                                          |
+| Modulo         | Payments mobile y documentacion                                                                                                                                                        |
+| Estado         | `EN_PROGRESO`                                                                                                                                                                          |
+| Dependencia    | `PAYMENTS-06` y prueba manual sandbox                                                                                                                                                  |
+| Implementacion | `mobile/src/features/payments` y `backend/src/modules/payments`                                                                                                                        |
+| Validacion     | Formato, build backend, unitarios y E2E, suite mobile, TypeScript, export web, migraciones limpias, busqueda de secretos y prueba manual sandbox cuando existan credenciales de prueba |
 
 ## Objetivo
 
@@ -15,12 +15,12 @@ Integrar el checkout seguro en Expo web/mobile, eliminar calculos monetarios aut
 
 ## Riesgos heredados obligatorios
 
-| Riesgo de Etapa 6 | Correccion obligatoria en Etapa 7 | Evidencia |
-|---|---|---|
-| Frontend aun usa CRUD y confirma por respuesta local | Consumir checkout/estado y esperar backend | Tests de UI/service |
-| Precio y saldo se calculan en mobile | Renderizar cotizacion backend sin usarla como autoridad | Tests sin constantes locales |
-| No existe operacion documentada | Documentar sandbox, webhooks, conciliacion y diagnostico | READMEs revisados |
-| Configuracion productiva no tiene checklist final | Documentar secretos, HTTPS y despliegue | Checklist ejecutado |
+| Riesgo de Etapa 6                                    | Correccion obligatoria en Etapa 7                        | Evidencia                    |
+| ---------------------------------------------------- | -------------------------------------------------------- | ---------------------------- |
+| Frontend aun usa CRUD y confirma por respuesta local | Consumir checkout/estado y esperar backend               | Tests de UI/service          |
+| Precio y saldo se calculan en mobile                 | Renderizar cotizacion backend sin usarla como autoridad  | Tests sin constantes locales |
+| No existe operacion documentada                      | Documentar sandbox, webhooks, conciliacion y diagnostico | READMEs revisados            |
+| Configuracion productiva no tiene checklist final    | Documentar secretos, HTTPS y despliegue                  | Checklist ejecutado          |
 
 ## Tareas backend
 
@@ -127,11 +127,33 @@ busqueda de secretos y datos sensibles
 - SDK oficial Mercado Pago: `mercadopago@3.2.0` integrado en backend mediante `Preference`, `Payment` y `PaymentRefund`; el gateway fake permanece para pruebas deterministas.
 - Gateway Mercado Pago con SDK: 1 suite, 23 pruebas aprobadas, incluyendo payload, idempotencia, estados, errores sanitizados, HMAC y reembolso.
 - Revision posterior al SDK: backend completo 40 suites/231 pruebas, E2E 2 suites/8 pruebas, build, formato, lint focalizado y `git diff --check` aprobados.
-- Auditoria productiva `pnpm audit --prod`: fallo con 33 vulnerabilidades heredadas (8 altas, 23 moderadas y 2 bajas) en dependencias de Nest, Prisma, TypeORM y transitivas. `mercadopago@3.2.0` no incorpora dependencias transitivas. La remediacion se registro como `SECURITY-01` y bloquea el cierre estricto.
+- La remediacion de la auditoria productiva se completo en `SECURITY-01`; ya no bloquea esta etapa.
+
+## Ajuste de flujo iniciado el 23 de julio de 2026
+
+- El alta crea un hold tecnico `PENDING_PAYMENT`; no expone una reserva confirmada antes del pago.
+- Escritorios encadena alta, cotizacion, checkout HTTPS y consulta del estado backend.
+- Un pago aprobado confirma la reserva. Una seña aprobada habilita completar solamente el saldo desde Pagos.
+- Pagos conserva su composicion de tarjetas y recupera la tarjeta superior con el total pendiente.
+- La disponibilidad contempla holds pendientes y la restriccion PostgreSQL existente protege solapamientos concurrentes para `PENDING_PAYMENT`, `RESERVED` y `ACTIVE`.
+- Evidencia parcial: 3 suites focalizadas de dominio con 22 pruebas, 2 suites de persistencia/caso de uso con 22 pruebas, prueba de pantalla Pagos con 2 pruebas, build backend y TypeScript mobile aprobados.
+- Suite completa final posterior al ajuste: backend 41 suites/243 pruebas y mobile 9 suites/32 pruebas aprobadas.
+- E2E PostgreSQL: 2 suites/8 pruebas aprobadas sobre una base temporal limpia; 17 migraciones aplicadas y la base fue eliminada al finalizar.
+- Build backend, TypeScript mobile, formato de archivos modificados y export web Expo con 2101 modulos aprobados.
+- Diagnostico sandbox real: credencial reconocida, preferencia creada por SDK, dominio `sandbox.mercadopago.com.ar` incorporado a la allowlist y checkout con 15 minutos de vigencia despues de sincronizar el reloj local.
+- Compra sandbox real completada. Se corrigio la distincion entre ID de preferencia e ID de pago: el webhook correlaciona por referencia unica, valida datos autoritativos y enlaza el pago real. La seña recuperada quedo `APPROVED` y su reserva `RESERVED`.
+- El polling mobile permanece activo hasta el vencimiento del checkout para mostrar confirmacion despues de volver del proveedor y refrescar Pagos.
+- La investigacion posterior sobre URLs de Expo, dispositivos y posible API gateway se registro como `INFRA-01` sin modificar configuracion global.
 
 ## Validacion manual pendiente
 
-`sandbox_configured=False`: no hay credenciales sandbox configuradas en el entorno. La etapa permanece `BLOQUEADA` hasta ejecutar y registrar `backend/src/modules/payments/MANUAL_SANDBOX_CHECKLIST.md`. No se presenta la prueba manual como aprobada y no se propone commit de cierre.
+- retorno desde Mercado Pago con mensaje “Reserva confirmada” luego de pagar.
+- aparición de la reserva en Pagos.
+- visualización y pago del saldo restante después de una seña.
+
+El bloqueo actual es externo: el sandbox limita el acceso por exceso de redirecciones. Como ya comprobaste creación del checkout, impacto en
+cuentas fake, webhook y aprobación de la reserva, esta prueba puede documentarse como diferida. La medición de calidad productiva quedará para
+cuando exista un pago real de producción.
 
 ## Commit sugerido
 

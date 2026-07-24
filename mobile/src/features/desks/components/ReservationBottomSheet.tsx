@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText } from '../../../components/ui/AppText';
-import { Button } from '../../../components/ui/Button';
-import { Icon } from '../../../components/ui/Icon';
-import { IconButton } from '../../../components/ui/IconButton';
-import { colors, statusColors } from '../../../theme/colors';
-import { radii, spacing } from '../../../theme/spacing';
-import { Desk } from '../types/desk.types';
-import { DeskSummaryCard } from './DeskSummaryCard';
+import { AppText } from "../../../components/ui/AppText";
+import { Button } from "../../../components/ui/Button";
+import { Icon } from "../../../components/ui/Icon";
+import { IconButton } from "../../../components/ui/IconButton";
+import { colors, statusColors } from "../../../theme/colors";
+import { radii, spacing } from "../../../theme/spacing";
+import { Desk } from "../types/desk.types";
+import type { PaymentOption } from "../../payments/types/payment.types";
+import { DeskSummaryCard } from "./DeskSummaryCard";
 
 type ReservationBottomSheetProps = {
   visible: boolean;
@@ -24,18 +25,19 @@ type ReservationBottomSheetProps = {
     date: string;
     startTime: string;
     endTime: string;
+    paymentOption: PaymentOption;
   }) => void;
 };
 
 function timeToMinutes(value: string) {
-  const [hours, minutes] = value.split(':').map(Number);
+  const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
 }
 
 function overlapsReservedSlot(
   startTime: string,
   endTime: string,
-  reservedSlots: NonNullable<Desk['reservedSlots']>,
+  reservedSlots: NonNullable<Desk["reservedSlots"]>,
 ) {
   return reservedSlots.some(
     (slot) =>
@@ -47,7 +49,7 @@ function overlapsReservedSlot(
 function getEndOptions(
   startTime: string,
   timeOptions: string[],
-  reservedSlots: NonNullable<Desk['reservedSlots']>,
+  reservedSlots: NonNullable<Desk["reservedSlots"]>,
 ) {
   return timeOptions.filter(
     (endTime) =>
@@ -58,10 +60,11 @@ function getEndOptions(
 
 function getStartOptions(
   timeOptions: string[],
-  reservedSlots: NonNullable<Desk['reservedSlots']>,
+  reservedSlots: NonNullable<Desk["reservedSlots"]>,
 ) {
   return timeOptions.filter(
-    (startTime) => getEndOptions(startTime, timeOptions, reservedSlots).length > 0,
+    (startTime) =>
+      getEndOptions(startTime, timeOptions, reservedSlots).length > 0,
   );
 }
 
@@ -78,13 +81,15 @@ export function ReservationBottomSheet({
 }: ReservationBottomSheetProps) {
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
+  const [paymentOption, setPaymentOption] = useState<PaymentOption>("FULL");
   const reservedSlots = useMemo(() => desk?.reservedSlots ?? [], [desk]);
   const startOptions = useMemo(
     () => getStartOptions(timeOptions, reservedSlots),
     [reservedSlots, timeOptions],
   );
   const endOptions = useMemo(
-    () => (startTime ? getEndOptions(startTime, timeOptions, reservedSlots) : []),
+    () =>
+      startTime ? getEndOptions(startTime, timeOptions, reservedSlots) : [],
     [reservedSlots, startTime, timeOptions],
   );
 
@@ -92,13 +97,15 @@ export function ReservationBottomSheet({
     if (!visible) return;
     const nextStart = startOptions.includes(initialStartTime)
       ? initialStartTime
-      : startOptions[0] ?? '';
+      : (startOptions[0] ?? "");
     const validEnds = nextStart
       ? getEndOptions(nextStart, timeOptions, reservedSlots)
       : [];
     setStartTime(nextStart);
     setEndTime(
-      validEnds.includes(initialEndTime) ? initialEndTime : validEnds[0] ?? '',
+      validEnds.includes(initialEndTime)
+        ? initialEndTime
+        : (validEnds[0] ?? ""),
     );
   }, [
     initialEndTime,
@@ -112,13 +119,18 @@ export function ReservationBottomSheet({
   const changeStart = (value: string) => {
     const validEnds = getEndOptions(value, timeOptions, reservedSlots);
     setStartTime(value);
-    setEndTime(validEnds[0] ?? '');
+    setEndTime(validEnds[0] ?? "");
   };
   const noAvailability = startOptions.length === 0;
   const canConfirm = Boolean(desk && startTime && endTime && !noAvailability);
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <Pressable
           accessibilityRole="button"
@@ -166,14 +178,55 @@ export function ReservationBottomSheet({
               selected={endTime}
               onSelect={setEndTime}
             />
+            <View style={styles.optionGroup}>
+              <AppText
+                variant="caption"
+                color={colors.blackOverlay}
+                style={styles.strong}
+              >
+                Forma de pago
+              </AppText>
+              <View style={styles.optionList}>
+                {[
+                  { value: "DEPOSIT" as const, label: "Pagar seña" },
+                  { value: "FULL" as const, label: "Pagar total" },
+                ].map((option) => (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected: option.value === paymentOption,
+                    }}
+                    onPress={() => setPaymentOption(option.value)}
+                    style={[
+                      styles.timeOption,
+                      option.value === paymentOption &&
+                        styles.timeOptionSelected,
+                    ]}
+                  >
+                    <AppText
+                      variant="caption"
+                      color={
+                        option.value === paymentOption
+                          ? colors.white
+                          : colors.primary
+                      }
+                      style={styles.strong}
+                    >
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             {noAvailability ? (
               <AppText variant="caption" color={statusColors.error}>
                 No hay horarios disponibles. Seleccione otra fecha.
               </AppText>
             ) : null}
             <AppText variant="caption" color={colors.primaryLight}>
-              Luego de reservar podra elegir seña o pago total con una cotizacion
-              calculada por Deskly.
+              La reserva se confirmará únicamente cuando Deskly verifique el
+              pago.
             </AppText>
           </ScrollView>
           <Button
@@ -181,7 +234,13 @@ export function ReservationBottomSheet({
             disabled={!canConfirm}
             onPress={() => {
               if (!desk || !canConfirm) return;
-              onConfirm({ desk, date: selectedDate, startTime, endTime });
+              onConfirm({
+                desk,
+                date: selectedDate,
+                startTime,
+                endTime,
+                paymentOption,
+              });
             }}
           >
             <Icon name="chevronRight" size={18} color={colors.white} />
@@ -205,7 +264,11 @@ function TimeOptions({
 }) {
   return (
     <View style={styles.optionGroup}>
-      <AppText variant="caption" color={colors.blackOverlay} style={styles.strong}>
+      <AppText
+        variant="caption"
+        color={colors.blackOverlay}
+        style={styles.strong}
+      >
         {label}
       </AppText>
       <View style={styles.optionList}>
@@ -235,18 +298,21 @@ function TimeOptions({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.blackOverlay },
+  overlay: { flex: 1, justifyContent: "flex-end" },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.blackOverlay,
+  },
   sheet: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '88%',
+    maxHeight: "88%",
     paddingBottom: spacing.xxl,
     paddingTop: spacing.md,
   },
   handle: {
-    alignSelf: 'center',
+    alignSelf: "center",
     backgroundColor: colors.border,
     borderRadius: radii.pill,
     height: 4,
@@ -259,31 +325,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenX,
   },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  title: { fontWeight: '800' },
-  strong: { fontWeight: '700' },
+  title: { fontWeight: "800" },
+  strong: { fontWeight: "700" },
   dateBlock: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.background,
     borderColor: colors.border,
     borderRadius: radii.lg,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
     padding: spacing.md,
   },
   optionGroup: { gap: spacing.sm },
-  optionList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  optionList: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   timeOption: {
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 34,
     paddingHorizontal: spacing.md,
   },
-  timeOptionSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  timeOptionSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
 });

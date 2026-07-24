@@ -2,24 +2,23 @@
 
 ## Proposito
 
-La feature muestra reservas paginadas, intentos de pago autorizados y cotizaciones calculadas por backend. Inicia un checkout hospedado y solo presenta una confirmacion cuando Deskly devuelve `APPROVED`.
+La feature muestra solamente reservas que ya poseen un pago aprobado. Conserva la tarjeta superior de saldo pendiente y permite completar pagos parciales con importes calculados por backend. Inicia un checkout hospedado y solo presenta una confirmacion cuando Deskly devuelve `APPROVED`.
 
 ## Componentes y flujo
 
-- `PaymentsScreen`: estados de carga, error, vacio, cotizacion, checkout y resultado. Pagina 9 reservas por vez.
-- `usePayments`: carga reservas autenticadas y sus intentos sin sumar estados no aprobados como dinero abonado.
+- `PaymentsScreen`: conserva el estilo de tarjetas, muestra el total pendiente arriba y el desglose total, abonado y saldo de cada reserva. Pagina 9 reservas por vez.
+- `usePayments`: carga reservas confirmadas, cotizaciones e intentos; excluye reservas sin pagos aprobados y no suma estados pendientes o rechazados como dinero abonado.
 - `payments.service.ts`: concentra cotizacion, checkout, consulta de intento y listado por reserva.
 - `payment.types.ts`: estados, opciones, cotizacion e intentos normalizados.
 
 Flujo:
 
-1. El usuario crea una reserva sin enviar monto.
-2. Payments solicita `GET /reservations/:id/payment-quote`.
-3. El usuario elige `DEPOSIT` o `FULL`; no existe monto personalizado.
-4. El cliente genera una clave una vez y llama `POST /payments/checkout` sin monto, moneda, miembro o estado.
-5. Se valida que `checkoutUrl` use HTTPS y se abre con `Linking.openURL`.
-6. Volver a la app no confirma el pago. Se consulta `GET /payments/:id` hasta cinco veces con espera acotada.
-7. Solo `APPROVED` se presenta como pago confirmado. Los demas estados permiten actualizar o reintentar.
+1. Desde Escritorios, el usuario elige seña o pago total antes de confirmar.
+2. El backend crea un hold tecnico `PENDING_PAYMENT`; la app solicita inmediatamente su cotizacion y checkout.
+3. Se valida que `checkoutUrl` use HTTPS y se abre con `Linking.openURL`.
+4. Volver a la app no confirma el pago. Se consulta `GET /payments/:id` hasta recibir un estado terminal o alcanzar el vencimiento informado por backend.
+5. Solo `APPROVED` confirma la reserva y se presenta como exito.
+6. La pestaña Pagos queda reservada para reservas con un pago aprobado. Si fue una seña, ofrece completar exclusivamente el saldo pendiente.
 
 ## Contratos
 
@@ -30,10 +29,10 @@ Cotizacion:
   "reservationId": "uuid",
   "currency": "ARS",
   "pricingVersion": "ARS_1500_HOUR_DEPOSIT_30_V1",
-  "options": [
-    { "option": "DEPOSIT", "amountMinorUnits": 180000 },
-    { "option": "FULL", "amountMinorUnits": 600000 }
-  ]
+  "totalMinorUnits": 600000,
+  "approvedMinorUnits": 180000,
+  "pendingMinorUnits": 420000,
+  "options": [{ "option": "FULL", "amountMinorUnits": 420000 }]
 }
 ```
 
@@ -65,8 +64,8 @@ Idempotency-Key: <clave estable por accion>
 - El service agrega JWT y envia un body minimo.
 - El service conserva la clave idempotente entregada por la accion.
 - Los errores mantienen prototipo y mensaje seguro.
-- La suite mobile valida regresiones de escritorios y reservas.
+- La suite mobile valida bloqueo de doble toque, ausencia de falsa confirmacion y finalizacion del saldo parcial.
 
-## Pruebas manuales pendientes
+## Prueba manual sandbox
 
-La prueba sandbox real requiere credenciales de prueba y frontend ejecutable. Debe verificar apertura web/native, retorno sin falsa confirmacion, webhook firmado, polling y estado final. No fue ejecutada durante desarrollo automatizado.
+La compra sandbox real abrio Checkout Pro y acredito la seña en la cuenta de prueba. El flujo backend diferencia preferencia y pago, correlaciona el webhook con referencia unica y deja la reserva confirmada. Resta verificar visualmente en una ejecucion nueva que el polling prolongado muestre el cartel de exito al volver y que Pagos ofrezca completar el saldo.

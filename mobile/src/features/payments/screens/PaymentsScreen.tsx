@@ -1,30 +1,30 @@
-import { useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState } from "react";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText } from '../../../components/ui/AppText';
-import { BottomTabBar } from '../../../components/ui/BottomTabBar';
-import { Button } from '../../../components/ui/Button';
-import { Icon } from '../../../components/ui/Icon';
-import { ScreenContainer } from '../../../components/ui/ScreenContainer';
-import { StatusModal } from '../../../components/ui/StatusModal';
-import { colors, statusColors } from '../../../theme/colors';
-import { radii, spacing } from '../../../theme/spacing';
-import type { UserRole } from '../../auth/types/auth.types';
-import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
-import { usePayments } from '../hooks/usePayments';
+import { AppText } from "../../../components/ui/AppText";
+import { BottomTabBar } from "../../../components/ui/BottomTabBar";
+import { Button } from "../../../components/ui/Button";
+import { Icon } from "../../../components/ui/Icon";
+import { ScreenContainer } from "../../../components/ui/ScreenContainer";
+import { StatusModal } from "../../../components/ui/StatusModal";
+import { colors, statusColors } from "../../../theme/colors";
+import { radii, spacing } from "../../../theme/spacing";
+import type { UserRole } from "../../auth/types/auth.types";
+import { DesksFeedbackCard } from "../../desks/components/DesksFeedbackCard";
+import { usePayments } from "../hooks/usePayments";
 import {
   createPaymentCheckout,
   createPaymentOperationKey,
   getPaymentAttempt,
   getPaymentQuote,
   PaymentServiceError,
-} from '../services/payments.service';
+} from "../services/payments.service";
 import type {
   PaymentOption,
   PaymentQuote,
   PaymentReservationItem,
   PaymentStatus,
-} from '../types/payment.types';
+} from "../types/payment.types";
 
 type PaymentsScreenProps = {
   accessToken: string;
@@ -41,27 +41,27 @@ type PaymentsScreenProps = {
 };
 
 const TERMINAL_STATUSES: PaymentStatus[] = [
-  'APPROVED',
-  'REJECTED',
-  'CANCELLED',
-  'EXPIRED',
-  'REFUNDED',
+  "APPROVED",
+  "REJECTED",
+  "CANCELLED",
+  "EXPIRED",
+  "REFUNDED",
 ];
 
 const statusLabels: Record<PaymentStatus, string> = {
-  PENDING: 'Pendiente',
-  PROCESSING: 'Procesando',
-  APPROVED: 'Aprobado',
-  REJECTED: 'Rechazado',
-  CANCELLED: 'Cancelado',
-  EXPIRED: 'Vencido',
-  REFUNDED: 'Reembolsado',
+  PENDING: "Pendiente",
+  PROCESSING: "Procesando",
+  APPROVED: "Aprobado",
+  REJECTED: "Rechazado",
+  CANCELLED: "Cancelado",
+  EXPIRED: "Vencido",
+  REFUNDED: "Reembolsado",
 };
 
 function formatMoney(minorUnits: number) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
   }).format(minorUnits / 100);
 }
 
@@ -76,11 +76,15 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
   const [quote, setQuote] = useState<PaymentQuote | null>(null);
   const [busyReservation, setBusyReservation] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
-    type: 'loading' | 'success' | 'error';
+    type: "loading" | "success" | "error";
     title: string;
     description: string;
   } | null>(null);
   const operationKeys = useRef(new Map<string, string>());
+  const totalPending = items.reduce(
+    (total, item) => total + item.pendingMinorUnits,
+    0,
+  );
 
   const requestQuote = async (reservationId: string) => {
     setBusyReservation(reservationId);
@@ -101,9 +105,9 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
     operationKeys.current.set(operationId, idempotencyKey);
     setBusyReservation(quote.reservationId);
     setFeedback({
-      type: 'loading',
-      title: 'Abriendo pago seguro',
-      description: 'Estamos preparando el checkout. No cierre la aplicacion.',
+      type: "loading",
+      title: "Abriendo pago seguro",
+      description: "Estamos preparando el checkout. No cierre la aplicacion.",
     });
     try {
       const checkout = await createPaymentCheckout(props.accessToken, {
@@ -112,30 +116,35 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
         idempotencyKey,
       });
       const url = new URL(checkout.checkoutUrl);
-      if (url.protocol !== 'https:') throw new PaymentServiceError('URL de pago invalida.');
+      if (url.protocol !== "https:")
+        throw new PaymentServiceError("URL de pago invalida.");
       await Linking.openURL(checkout.checkoutUrl);
       setQuote(null);
       setFeedback({
-        type: 'loading',
-        title: 'Esperando confirmacion',
+        type: "loading",
+        title: "Esperando confirmacion",
         description:
-          'Volver del checkout no confirma el pago. Consultamos el estado informado por Deskly.',
+          "Volver del checkout no confirma el pago. Consultamos el estado informado por Deskly.",
       });
-      const status = await pollPayment(props.accessToken, checkout.paymentId);
+      const status = await pollPayment(
+        props.accessToken,
+        checkout.paymentId,
+        checkout.expiresAt,
+      );
       setLocalRefresh((value) => value + 1);
-      if (status === 'APPROVED') {
+      if (status === "APPROVED") {
         operationKeys.current.delete(operationId);
         setFeedback({
-          type: 'success',
-          title: 'Pago confirmado',
-          description: 'Deskly verifico el pago y actualizo la reserva.',
+          type: "success",
+          title: "Pago confirmado",
+          description: "Deskly verifico el pago y actualizo la reserva.",
         });
       } else {
         setFeedback({
-          type: 'error',
-          title: status ? statusLabels[status] : 'Pago aun pendiente',
+          type: "error",
+          title: status ? statusLabels[status] : "Pago aun pendiente",
           description:
-            'No existe una aprobacion confirmada. Puede actualizar el estado o reintentar.',
+            "No existe una aprobacion confirmada. Puede actualizar el estado o reintentar.",
         });
       }
     } catch (error) {
@@ -148,13 +157,13 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
   const showError = (error: unknown) => {
     const known =
       error instanceof PaymentServiceError ||
-      (error instanceof Error && error.name === 'PaymentServiceError');
+      (error instanceof Error && error.name === "PaymentServiceError");
     setFeedback({
-      type: 'error',
-      title: 'No pudimos procesar el pago',
+      type: "error",
+      title: "No pudimos procesar el pago",
       description: known
         ? (error as Error).message
-        : 'Lo sentimos, ocurrio un problema. Intente nuevamente.',
+        : "Lo sentimos, ocurrio un problema. Intente nuevamente.",
     });
   };
 
@@ -164,8 +173,33 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.header}>
             <AppText variant="title">Pagos</AppText>
-            <Button title="Actualizar estados" variant="ghost" onPress={() => void reload()} />
+            <AppText
+              variant="caption"
+              color={colors.primaryLight}
+              style={styles.count}
+            >
+              {items.length} pago{items.length === 1 ? "" : "s"} registrado
+              {items.length === 1 ? "" : "s"}
+            </AppText>
           </View>
+          {!isLoading && items.length > 0 ? (
+            <View style={styles.statCard}>
+              <View style={styles.statLabel}>
+                <Icon name="creditCard" size={16} color={colors.blackOverlay} />
+                <AppText variant="caption" color={colors.blackOverlay}>
+                  TOTAL PENDIENTE
+                </AppText>
+              </View>
+              <AppText variant="subtitle" style={styles.strong}>
+                {formatMoney(totalPending)}
+              </AppText>
+            </View>
+          ) : null}
+          <Button
+            title="Actualizar estados"
+            variant="ghost"
+            onPress={() => void reload()}
+          />
           {isLoading ? (
             <DesksFeedbackCard
               icon="loader"
@@ -181,8 +215,8 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
           ) : items.length === 0 ? (
             <DesksFeedbackCard
               icon="wallet"
-              title="No hay reservas para pagar"
-              description="Cree una reserva para solicitar una cotizacion segura."
+              title="No hay saldos pendientes"
+              description="Sus pagos confirmados y saldos parciales aparecerán aquí."
             />
           ) : (
             items.map((item) => (
@@ -202,12 +236,16 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
                 disabled={page === 1}
                 onPress={() => setPage((value) => Math.max(1, value - 1))}
               />
-              <AppText variant="caption">Pagina {page} de {totalPages}</AppText>
+              <AppText variant="caption">
+                Pagina {page} de {totalPages}
+              </AppText>
               <Button
                 title="Siguiente"
                 variant="ghost"
                 disabled={page >= totalPages}
-                onPress={() => setPage((value) => Math.min(totalPages, value + 1))}
+                onPress={() =>
+                  setPage((value) => Math.min(totalPages, value + 1))
+                }
               />
             </View>
           ) : null}
@@ -217,12 +255,16 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
               {quote.options.map((option) => (
                 <Button
                   key={option.option}
-                  title={`${option.option === 'DEPOSIT' ? 'Pagar seña' : 'Pagar total'}: ${formatMoney(option.amountMinorUnits)}`}
+                  title={`${option.option === "DEPOSIT" ? "Pagar seña" : "Pagar total"}: ${formatMoney(option.amountMinorUnits)}`}
                   disabled={busyReservation === quote.reservationId}
                   onPress={() => void startCheckout(option.option)}
                 />
               ))}
-              <Button title="Cancelar" variant="ghost" onPress={() => setQuote(null)} />
+              <Button
+                title="Cancelar"
+                variant="ghost"
+                onPress={() => setQuote(null)}
+              />
             </View>
           ) : null}
         </ScrollView>
@@ -245,7 +287,9 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
           type={feedback.type}
           title={feedback.title}
           description={feedback.description}
-          onClose={feedback.type === 'loading' ? undefined : () => setFeedback(null)}
+          onClose={
+            feedback.type === "loading" ? undefined : () => setFeedback(null)
+          }
         />
       ) : null}
     </ScreenContainer>
@@ -262,33 +306,77 @@ function PaymentCard({
   onQuote: () => void;
 }) {
   const latest = item.attempts[0];
-  const approved = item.attempts.some((attempt) => attempt.status === 'APPROVED');
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View>
-          <AppText variant="body" style={styles.strong}>{item.deskName}</AppText>
-          <AppText variant="caption" color={colors.primaryLight}>{item.dateLabel}</AppText>
+          <AppText variant="body" style={styles.strong}>
+            {item.deskName}
+          </AppText>
+          <AppText variant="caption" color={colors.primaryLight}>
+            {item.dateLabel}
+          </AppText>
         </View>
         <AppText
           variant="caption"
-          color={approved ? statusColors.success : colors.primaryLight}
+          color={
+            item.pendingMinorUnits === 0
+              ? statusColors.success
+              : statusColors.warning
+          }
           style={styles.strong}
         >
-          {latest ? statusLabels[latest.status] : 'Sin intento'}
+          {item.pendingMinorUnits === 0 ? "Pagado" : "Seña pagada"}
         </AppText>
       </View>
-      {latest ? (
-        <AppText variant="body">
-          {formatMoney(latest.amountMinorUnits)} {latest.currency}
-        </AppText>
-      ) : null}
-      {!approved ? (
+      <View style={styles.amountBlock}>
+        <View style={styles.amountRow}>
+          <AppText variant="caption" color={colors.blackOverlay}>
+            Monto total
+          </AppText>
+          <AppText variant="caption" style={styles.strong}>
+            {formatMoney(item.totalMinorUnits)}
+          </AppText>
+        </View>
+        <View style={styles.amountRow}>
+          <AppText variant="caption" color={colors.blackOverlay}>
+            Abonado
+          </AppText>
+          <AppText variant="caption">
+            {formatMoney(item.approvedMinorUnits)}
+          </AppText>
+        </View>
+        <View style={[styles.amountRow, styles.amountRowBorder]}>
+          <AppText variant="caption" color={colors.blackOverlay}>
+            Saldo pendiente
+          </AppText>
+          <AppText
+            variant="caption"
+            color={
+              item.pendingMinorUnits > 0
+                ? statusColors.warning
+                : statusColors.success
+            }
+            style={styles.strong}
+          >
+            {formatMoney(item.pendingMinorUnits)}
+          </AppText>
+        </View>
+      </View>
+      {item.pendingMinorUnits > 0 ? (
         <Button
-          title={busy ? 'Consultando...' : 'Cotizar pago'}
+          title={
+            busy
+              ? "Consultando..."
+              : `Completar pago (${formatMoney(item.pendingMinorUnits)})`
+          }
           disabled={busy}
           onPress={onQuote}
         />
+      ) : latest ? (
+        <AppText variant="caption" color={colors.primaryLight}>
+          Último pago: {statusLabels[latest.status]}
+        </AppText>
       ) : null}
     </View>
   );
@@ -297,22 +385,34 @@ function PaymentCard({
 async function pollPayment(
   accessToken: string,
   paymentId: string,
+  expiresAt: string,
 ): Promise<PaymentStatus | null> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  const providerDeadline = new Date(expiresAt).getTime();
+  const deadline = Math.min(
+    Number.isNaN(providerDeadline)
+      ? Date.now() + 15 * 60_000
+      : providerDeadline,
+    Date.now() + 15 * 60_000,
+  );
+  while (true) {
     const payment = await getPaymentAttempt(accessToken, paymentId);
     if (TERMINAL_STATUSES.includes(payment.status)) return payment.status;
-    if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 2000));
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return null;
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(3000, remaining)),
+    );
   }
-  return null;
 }
 
 const styles = StyleSheet.create({
   layout: { flex: 1, gap: spacing.md },
   content: { gap: spacing.md, paddingBottom: spacing.lg },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.xs,
+  },
+  count: {
+    fontWeight: "700",
   },
   card: {
     backgroundColor: colors.white,
@@ -330,10 +430,39 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
   },
-  pagination: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  statCard: {
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
   },
-  strong: { fontWeight: '800' },
+  statLabel: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  amountBlock: {
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  amountRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  amountRowBorder: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingTop: spacing.sm,
+  },
+  pagination: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  strong: { fontWeight: "800" },
 });

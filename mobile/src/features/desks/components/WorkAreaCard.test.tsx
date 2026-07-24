@@ -1,12 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from "@testing-library/react-native";
 
-import { buildWorkArea } from '../testing/desk.fixtures';
-import { WorkAreaCard } from './WorkAreaCard';
+import { buildWorkArea } from "../testing/desk.fixtures";
+import { WorkAreaCard } from "./WorkAreaCard";
 
 const workArea = buildWorkArea();
 
-describe('WorkAreaCard', () => {
-  it('muestra la informacion visible del area disponible', () => {
+describe("WorkAreaCard", () => {
+  it("muestra la informacion visible del area disponible", () => {
     render(
       <WorkAreaCard
         area={workArea}
@@ -16,14 +16,16 @@ describe('WorkAreaCard', () => {
       />,
     );
 
-    expect(screen.getByText('Sala Norte')).toBeOnTheScreen();
-    expect(screen.getByText('Sede Centro')).toBeOnTheScreen();
-    expect(screen.getByText('2 disponibles')).toBeOnTheScreen();
-    expect(screen.getByText('2 de 4 escritorios disponibles')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Mapa de Sala Norte')).toBeOnTheScreen();
+    expect(screen.getByText("Sala Norte")).toBeOnTheScreen();
+    expect(screen.getByText("Sede Centro")).toBeOnTheScreen();
+    expect(screen.getByText("2 disponibles")).toBeOnTheScreen();
+    expect(
+      screen.getByText("2 de 4 escritorios disponibles"),
+    ).toBeOnTheScreen();
+    expect(screen.getByLabelText("Mapa de Sala Norte")).toBeOnTheScreen();
   });
 
-  it('permite iniciar la reserva del area seleccionada', () => {
+  it("permite iniciar la reserva del area seleccionada", () => {
     const onReserve = jest.fn();
 
     render(
@@ -35,13 +37,13 @@ describe('WorkAreaCard', () => {
       />,
     );
 
-    fireEvent.press(screen.getByText('Reservar'));
+    fireEvent.press(screen.getByText("Ver Escritorios"));
 
     expect(onReserve).toHaveBeenCalledTimes(1);
     expect(onReserve).toHaveBeenCalledWith(workArea);
   });
 
-  it('omite el mapa cuando el area no tiene coordenadas completas', () => {
+  it("omite el mapa cuando el area no tiene coordenadas completas", () => {
     render(
       <WorkAreaCard
         area={buildWorkArea({ latitude: undefined, longitude: undefined })}
@@ -51,6 +53,6 @@ describe('WorkAreaCard', () => {
       />,
     );
 
-    expect(screen.queryByLabelText('Mapa de Sala Norte')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText("Mapa de Sala Norte")).not.toBeOnTheScreen();
   });
 });
