@@ -1,12 +1,12 @@
 # Tareas pendientes de Mis reservas
 
-| Campo | Valor |
-|---|---|
-| ID | `MOBILE-RESERVATIONS-LOCATION` |
-| Modulo | Reservations mobile y contrato backend |
-| Estado | `PENDIENTE` |
-| Dependencia | Contrato backend de ubicacion relacionado |
-| Implementacion | `mobile/src/features/reservations` |
+| Campo          | Valor                                     |
+| -------------- | ----------------------------------------- |
+| ID             | `MOBILE-RESERVATIONS-LOCATION`            |
+| Modulo         | Reservations mobile y contrato backend    |
+| Estado         | `COMPLETADA`                              |
+| Dependencia    | Contrato backend de ubicacion relacionado |
+| Implementacion | `mobile/src/features/reservations`        |
 
 ## Objetivo
 
@@ -73,15 +73,25 @@ Cada tarea debe completarse, validarse e informarse por separado. No se debe ava
 
 Objetivo unico: crear una factory reutilizable de reservas con variantes completa, sin ubicacion y con datos parciales.
 
+Estado: `COMPLETADA`.
+
 - Modificar solamente archivos bajo `mobile/src/features/reservations/testing`.
 - Reutilizar el estilo de `features/desks/testing/desk.fixtures.ts`.
 - No modificar tipos productivos ni comportamiento.
 - Validacion: TypeScript/Jest debe poder importar las fixtures.
 - Commit propuesto: `test(reservations): add reservation detail fixtures`
 
+Evidencia:
+
+- Los archivos `reservation.fixtures.ts` y `reservation.fixtures.test.ts` ya se encontraban trackeados.
+- Suite focalizada: 1 suite y 4 pruebas aprobadas.
+- Variantes verificadas: ubicacion completa, ubicacion ausente, datos parciales y aislamiento de datos anidados.
+
 ### F-MR-02: Pruebas de carga y renderizado actual
 
 Objetivo unico: respaldar el comportamiento existente de `Mis reservas` antes de ampliarlo.
+
+Estado: `COMPLETADA`.
 
 - Probar que la pantalla inicia la consulta con el token y parametros correctos.
 - Probar listado con varias reservas sin mezclar datos.
@@ -91,11 +101,19 @@ Objetivo unico: respaldar el comportamiento existente de `Mis reservas` antes de
 - Ejecutar solo la suite agregada y confirmar que describe el comportamiento actual.
 - Commit propuesto: `test(reservations): cover current reservations rendering states`
 
+Evidencia:
+
+- `MyReservationsScreen.test.tsx` ya se encontraba trackeado y cubre los seis escenarios requeridos.
+- Suite focalizada: 1 suite y 6 pruebas aprobadas.
+- Se verificaron token y parametros, carga pendiente, reservas multiples aisladas, error accionable, estado vacio y ausencia segura de ubicacion.
+
 ### F-MR-03: Pruebas del mapeo del contrato relacionado
 
 Precondicion: contrato backend de area y localidad aprobado.
 
 Objetivo unico: definir en pruebas como se transforma la respuesta HTTP a `Reservation`.
+
+Estado: `COMPLETADA`.
 
 - Verificar asociacion correcta reserva -> escritorio -> area -> localidad.
 - Verificar que dos reservas conservan sus propios datos relacionados.
@@ -108,6 +126,8 @@ Objetivo unico: definir en pruebas como se transforma la respuesta HTTP a `Reser
 
 Objetivo unico: hacer pasar F-MR-03 sin cambios visuales.
 
+Estado: `COMPLETADA`.
+
 - Ampliar `reservation.types.ts` con un tipo de ubicacion reutilizable.
 - Ampliar el tipo privado de respuesta y `mapReservation` en `reservations.service.ts`.
 - Mantener compatibilidad con respuestas incompletas.
@@ -118,6 +138,8 @@ Objetivo unico: hacer pasar F-MR-03 sin cambios visuales.
 ### F-MR-05: Pruebas del detalle expandible
 
 Objetivo unico: definir la interaccion visible del componente.
+
+Estado: `COMPLETADA`.
 
 - Probar que la informacion principal permanece visible con el detalle cerrado.
 - Probar apertura y cierre mediante una accion accesible.
@@ -131,6 +153,8 @@ Objetivo unico: definir la interaccion visible del componente.
 
 Objetivo unico: implementar el componente minimo que haga pasar F-MR-05.
 
+Estado: `COMPLETADA`.
+
 - Crear `ReservationLocationDetails` dentro de la feature.
 - Mantener el estado expandido en el nivel que permita independencia entre tarjetas.
 - Reutilizar `AppText`, `Icon`, colores y espaciados existentes.
@@ -142,6 +166,8 @@ Objetivo unico: implementar el componente minimo que haga pasar F-MR-05.
 
 Objetivo unico: verificar la integracion del detalle en varias tarjetas.
 
+Estado: `COMPLETADA`.
+
 - Probar que cada tarjeta representa la reserva correcta.
 - Probar apertura independiente o politica de una tarjeta abierta, segun la implementacion aprobada.
 - Probar que filtros y acciones actuales siguen funcionando.
@@ -151,6 +177,8 @@ Objetivo unico: verificar la integracion del detalle en varias tarjetas.
 ### F-MR-08: Integracion en Mis reservas
 
 Objetivo unico: hacer pasar F-MR-07 con el minimo cambio funcional.
+
+Estado: `COMPLETADA`.
 
 - Integrar el detalle en `ReservationCard` y, solo si hace falta, propagar estado desde `ReservationList`.
 - No alterar cancelacion, check-in, filtros, calendario ni navegacion.
@@ -163,6 +191,8 @@ Precondicion: backend con direccion y coordenadas implementadas.
 
 Objetivo unico: definir la presentacion de los datos preparados para un mapa futuro.
 
+Estado: `COMPLETADA`.
+
 - Probar direccion cuando exista.
 - Probar latitud y longitud solo cuando ambas sean validas y esten presentes.
 - Probar que coordenadas ausentes no crean placeholders de mapa.
@@ -173,20 +203,52 @@ Objetivo unico: definir la presentacion de los datos preparados para un mapa fut
 
 Objetivo unico: hacer pasar F-MR-09.
 
+Estado: `COMPLETADA`.
+
 - Exponer los datos como texto secundario o mediante una estructura interna reutilizable.
 - No implementar mapa, geocodificacion ni solicitudes externas.
 - Evitar renders y transformaciones repetidas innecesarias.
 - Commit propuesto: `feat(reservations): display optional geographic details`
 
+## Evidencia de F-MR-03 a F-MR-10
+
+- El backend carga `Reservation -> Desk -> WorkArea -> Locality` en la consulta principal y el mapper construye `location` sin consultas por tarjeta.
+- Backend focalizado: 3 suites y 14 pruebas aprobadas para repositorio, mapper de salida y controller.
+- El service mobile clona la ubicacion por reserva, tolera su ausencia y conserva opcionales sin convertirlos en texto visible.
+- `ReservationLocationDetails` esta integrado en cada `ReservationCard`, mantiene expansion independiente y reutiliza `LocationMap` para web y native.
+- Se corrigio la validacion textual para aceptar coordenadas solamente dentro de los rangos geograficos validos, igual que el mapa.
+- Mobile focalizado: 4 suites y 18 pruebas aprobadas.
+- TypeScript mobile: aprobado sin errores.
+
 ### F-MR-11: Regresion y documentacion final
 
 Objetivo unico: validar el modulo completo y actualizar su documentacion estable.
+
+Estado: `COMPLETADA`.
 
 - Ejecutar suites de reservas y escritorios relacionadas.
 - Ejecutar TypeScript y linting disponible, registrando por separado errores preexistentes.
 - Validar manualmente carga, error, vacio, apertura/cierre y dos reservas con ubicaciones diferentes.
 - Actualizar el README del modulo con componentes, hook, service, contrato, permisos, validaciones y estados.
 - Commit propuesto: `docs(reservations): document reservation location details`
+
+Evidencia:
+
+- Mobile completo: 9 suites y 33 pruebas aprobadas.
+- Backend completo: 41 suites y 243 pruebas aprobadas.
+- E2E PostgreSQL: 2 suites y 8 pruebas aprobadas sobre la base aislada `deskly_test`.
+- Migraciones: 17 aplicadas correctamente.
+- Build backend, TypeScript mobile y export web Expo con 2101 modulos: aprobados.
+- `git diff --check`: aprobado.
+- El README estable documenta vistas, componentes, service, hook, permisos, validaciones y errores.
+- Validacion manual informada por el usuario: el area y el mapa asociados se muestran en la tarjeta de reserva.
+- Los estados carga, error, vacio, apertura/cierre, datos parciales y aislamiento entre tarjetas quedaron cubiertos automaticamente.
+
+## Cierre
+
+La tarea `MOBILE-RESERVATIONS-LOCATION` queda completada. No se agregaron consultas por tarjeta, geocodificacion ni cambios en navegacion, auth, layout o estilos globales.
+
+Mensaje de commit propuesto: `feat(reservas): validar ubicacion y mapa de las reservas`
 
 ## Archivos probablemente involucrados
 

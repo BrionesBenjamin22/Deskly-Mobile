@@ -25,10 +25,18 @@ El detalle de ubicacion se muestra a miembros y gestores cuando el backend lo en
 
 - Una reserva sin `location` conserva el resumen y no muestra el control expandible.
 - Direccion se muestra solo cuando contiene un valor.
-- Coordenadas se muestran solo cuando latitud y longitud son numeros finitos.
+- Coordenadas se muestran solo cuando latitud y longitud son numeros finitos y se encuentran dentro de los rangos geograficos validos.
 - El mapa interactivo usa esas mismas coordenadas y muestra un unico marcador del establecimiento, sin solicitar ubicacion del dispositivo.
 - Carga, error, vacio, respuestas parciales y aislamiento entre tarjetas estan cubiertos por pruebas.
 
 ## Errores
 
 Los errores HTTP se normalizan en el service y la pantalla presenta feedback visible y accionable. Los datos relacionados faltantes no interrumpen el renderizado.
+
+## Evidencia de validacion
+
+- Mobile completo: 9 suites y 33 pruebas aprobadas.
+- Backend completo: 41 suites y 243 pruebas aprobadas.
+- E2E PostgreSQL: 2 suites y 8 pruebas aprobadas sobre `deskly_test` con 17 migraciones.
+- Build backend, TypeScript mobile, export web y `git diff --check`: aprobados.
+- Validacion manual: se confirmo en pantalla que cada reserva muestra el area y el mapa asociados.
