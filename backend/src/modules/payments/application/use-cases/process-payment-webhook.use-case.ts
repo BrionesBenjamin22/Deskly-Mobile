@@ -6,6 +6,7 @@ import {
   ConcurrentPaymentUpdateError,
   DuplicatePaymentEventError,
   DuplicateReservationApprovalError,
+  PaymentGatewayError,
 } from '../../domain/errors/payment-domain.errors';
 import { PAYMENT_ATTEMPT_REPOSITORY } from '../../domain/ports/payment-attempt-repository.port';
 import type { PaymentAttemptRepositoryPort } from '../../domain/ports/payment-attempt-repository.port';
@@ -50,22 +51,36 @@ export class ProcessPaymentWebhookUseCase {
       this.logger.log(`webhook duplicado event=${safeEventId}`);
       return { accepted: true, duplicate: true, applied: false };
     }
-    const payment = await this.repository.findByExternalPaymentId(
+    const snapshot = await this.gateway.getPayment(
+      notification.externalPaymentId,
+    );
+    let payment = await this.repository.findByExternalPaymentId(
       this.gateway.provider,
       notification.externalPaymentId,
+    );
+    payment ??= await this.repository.findByExternalReference(
+      this.gateway.provider,
+      snapshot.externalReference,
     );
     if (!payment) {
       this.logger.warn(`webhook sin pago local event=${safeEventId}`);
       return { accepted: true, duplicate: false, applied: false };
     }
-    const snapshot = await this.gateway.getPayment(
-      notification.externalPaymentId,
-      {
-        externalReference: payment.externalReference,
-        amountMinorUnits: payment.amount.minorUnits,
-        currency: payment.amount.currency,
-      },
-    );
+    if (
+      snapshot.externalReference !== payment.externalReference ||
+      snapshot.amountMinorUnits !== payment.amount.minorUnits ||
+      snapshot.currency !== payment.amount.currency
+    )
+      throw new PaymentGatewayError(
+        'Los datos informados por el proveedor no coinciden con el pago.',
+        false,
+      );
+    if (payment.externalPaymentId !== notification.externalPaymentId)
+      payment = await this.repository.bindExternalPaymentId(
+        payment.id!,
+        this.gateway.provider,
+        notification.externalPaymentId,
+      );
     const nextStatus = this.resolveStatus(
       payment.status,
       snapshot.status,

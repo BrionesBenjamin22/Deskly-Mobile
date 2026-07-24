@@ -8,7 +8,11 @@ describe('GetPaymentQuoteUseCase', () => {
   const reservationId = '550e8400-e29b-41d4-a716-446655440001';
   const memberId = '550e8400-e29b-41d4-a716-446655440002';
   const reservations = { findById: jest.fn() };
-  const useCase = new GetPaymentQuoteUseCase(reservations as never);
+  const payments = { listByReservationId: jest.fn() };
+  const useCase = new GetPaymentQuoteUseCase(
+    reservations as never,
+    payments as never,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -23,6 +27,7 @@ describe('GetPaymentQuoteUseCase', () => {
         status: 'RESERVED',
       }),
     );
+    payments.listByReservationId.mockResolvedValue([]);
   });
 
   it('devuelve opciones ARS calculadas exclusivamente en backend', async () => {
@@ -30,11 +35,32 @@ describe('GetPaymentQuoteUseCase', () => {
       reservationId,
       currency: 'ARS',
       pricingVersion: 'ARS_1500_HOUR_DEPOSIT_30_V1',
+      totalMinorUnits: 600_000,
+      approvedMinorUnits: 0,
+      pendingMinorUnits: 600_000,
       options: [
         { option: 'DEPOSIT', amountMinorUnits: 180_000 },
         { option: 'FULL', amountMinorUnits: 600_000 },
       ],
     });
+  });
+
+  it('ofrece solo el saldo restante despues de una seña aprobada', async () => {
+    payments.listByReservationId.mockResolvedValue([
+      {
+        status: 'APPROVED',
+        amount: { minorUnits: 180_000 },
+      },
+    ]);
+
+    await expect(useCase.execute(reservationId, memberId)).resolves.toEqual(
+      expect.objectContaining({
+        totalMinorUnits: 600_000,
+        approvedMinorUnits: 180_000,
+        pendingMinorUnits: 420_000,
+        options: [{ option: 'FULL', amountMinorUnits: 420_000 }],
+      }),
+    );
   });
 
   it('rechaza reserva inexistente, ajena o no pagable', async () => {

@@ -26,7 +26,14 @@ export type GatewayPaymentSnapshot = {
   occurredAt: Date;
 };
 
-export type CreateGatewayPaymentResult = GatewayPaymentSnapshot & {
+export type CreateGatewayPaymentResult = {
+  provider: PaymentProvider;
+  externalPaymentId?: string | null;
+  externalReference: string;
+  status: PaymentStatus;
+  amountMinorUnits: number;
+  currency: Currency;
+  occurredAt: Date;
   checkoutUrl: string;
   expiresAt: Date;
 };

@@ -71,28 +71,31 @@ export class CreatePaymentUseCase {
     const reservationPayments = await this.payments.listByReservationId(
       input.reservationId,
     );
-    if (reservationPayments.some((payment) => payment.status === 'APPROVED'))
+    const approvedMinorUnits = reservationPayments
+      .filter((payment) => payment.status === 'APPROVED')
+      .reduce((total, payment) => total + payment.amount.minorUnits, 0);
+    const durationMinutes =
+      this.toMinutes(reservation.endTime) -
+      this.toMinutes(reservation.startTime);
+    const fullQuote = this.pricing.quote(durationMinutes, 'FULL');
+    if (approvedMinorUnits >= fullQuote.total.minorUnits)
       throw new InvalidPaymentAttemptError(
-        'La reserva ya posee un pago aprobado.',
+        'La reserva ya se encuentra pagada en su totalidad.',
       );
-    const incompatibleCheckout = reservationPayments.find(
+    if (input.option === 'DEPOSIT' && approvedMinorUnits > 0)
+      throw new InvalidPaymentAttemptError(
+        'La seña ya fue abonada. Solo puede completarse el saldo pendiente.',
+      );
+    const activeCheckout = reservationPayments.find(
       (payment) =>
         ['PENDING', 'PROCESSING'].includes(payment.status) &&
-        payment.expiresAt > new Date() &&
-        payment.idempotencyKey !== input.idempotencyKey,
+        payment.expiresAt > new Date(),
     );
-    if (incompatibleCheckout)
-      throw new InvalidPaymentAttemptError(
-        'La reserva ya posee un checkout vigente.',
-      );
-    const toMinutes = (value: string) => {
-      const [h, m] = value.split(':').map(Number);
-      return h * 60 + m;
-    };
-    const quote = this.pricing.quote(
-      toMinutes(reservation.endTime) - toMinutes(reservation.startTime),
-      input.option,
-    );
+    const requestedQuote = this.pricing.quote(durationMinutes, input.option);
+    const amountMinorUnits =
+      input.option === 'FULL'
+        ? fullQuote.total.minorUnits - approvedMinorUnits
+        : requestedQuote.payable.minorUnits;
     const fingerprint = this.fingerprint(input);
     const prior = await this.payments.findByIdempotencyKey(
       this.gateway.provider,
@@ -100,26 +103,38 @@ export class CreatePaymentUseCase {
     );
     if (prior && prior.operationFingerprint !== fingerprint)
       throw new PaymentIdempotencyConflictError();
+    if (
+      activeCheckout &&
+      (activeCheckout.option !== input.option ||
+        activeCheckout.amount.minorUnits !== amountMinorUnits ||
+        activeCheckout.operationFingerprint !== fingerprint)
+    )
+      throw new InvalidPaymentAttemptError(
+        'La reserva ya posee un checkout vigente.',
+      );
+    if (activeCheckout?.checkoutUrl) return this.output(activeCheckout);
     if (prior?.checkoutUrl) return this.output(prior);
     const expiresAt =
       prior?.expiresAt ??
       new Date(Date.now() + PAYMENT_HOLD_DURATION_MINUTES * 60_000);
+    const paymentId = randomUUID();
     const payment =
+      activeCheckout ??
       prior ??
       (await this.payments.createWithReservationHold(
         new PaymentAttempt({
-          id: randomUUID(),
+          id: paymentId,
           reservationId: input.reservationId,
           memberId: input.memberId,
-          amountMinorUnits: quote.payable.minorUnits,
+          amountMinorUnits,
           currency: 'ARS',
           option: input.option,
-          pricingVersion: quote.pricingVersion,
+          pricingVersion: requestedQuote.pricingVersion,
           provider: this.gateway.provider,
           status: 'PENDING',
           idempotencyKey: input.idempotencyKey,
           operationFingerprint: fingerprint,
-          externalReference: `reservation:${input.reservationId}`,
+          externalReference: `payment:${paymentId}`,
           expiresAt,
         }),
       ));
@@ -132,7 +147,7 @@ export class CreatePaymentUseCase {
         currency: 'ARS',
         description: `Reserva ${input.reservationId}`,
         expiresAt,
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: payment.idempotencyKey,
       });
     } catch (error) {
       if (
@@ -155,6 +170,11 @@ export class CreatePaymentUseCase {
       checkoutUrl: checkout.checkoutUrl,
     });
     return this.output(await this.payments.saveCheckout(payment));
+  }
+
+  private toMinutes(value: string): number {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
   }
 
   private fingerprint(input: CreatePaymentInput): string {

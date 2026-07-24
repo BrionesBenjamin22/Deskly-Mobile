@@ -143,12 +143,13 @@ export class PaymentAttempt {
   }
 
   attachCheckout(input: {
-    externalPaymentId: string;
+    externalPaymentId?: string | null;
     checkoutUrl: string;
   }): void {
-    if (this.properties.externalPaymentId || this.properties.checkoutUrl) {
+    if (this.properties.checkoutUrl) {
       if (
-        this.properties.externalPaymentId !== input.externalPaymentId ||
+        (input.externalPaymentId &&
+          this.properties.externalPaymentId !== input.externalPaymentId) ||
         this.properties.checkoutUrl !== input.checkoutUrl
       ) {
         throw new InvalidPaymentAttemptError(
@@ -157,7 +158,8 @@ export class PaymentAttempt {
       }
       return;
     }
-    this.properties.externalPaymentId = input.externalPaymentId;
+    this.properties.externalPaymentId =
+      input.externalPaymentId ?? this.properties.externalPaymentId;
     this.properties.checkoutUrl = input.checkoutUrl;
   }
 

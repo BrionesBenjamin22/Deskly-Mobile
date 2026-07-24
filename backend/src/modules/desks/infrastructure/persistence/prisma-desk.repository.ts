@@ -83,7 +83,11 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
           where: {
             date: this.toDate(params.date),
             status: {
-              in: [ReservationStatus.RESERVED, ReservationStatus.ACTIVE],
+              in: [
+                ReservationStatus.PENDING_PAYMENT,
+                ReservationStatus.RESERVED,
+                ReservationStatus.ACTIVE,
+              ],
             },
           },
           select: {
@@ -146,9 +150,9 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
   async listWorkAreas(params: { localityId?: string; activeOnly?: boolean }) {
     const areas = await this.prisma.workArea.findMany({
       where: {
-        ...(params.activeOnly ?? true ? { active: true } : {}),
+        ...((params.activeOnly ?? true) ? { active: true } : {}),
         ...(params.localityId ? { localityId: params.localityId } : {}),
-        locality: params.activeOnly ?? true ? { active: true } : undefined,
+        locality: (params.activeOnly ?? true) ? { active: true } : undefined,
       },
       orderBy: [{ locality: { name: 'asc' } }, { name: 'asc' }],
       select: {

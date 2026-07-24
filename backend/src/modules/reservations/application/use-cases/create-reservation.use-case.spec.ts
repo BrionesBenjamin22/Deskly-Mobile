@@ -62,7 +62,7 @@ describe('CreateReservationUseCase', () => {
     reservationRepository.memberExists.mockResolvedValue(true);
   });
 
-  it('creates an active reservation when the desk is available', async () => {
+  it('creates only a temporary payment hold when the desk is available', async () => {
     deskRepository.findById.mockResolvedValue(desk);
     reservationRepository.existsOverlappingReservation.mockResolvedValue(false);
     reservationRepository.save.mockResolvedValue(
@@ -74,7 +74,7 @@ describe('CreateReservationUseCase', () => {
         date: '2026-06-01',
         startTime: '09:00',
         endTime: '13:00',
-        status: 'RESERVED',
+        status: 'PENDING_PAYMENT',
       }),
     );
 
@@ -94,7 +94,7 @@ describe('CreateReservationUseCase', () => {
       date: '2026-06-01',
       startTime: '09:00',
       endTime: '13:00',
-      status: 'RESERVED',
+      status: 'PENDING_PAYMENT',
     });
   });
 

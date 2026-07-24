@@ -70,7 +70,11 @@ describe('PrismaPaymentAttemptRepository', () => {
     findUniqueOrThrow: jest.fn(),
   };
   const transactionPaymentEvent = { create: jest.fn() };
-  const transactionReservation = { updateMany: jest.fn() };
+  const transactionReservation = {
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
+  };
   const prisma = {
     payment,
     paymentEvent,
@@ -86,6 +90,10 @@ describe('PrismaPaymentAttemptRepository', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    transactionReservation.findUnique.mockResolvedValue({
+      status: 'PENDING_PAYMENT',
+    });
+    transactionReservation.update.mockResolvedValue({});
     transactionReservation.updateMany.mockResolvedValue({ count: 1 });
   });
 
@@ -117,10 +125,9 @@ describe('PrismaPaymentAttemptRepository', () => {
         data: expect.objectContaining({ amountMinorUnits: 45_000n }),
       }),
     );
-    expect(transactionReservation.updateMany).toHaveBeenCalledWith({
-      where: { id: 'reservation-1', status: 'RESERVED' },
+    expect(transactionReservation.update).toHaveBeenCalledWith({
+      where: { id: 'reservation-1' },
       data: {
-        status: 'PENDING_PAYMENT',
         holdExpiresAt: new Date('2026-07-18T12:15:00.000Z'),
       },
     });

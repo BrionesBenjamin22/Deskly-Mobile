@@ -53,6 +53,7 @@ describe('MercadoPagoGateway', () => {
     );
     expect(result).toMatchObject({
       provider: 'MERCADO_PAGO',
+      externalPaymentId: null,
       status: 'PENDING',
       amountMinorUnits: 12345,
     });
@@ -81,6 +82,23 @@ describe('MercadoPagoGateway', () => {
       },
     );
     expect(JSON.stringify(result)).not.toContain(config.accessToken);
+  });
+
+  it('acepta el dominio regional oficial de Checkout Pro para Argentina', async () => {
+    const gateway = new MercadoPagoGateway(
+      config,
+      sdk({
+        createPreference: jest.fn().mockResolvedValue({
+          id: 'pref-ar',
+          sandbox_init_point:
+            'https://sandbox.mercadopago.com.ar/checkout/v1/redirect',
+        }),
+      }),
+    );
+
+    await expect(gateway.createPayment(input)).resolves.toMatchObject({
+      checkoutUrl: 'https://sandbox.mercadopago.com.ar/checkout/v1/redirect',
+    });
   });
 
   it.each([
@@ -170,6 +188,18 @@ describe('MercadoPagoGateway', () => {
           createPreference: jest.fn().mockResolvedValue({
             id: 'pref',
             sandbox_init_point: 'https://evil.example',
+          }),
+        }),
+      ).createPayment(input),
+    ).rejects.toThrow('checkout invalido');
+    await expect(
+      new MercadoPagoGateway(
+        config,
+        sdk({
+          createPreference: jest.fn().mockResolvedValue({
+            id: 'pref',
+            sandbox_init_point:
+              'https://sandbox.mercadopago.com.ar.evil.example/checkout',
           }),
         }),
       ).createPayment(input),

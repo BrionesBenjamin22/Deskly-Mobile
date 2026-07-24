@@ -82,6 +82,8 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
         date: new Date('2026-07-25T00:00:00.000Z'),
         startTime: new Date('1970-01-01T09:00:00.000Z'),
         endTime: new Date('1970-01-01T13:00:00.000Z'),
+        status: 'PENDING_PAYMENT',
+        holdExpiresAt: new Date(Date.now() + 15 * 60_000),
       },
     });
     memberId = user.member!.id;
@@ -157,6 +159,9 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
       reservationId,
       currency: 'ARS',
       pricingVersion: 'ARS_1500_HOUR_DEPOSIT_30_V1',
+      totalMinorUnits: 600_000,
+      approvedMinorUnits: 0,
+      pendingMinorUnits: 600_000,
       options: [
         { option: 'DEPOSIT', amountMinorUnits: 180_000 },
         { option: 'FULL', amountMinorUnits: 600_000 },

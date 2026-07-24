@@ -108,7 +108,7 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     this.assertCheckoutUrl(checkoutUrl);
     return {
       provider: this.provider,
-      externalPaymentId: id,
+      externalPaymentId: null,
       externalReference: input.externalReference,
       status: 'PENDING',
       amountMinorUnits: input.amountMinorUnits,
@@ -304,7 +304,7 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     }
     if (
       url.protocol !== 'https:' ||
-      !/(^|\.)mercadopago\.com$/.test(url.hostname)
+      !/(^|\.)mercadopago\.com(?:\.ar)?$/.test(url.hostname)
     )
       throw new PaymentGatewayError(
         'El proveedor devolvio un checkout invalido.',

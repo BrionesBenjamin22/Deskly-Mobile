@@ -47,6 +47,7 @@ type ReservationPersistenceRecord = {
   updatedAt: Date;
   cancelledAt: Date | null;
   checkedInAt: Date | null;
+  holdExpiresAt: Date | null;
   desk: {
     code: string;
     name: string | null;
@@ -77,12 +78,17 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   async existsOverlappingReservation(
     params: OverlappingReservationParams,
   ): Promise<boolean> {
+    await this.cancelExpiredPaymentHolds();
     const count = await this.prisma.reservation.count({
       where: {
         deskId: params.deskId,
         date: this.toDate(params.date),
         status: {
-          in: [ReservationStatus.RESERVED, ReservationStatus.ACTIVE],
+          in: [
+            ReservationStatus.PENDING_PAYMENT,
+            ReservationStatus.RESERVED,
+            ReservationStatus.ACTIVE,
+          ],
         },
         startTime: {
           lt: this.toTime(params.endTime),
@@ -165,7 +171,11 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   async releasePaymentHold(id: string): Promise<Reservation | null> {
     await this.prisma.reservation.updateMany({
       where: { id, status: ReservationStatus.PENDING_PAYMENT },
-      data: { status: ReservationStatus.RESERVED, holdExpiresAt: null },
+      data: {
+        status: ReservationStatus.CANCELLED,
+        holdExpiresAt: null,
+        cancelledAt: new Date(),
+      },
     });
     return this.findById(id);
   }
@@ -218,7 +228,8 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
           date: this.toDate(reservation.date),
           startTime: this.toTime(reservation.startTime),
           endTime: this.toTime(reservation.endTime),
-          status: ReservationStatus.RESERVED,
+          status: reservation.status,
+          holdExpiresAt: reservation.holdExpiresAt,
         },
         include: reservationRelationsInclude,
       });
@@ -232,6 +243,20 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
 
       throw error;
     }
+  }
+
+  private async cancelExpiredPaymentHolds(): Promise<void> {
+    await this.prisma.reservation.updateMany({
+      where: {
+        status: ReservationStatus.PENDING_PAYMENT,
+        holdExpiresAt: { lt: new Date() },
+      },
+      data: {
+        status: ReservationStatus.CANCELLED,
+        holdExpiresAt: null,
+        cancelledAt: new Date(),
+      },
+    });
   }
 
   private async updateReservation(
@@ -297,6 +322,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       updatedAt: reservation.updatedAt,
       cancelledAt: reservation.cancelledAt,
       checkedInAt: reservation.checkedInAt,
+      holdExpiresAt: reservation.holdExpiresAt,
     });
   }
 

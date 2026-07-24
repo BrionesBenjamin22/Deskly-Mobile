@@ -8,5 +8,5 @@ export type CreateReservationOutput = {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'RESERVED';
+  status: 'PENDING_PAYMENT';
 };

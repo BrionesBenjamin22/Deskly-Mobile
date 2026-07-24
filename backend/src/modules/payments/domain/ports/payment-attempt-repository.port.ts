@@ -30,6 +30,15 @@ export interface PaymentAttemptRepositoryPort {
     provider: PaymentProvider,
     externalPaymentId: string,
   ): Promise<PaymentAttempt | null>;
+  findByExternalReference(
+    provider: PaymentProvider,
+    externalReference: string,
+  ): Promise<PaymentAttempt | null>;
+  bindExternalPaymentId(
+    paymentId: string,
+    provider: PaymentProvider,
+    externalPaymentId: string,
+  ): Promise<PaymentAttempt>;
   listByReservationId(reservationId: string): Promise<PaymentAttempt[]>;
   listStale(
     provider: PaymentProvider,

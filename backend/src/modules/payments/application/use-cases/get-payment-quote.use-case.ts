@@ -4,6 +4,8 @@ import { RESERVATION_REPOSITORY } from '../../../reservations/domain/ports/reser
 import type { ReservationRepositoryPort } from '../../../reservations/domain/ports/reservation-repository.port';
 import { InvalidPaymentAttemptError } from '../../domain/errors/payment-domain.errors';
 import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
+import { PAYMENT_ATTEMPT_REPOSITORY } from '../../domain/ports/payment-attempt-repository.port';
+import type { PaymentAttemptRepositoryPort } from '../../domain/ports/payment-attempt-repository.port';
 import {
   PAYMENT_PRICING_VERSION,
   PaymentPricingPolicy,
@@ -17,6 +19,8 @@ export class GetPaymentQuoteUseCase {
   constructor(
     @Inject(RESERVATION_REPOSITORY)
     private readonly reservations: ReservationRepositoryPort,
+    @Inject(PAYMENT_ATTEMPT_REPOSITORY)
+    private readonly payments: PaymentAttemptRepositoryPort,
   ) {}
 
   async execute(reservationId: string, memberId: string) {
@@ -33,18 +37,44 @@ export class GetPaymentQuoteUseCase {
       this.toMinutes(reservation.startTime);
     const deposit = this.pricing.quote(durationMinutes, 'DEPOSIT');
     const full = this.pricing.quote(durationMinutes, 'FULL');
+    const approvedMinorUnits = (
+      await this.payments.listByReservationId(reservationId)
+    )
+      .filter((payment) => payment.status === 'APPROVED')
+      .reduce((total, payment) => total + payment.amount.minorUnits, 0);
+    const pendingMinorUnits = Math.max(
+      0,
+      full.total.minorUnits - approvedMinorUnits,
+    );
+    const options =
+      approvedMinorUnits === 0
+        ? [
+            {
+              option: 'DEPOSIT' as const,
+              amountMinorUnits: deposit.payable.minorUnits,
+            },
+            {
+              option: 'FULL' as const,
+              amountMinorUnits: full.payable.minorUnits,
+            },
+          ]
+        : pendingMinorUnits > 0
+          ? [
+              {
+                option: 'FULL' as const,
+                amountMinorUnits: pendingMinorUnits,
+              },
+            ]
+          : [];
 
     return {
       reservationId,
       currency: 'ARS' as const,
       pricingVersion: PAYMENT_PRICING_VERSION,
-      options: [
-        {
-          option: 'DEPOSIT' as const,
-          amountMinorUnits: deposit.payable.minorUnits,
-        },
-        { option: 'FULL' as const, amountMinorUnits: full.payable.minorUnits },
-      ],
+      totalMinorUnits: full.total.minorUnits,
+      approvedMinorUnits,
+      pendingMinorUnits,
+      options,
     };
   }
 

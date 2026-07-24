@@ -25,6 +25,8 @@ El dominio no importa tipos de Mercado Pago. Los secretos no forman parte de DTO
 
 La consulta externa normaliza estados y compara referencia, importe y moneda contra el intento interno. Un estado desconocido queda `PROCESSING`, nunca `APPROVED`. El retorno visual tampoco aprueba pagos.
 
+El host debe mantener el reloj sincronizado mediante NTP. La preferencia usa una expiracion absoluta; un desfase horario puede hacer que Mercado Pago la reciba ya vencida. El diagnostico debe comparar el reloj UTC local con el header `Date` del proveedor antes de modificar la duracion del hold.
+
 ### SDK oficial y clases integradas
 
 `MercadoPagoGateway` conserva la implementacion del puerto de dominio `PaymentGatewayPort` y encapsula tres clientes oficiales:
@@ -37,13 +39,15 @@ La consulta externa normaliza estados y compara referencia, importe y moneda con
 
 La verificacion del webhook no se delega al transporte: valida el cuerpo crudo, `x-signature` y `x-request-id` mediante HMAC SHA-256 y comparacion en tiempo constante antes de consultar el pago por SDK. Los errores del SDK se traducen a `PaymentGatewayError`; nunca se propagan bodies, tokens ni mensajes del proveedor. Los estados HTTP 408, 429 y 5xx se clasifican como reintentables; los 4xx restantes son definitivos.
 
-| Caso de uso | Cliente SDK | Validaciones automatizadas |
-|---|---|---|
-| Crear checkout | `Preference` | Payload autoritativo ARS, URLs backend, expiracion, idempotencia y allowlist HTTPS de la respuesta. |
-| Consultar o conciliar pago | `Payment` | Mapeo conservador de estados y coincidencia de referencia, importe y moneda. |
-| Procesar webhook | `Payment` luego de HMAC local | Firma valida, datos minimos, anti-replay transaccional y confirmacion solo con estado verificado. |
-| Reembolsar duplicado | `PaymentRefund` y `Payment` | Idempotencia del reembolso y lectura posterior del estado definitivo. |
-| Fallo externo | Todos | Timeout, desconexion, 408, 429 y 5xx reintentables; errores sanitizados sin secretos. |
+La preferencia y el pago son recursos externos diferentes. Crear Checkout Pro guarda solamente la URL de la preferencia; no utiliza su ID como si fuera un pago. Cuando llega una notificacion, el backend consulta el ID real del pago, correlaciona mediante la referencia unica `payment:<id interno>`, valida importe y moneda, y recien entonces persiste el identificador real y aplica la transicion.
+
+| Caso de uso                | Cliente SDK                   | Validaciones automatizadas                                                                                                                             |
+| -------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Crear checkout             | `Preference`                  | Payload autoritativo ARS, URLs backend, expiracion, idempotencia y allowlist HTTPS de los dominios oficiales `mercadopago.com` y `mercadopago.com.ar`. |
+| Consultar o conciliar pago | `Payment`                     | Mapeo conservador de estados y coincidencia de referencia, importe y moneda.                                                                           |
+| Procesar webhook           | `Payment` luego de HMAC local | Firma valida, datos minimos, anti-replay transaccional y confirmacion solo con estado verificado.                                                      |
+| Reembolsar duplicado       | `PaymentRefund` y `Payment`   | Idempotencia del reembolso y lectura posterior del estado definitivo.                                                                                  |
+| Fallo externo              | Todos                         | Timeout, desconexion, 408, 429 y 5xx reintentables; errores sanitizados sin secretos.                                                                  |
 
 Variables: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `MERCADO_PAGO_SUCCESS_URL`, `MERCADO_PAGO_FAILURE_URL`, `MERCADO_PAGO_PENDING_URL`, `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` y `MERCADO_PAGO_TIMEOUT_MS`. La allowlist contiene origenes separados por coma. Nunca versionar valores reales.
 
@@ -79,11 +83,14 @@ POST /payments/operations/reconcile
 - El miembro se obtiene del JWT y debe ser propietario de la reserva.
 - La reserva debe estar en `RESERVED` o `PENDING_PAYMENT`.
 - El precio es ARS 1.500 por hora bajo la version `ARS_1500_HOUR_DEPOSIT_30_V1`.
-- El checkout crea un hold de 15 minutos y mantiene la reserva en `PENDING_PAYMENT`.
-- La creacion del checkout no confirma la reserva ni aprueba el pago.
+- Crear una reserva genera solamente un hold tecnico `PENDING_PAYMENT` por 15 minutos; todavia no es una reserva confirmada.
+- El checkout inicial conserva ese hold. Solo un pago `APPROVED`, verificado por webhook o conciliacion, cambia la reserva a `RESERVED`.
+- Si la seña queda aprobada, la reserva se confirma y un checkout posterior `FULL` cobra exclusivamente el saldo restante.
+- La cotizacion informa `totalMinorUnits`, `approvedMinorUnits` y `pendingMinorUnits`. Despues de una seña solo ofrece la opcion `FULL` por el remanente.
 - Una clave repetida con los mismos datos reutiliza el intento; con datos diferentes devuelve conflicto.
-- Un pago aprobado o un checkout vigente incompatible impiden otro intento.
-- Un fallo definitivo del proveedor rechaza el intento y libera el hold. Un timeout reintentable conserva la operacion.
+- Un pago total aprobado o un checkout vigente incompatible impiden otro intento.
+- Un reintento compatible recupera el checkout vigente; si el proveedor fallo antes de devolver la URL, reutiliza la clave externa original para completar la creacion sin duplicar pagos.
+- Un fallo definitivo o la expiracion del pago inicial cancela el hold no confirmado. Un timeout reintentable conserva la operacion.
 - No existe listado global publico ni borrado fisico de pagos.
 
 ## Permisos

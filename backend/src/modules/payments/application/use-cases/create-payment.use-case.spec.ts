@@ -15,6 +15,13 @@ describe('CreatePaymentUseCase', () => {
   let stored: PaymentAttempt | null;
   let useCase: CreatePaymentUseCase;
   let gateway: FakePaymentGateway;
+  let payments: {
+    findByIdempotencyKey: jest.Mock;
+    listByReservationId: jest.Mock;
+    createWithReservationHold: jest.Mock;
+    saveCheckout: jest.Mock;
+    saveStatus: jest.Mock;
+  };
   let reservations: {
     findById: jest.Mock;
     putOnPaymentHold: jest.Mock;
@@ -43,8 +50,10 @@ describe('CreatePaymentUseCase', () => {
         .fn()
         .mockImplementation(async () => reservations.findById()),
     };
-    const payments = {
-      findByIdempotencyKey: jest.fn(async () => stored),
+    payments = {
+      findByIdempotencyKey: jest.fn(async (_provider: string, key: string) =>
+        stored?.idempotencyKey === key ? stored : null,
+      ),
       listByReservationId: jest.fn(async () => (stored ? [stored] : [])),
       createWithReservationHold: jest.fn(
         async (payment: PaymentAttempt) => (stored = payment),
@@ -196,6 +205,34 @@ describe('CreatePaymentUseCase', () => {
     ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
   });
 
+  it('cobra solamente el saldo restante despues de una seña aprobada', async () => {
+    const deposit = new PaymentAttempt({
+      id: 'payment-deposit',
+      reservationId,
+      memberId,
+      amountMinorUnits: 180_000,
+      currency: 'ARS',
+      option: 'DEPOSIT',
+      pricingVersion: 'ARS_1500_HOUR_DEPOSIT_30_V1',
+      provider: 'FAKE',
+      status: 'APPROVED',
+      idempotencyKey: 'deposit-approved',
+      operationFingerprint: 'deposit-fingerprint',
+      externalReference: `reservation:${reservationId}`,
+      expiresAt: new Date('2026-07-25T12:15:00.000Z'),
+    });
+    payments.listByReservationId.mockResolvedValue([deposit]);
+
+    const result = await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'FULL',
+      idempotencyKey: 'checkout-saldo-restante',
+    });
+
+    expect(result.amountMinorUnits).toBe(420_000);
+  });
+
   it('rechaza otro checkout mientras existe uno vigente', async () => {
     await useCase.execute({
       reservationId,
@@ -211,6 +248,52 @@ describe('CreatePaymentUseCase', () => {
         idempotencyKey: 'checkout-vigente-nuevo',
       }),
     ).rejects.toBeInstanceOf(InvalidPaymentAttemptError);
+  });
+
+  it('recupera el checkout vigente compatible aunque el frontend genere otra clave', async () => {
+    const first = await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'DEPOSIT',
+      idempotencyKey: 'checkout-vigente-compatible-original',
+    });
+    payments.findByIdempotencyKey.mockResolvedValue(null);
+
+    const recovered = await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'DEPOSIT',
+      idempotencyKey: 'checkout-vigente-compatible-reintento',
+    });
+
+    expect(recovered).toEqual(first);
+    expect(gateway.createdPaymentCount).toBe(1);
+  });
+
+  it('reintenta un checkout compatible sin URL usando la clave externa original', async () => {
+    jest
+      .spyOn(gateway, 'createPayment')
+      .mockRejectedValueOnce(new PaymentGatewayError('timeout', true));
+
+    await expect(
+      useCase.execute({
+        reservationId,
+        memberId,
+        option: 'FULL',
+        idempotencyKey: 'checkout-sin-url-original',
+      }),
+    ).rejects.toBeInstanceOf(PaymentGatewayError);
+    payments.findByIdempotencyKey.mockResolvedValue(null);
+
+    const recovered = await useCase.execute({
+      reservationId,
+      memberId,
+      option: 'FULL',
+      idempotencyKey: 'checkout-sin-url-reintento',
+    });
+
+    expect(recovered.checkoutUrl).toContain('fake-payments.test/checkout');
+    expect(gateway.createdPaymentCount).toBe(1);
   });
 
   it('libera el hold ante un fallo definitivo del gateway', async () => {

@@ -69,6 +69,7 @@ export class CreateReservationUseCase {
       throw new DeskUnavailableError();
     }
 
+    const holdExpiresAt = new Date(Date.now() + 15 * 60_000);
     const reservation = await this.reservationRepository.save(
       new Reservation({
         deskId: desk.id,
@@ -77,7 +78,8 @@ export class CreateReservationUseCase {
         date: reservationDate.value,
         startTime: timeSlot.startTime,
         endTime: timeSlot.endTime,
-        status: 'RESERVED',
+        status: 'PENDING_PAYMENT',
+        holdExpiresAt,
       }),
     );
 
@@ -97,7 +99,7 @@ export class CreateReservationUseCase {
       date: reservation.date,
       startTime: reservation.startTime,
       endTime: reservation.endTime,
-      status: 'RESERVED',
+      status: 'PENDING_PAYMENT',
     };
   }
 }

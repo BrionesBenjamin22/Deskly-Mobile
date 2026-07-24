@@ -59,17 +59,23 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
         const created = await transaction.payment.create({
           data: this.toCreateData(payment),
         });
-        const held = await transaction.reservation.updateMany({
-          where: { id: payment.reservationId, status: 'RESERVED' },
-          data: {
-            status: 'PENDING_PAYMENT',
-            holdExpiresAt: payment.expiresAt,
-          },
+        const reservation = await transaction.reservation.findUnique({
+          where: { id: payment.reservationId },
+          select: { status: true },
         });
-        if (held.count !== 1) {
+        if (
+          !reservation ||
+          !['PENDING_PAYMENT', 'RESERVED'].includes(reservation.status)
+        ) {
           throw new InvalidPaymentAttemptError(
             'La reserva no pudo bloquearse para el pago.',
           );
+        }
+        if (reservation.status === 'PENDING_PAYMENT') {
+          await transaction.reservation.update({
+            where: { id: payment.reservationId },
+            data: { holdExpiresAt: payment.expiresAt },
+          });
         }
         return created;
       });
@@ -90,7 +96,7 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
   }
 
   async saveCheckout(payment: PaymentAttempt): Promise<PaymentAttempt> {
-    if (!payment.id || !payment.externalPaymentId || !payment.checkoutUrl)
+    if (!payment.id || !payment.checkoutUrl)
       throw new ConcurrentPaymentUpdateError();
     const updated = await this.prisma.payment.updateMany({
       where: { id: payment.id, externalPaymentId: null, checkoutUrl: null },
@@ -102,7 +108,8 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
     if (updated.count !== 1) {
       const existing = await this.findById(payment.id);
       if (
-        existing?.externalPaymentId === payment.externalPaymentId &&
+        existing &&
+        existing.externalPaymentId === payment.externalPaymentId &&
         existing.checkoutUrl === payment.checkoutUrl
       )
         return existing;
@@ -138,6 +145,29 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
       },
     });
     return payment ? this.toDomain(payment) : null;
+  }
+
+  async findByExternalReference(
+    provider: PaymentProvider,
+    externalReference: string,
+  ): Promise<PaymentAttempt | null> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { provider, externalReference },
+      orderBy: { createdAt: 'desc' },
+    });
+    return payment ? this.toDomain(payment) : null;
+  }
+
+  async bindExternalPaymentId(
+    paymentId: string,
+    provider: PaymentProvider,
+    externalPaymentId: string,
+  ): Promise<PaymentAttempt> {
+    await this.prisma.payment.update({
+      where: { id: paymentId, provider },
+      data: { externalPaymentId },
+    });
+    return (await this.findById(paymentId))!;
   }
 
   async listByReservationId(reservationId: string): Promise<PaymentAttempt[]> {
@@ -216,15 +246,25 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
             },
             data: { status: 'RESERVED', holdExpiresAt: null },
           });
-          if (confirmed.count !== 1)
-            throw new DuplicateReservationApprovalError();
+          if (confirmed.count !== 1) {
+            const reservation = await transaction.reservation.findUnique({
+              where: { id: payment.reservationId },
+              select: { status: true },
+            });
+            if (reservation?.status !== 'RESERVED')
+              throw new DuplicateReservationApprovalError();
+          }
         } else if (
           payment.status === 'EXPIRED' ||
           payment.status === 'CANCELLED'
         ) {
           await transaction.reservation.updateMany({
             where: { id: payment.reservationId, status: 'PENDING_PAYMENT' },
-            data: { status: 'RESERVED', holdExpiresAt: null },
+            data: {
+              status: 'CANCELLED',
+              holdExpiresAt: null,
+              cancelledAt: new Date(),
+            },
           });
         }
 

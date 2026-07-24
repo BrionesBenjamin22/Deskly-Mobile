@@ -7,7 +7,10 @@ import {
 import { ProcessPaymentWebhookUseCase } from './process-payment-webhook.use-case';
 
 const at = new Date('2026-07-21T12:00:00.000Z');
-const payment = (status: 'PENDING' | 'PROCESSING' | 'APPROVED' = 'PENDING') =>
+const payment = (
+  status: 'PENDING' | 'PROCESSING' | 'APPROVED' = 'PENDING',
+  externalPaymentId: string | null = 'external-1',
+) =>
   new PaymentAttempt({
     id: 'payment-1',
     reservationId: 'reservation-1',
@@ -20,7 +23,7 @@ const payment = (status: 'PENDING' | 'PROCESSING' | 'APPROVED' = 'PENDING') =>
     status,
     idempotencyKey: 'key',
     operationFingerprint: 'fingerprint',
-    externalPaymentId: 'external-1',
+    externalPaymentId,
     externalReference: 'reservation:reservation-1',
     expiresAt: new Date('2026-07-21T13:00:00.000Z'),
     version: 0,
@@ -36,6 +39,8 @@ describe('ProcessPaymentWebhookUseCase', () => {
   const repository = {
     externalEventExists: jest.fn(),
     findByExternalPaymentId: jest.fn(),
+    findByExternalReference: jest.fn(),
+    bindExternalPaymentId: jest.fn(),
     saveStatus: jest.fn(),
   };
   const useCase = new ProcessPaymentWebhookUseCase(
@@ -52,6 +57,8 @@ describe('ProcessPaymentWebhookUseCase', () => {
     });
     repository.externalEventExists.mockResolvedValue(false);
     repository.findByExternalPaymentId.mockResolvedValue(payment());
+    repository.findByExternalReference.mockResolvedValue(null);
+    repository.bindExternalPaymentId.mockImplementation(async () => payment());
     gateway.getPayment.mockResolvedValue({
       provider: 'FAKE',
       externalPaymentId: 'external-1',
@@ -77,11 +84,7 @@ describe('ProcessPaymentWebhookUseCase', () => {
     await expect(
       useCase.execute({ rawBody: '{}', headers: {} }),
     ).resolves.toEqual({ accepted: true, duplicate: false, applied: true });
-    expect(gateway.getPayment).toHaveBeenCalledWith('external-1', {
-      externalReference: 'reservation:reservation-1',
-      amountMinorUnits: 45000,
-      currency: 'ARS',
-    });
+    expect(gateway.getPayment).toHaveBeenCalledWith('external-1');
     expect(repository.saveStatus).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'APPROVED' }),
       expect.objectContaining({
@@ -115,10 +118,32 @@ describe('ProcessPaymentWebhookUseCase', () => {
 
   it('acepta sin efectos un pago externo firmado que no existe localmente', async () => {
     repository.findByExternalPaymentId.mockResolvedValue(null);
+    repository.findByExternalReference.mockResolvedValue(null);
     await expect(
       useCase.execute({ rawBody: '{}', headers: {} }),
     ).resolves.toEqual({ accepted: true, duplicate: false, applied: false });
-    expect(gateway.getPayment).not.toHaveBeenCalled();
+    expect(gateway.getPayment).toHaveBeenCalledWith('external-1');
+  });
+
+  it('correlaciona por referencia y enlaza el id real informado por el webhook', async () => {
+    const local = payment('PENDING', null);
+    repository.findByExternalPaymentId.mockResolvedValue(null);
+    repository.findByExternalReference.mockResolvedValue(local);
+    repository.bindExternalPaymentId.mockResolvedValue(local);
+
+    await expect(
+      useCase.execute({ rawBody: '{}', headers: {} }),
+    ).resolves.toMatchObject({ applied: true });
+
+    expect(repository.findByExternalReference).toHaveBeenCalledWith(
+      'FAKE',
+      'reservation:reservation-1',
+    );
+    expect(repository.bindExternalPaymentId).toHaveBeenCalledWith(
+      'payment-1',
+      'FAKE',
+      'external-1',
+    );
   });
 
   it('absorbe la carrera del constraint unico como duplicado', async () => {
@@ -147,6 +172,22 @@ describe('ProcessPaymentWebhookUseCase', () => {
     await expect(
       useCase.execute({ rawBody: '{}', headers: {} }),
     ).rejects.toMatchObject({ retryable: true });
+    expect(repository.saveStatus).not.toHaveBeenCalled();
+  });
+
+  it('rechaza una correlacion cuyo importe no coincide con el intento local', async () => {
+    gateway.getPayment.mockResolvedValue({
+      ...(await gateway.getPayment()),
+      amountMinorUnits: 1,
+    });
+
+    await expect(
+      useCase.execute({ rawBody: '{}', headers: {} }),
+    ).rejects.toMatchObject({
+      name: 'PaymentGatewayError',
+      retryable: false,
+    });
+    expect(repository.bindExternalPaymentId).not.toHaveBeenCalled();
     expect(repository.saveStatus).not.toHaveBeenCalled();
   });
 

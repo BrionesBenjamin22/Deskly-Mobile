@@ -14,10 +14,12 @@ import {
   PaymentGatewayPort,
 } from '../../domain/ports/payment-gateway.port';
 
+type FakeGatewayPayment = CreateGatewayPaymentResult & GatewayPaymentSnapshot;
+
 export class FakePaymentGateway implements PaymentGatewayPort {
   readonly provider = 'FAKE' as const;
   private sequence = 0;
-  private readonly payments = new Map<string, CreateGatewayPaymentResult>();
+  private readonly payments = new Map<string, FakeGatewayPayment>();
   private readonly creations = new Map<
     string,
     { fingerprint: string; id: string }
@@ -43,7 +45,7 @@ export class FakePaymentGateway implements PaymentGatewayPort {
     }
 
     const externalPaymentId = `fake-payment-${++this.sequence}`;
-    const result: CreateGatewayPaymentResult = {
+    const result: FakeGatewayPayment = {
       provider: 'FAKE',
       externalPaymentId,
       externalReference: input.externalReference,
@@ -151,9 +153,7 @@ export class FakePaymentGateway implements PaymentGatewayPort {
     return { ...payment, occurredAt: new Date(payment.occurredAt) };
   }
 
-  private clonePayment(
-    payment: CreateGatewayPaymentResult,
-  ): CreateGatewayPaymentResult {
+  private clonePayment(payment: FakeGatewayPayment): FakeGatewayPayment {
     return {
       ...this.cloneSnapshot(payment),
       checkoutUrl: payment.checkoutUrl,
