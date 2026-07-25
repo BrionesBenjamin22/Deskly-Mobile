@@ -40,4 +40,18 @@ describe('StatusModal', () => {
 
     expect(view.UNSAFE_getByType(Icon).props.name).toBe('x');
   });
+
+  it('detiene la rotacion al pasar de carga a confirmacion', () => {
+    const view = render(
+      <StatusModal visible type="loading" title="Procesando" />,
+    );
+
+    expect(view.UNSAFE_getByType(Icon).props.name).toBe('loader');
+
+    view.rerender(
+      <StatusModal visible type="success" title="Operacion confirmada" />,
+    );
+
+    expect(view.UNSAFE_getByType(Icon).props.name).toBe('check');
+  });
 });

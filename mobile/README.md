@@ -138,7 +138,9 @@ mantener en el monolito.
 - estado vacio reutilizable
 - barra inferior visual
 
-El selector de fechas adapta la cantidad de dias visibles al ancho de pantalla: en mobile muestra menos opciones y en web/tablet muestra mas dias para aprovechar el espacio disponible.
+El selector rapido contiene los proximos 30 dias y admite desplazamiento horizontal
+con anclaje semanal. Cuando una fecha se selecciona desde `Ver mas fechas`, la
+tira se desplaza automaticamente para mantener esa seleccion visible.
 
 La consulta de disponibilidad valida los filtros desde controles cerrados:
 

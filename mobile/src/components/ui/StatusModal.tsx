@@ -50,7 +50,6 @@ export function StatusModal({
   onAction,
 }: StatusModalProps) {
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const loaderRotation = useRef(new Animated.Value(0)).current;
   const [isMounted, setIsMounted] = useState(visible);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const config = statusConfig[type];
@@ -117,35 +116,9 @@ export function StatusModal({
     };
   }, [onClose, requestClose, type, visible]);
 
-  useEffect(() => {
-    if (!visible || type !== 'loading') {
-      loaderRotation.stopAnimation();
-      return undefined;
-    }
-
-    loaderRotation.setValue(0);
-    const animation = Animated.loop(
-      Animated.timing(loaderRotation, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-    );
-    animation.start();
-
-    return () => {
-      animation.stop();
-      loaderRotation.stopAnimation();
-    };
-  }, [loaderRotation, type, visible]);
-
   const panelTranslateY = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [28, 0],
-  });
-  const loaderRotate = loaderRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
   });
 
   if (!isMounted) {
@@ -181,15 +154,12 @@ export function StatusModal({
           <View
             style={[styles.iconCircle, { backgroundColor: config.circleColor }]}
           >
-            <Animated.View
-              style={
-                type === 'loading'
-                  ? { transform: [{ rotate: loaderRotate }] }
-                  : undefined
-              }
-            >
-              <Icon name={config.icon} size={34} color={config.iconColor} />
-            </Animated.View>
+            <Icon
+              key={type}
+              name={config.icon}
+              size={34}
+              color={config.iconColor}
+            />
           </View>
 
           <AppText

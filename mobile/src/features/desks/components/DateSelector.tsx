@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import { spacing } from '../../../theme/spacing';
 import { DatePill } from './DatePill';
@@ -35,23 +35,15 @@ function toDateId(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function getVisibleDateCount(width: number) {
-  if (width >= 1024) {
-    return 10;
-  }
+const DATE_OPTION_COUNT = 30;
+const DATE_PILL_WIDTH = 84;
+const DATE_PILL_STEP = DATE_PILL_WIDTH + spacing.sm;
+const WEEK_SNAP_DISTANCE = DATE_PILL_STEP * 7;
 
-  if (width >= 768) {
-    return 8;
-  }
-
-  if (width >= 480) {
-    return 6;
-  }
-
-  return 4;
-}
-
-export function getDeskDateOptions(baseDate = new Date(), count = 4): DeskDateOption[] {
+export function getDeskDateOptions(
+  baseDate = new Date(),
+  count = 4,
+): DeskDateOption[] {
   const normalizedBase = new Date(baseDate);
   normalizedBase.setHours(0, 0, 0, 0);
 
@@ -75,18 +67,38 @@ type DateSelectorProps = {
   onSelectDate: (date: string) => void;
 };
 
-export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) {
-  const { width } = useWindowDimensions();
-  const visibleDateCount = getVisibleDateCount(width);
+export function DateSelector({
+  selectedDate,
+  onSelectDate,
+}: DateSelectorProps) {
+  const scrollRef = useRef<ScrollView>(null);
   const dates = useMemo(
-    () => getDeskDateOptions(new Date(), visibleDateCount),
-    [visibleDateCount],
+    () => getDeskDateOptions(new Date(), DATE_OPTION_COUNT),
+    [],
   );
+
+  useEffect(() => {
+    const selectedIndex = dates.findIndex((date) => date.id === selectedDate);
+
+    if (selectedIndex < 0) {
+      return;
+    }
+
+    scrollRef.current?.scrollTo({
+      animated: true,
+      x: selectedIndex * DATE_PILL_STEP,
+      y: 0,
+    });
+  }, [dates, selectedDate]);
 
   return (
     <ScrollView
+      ref={scrollRef}
+      decelerationRate="fast"
       horizontal
       showsHorizontalScrollIndicator={false}
+      snapToInterval={WEEK_SNAP_DISTANCE}
+      snapToAlignment="start"
       style={styles.container}
       contentContainerStyle={styles.content}
     >
