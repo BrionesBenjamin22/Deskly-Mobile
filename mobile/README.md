@@ -171,6 +171,25 @@ La UI distingue:
 
 Los homes consumen 9 elementos por pagina por defecto. Las pantallas que muestren historial de cambios deben consumirlo con 3 items por pagina cuando el endpoint este disponible.
 
+## Cadena de suministro
+
+La aplicacion mantiene Expo dentro de la matriz compatible del SDK 54. Las
+resoluciones `pnpm.overrides` fijan versiones corregidas de dependencias
+transitivas que Expo y React Native aun no incorporan de forma nativa.
+
+Al actualizar Expo o React Native se debe ejecutar:
+
+```bash
+pnpm run check:expo
+pnpm audit --prod
+pnpm run typecheck
+pnpm test -- --runInBand
+pnpm run export:web
+```
+
+Las resoluciones solo deben retirarse cuando el audit permanezca limpio y la
+barrera completa resulte aprobada sin ellas.
+
 ## Pendientes
 
 - conectar navegacion real para `Mis reservas` y `Perfil`
