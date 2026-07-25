@@ -50,13 +50,13 @@ services:
     restart: unless-stopped
     init: true
     env_file:
-      - ./backend/.env
+      - ./backend/.env.development
     environment:
       NODE_ENV: development
       PORT: 3000
       DATABASE_URL: postgresql://deskly:${POSTGRES_PASSWORD}@database:5432/deskly?schema=public
     ports:
-      - "127.0.0.1:3000:3000"
+      - "0.0.0.0:3000:3000"
     depends_on:
       migration:
         condition: service_completed_successfully
@@ -91,7 +91,8 @@ services:
     restart: unless-stopped
     init: true
     environment:
-      EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://127.0.0.1:3000}
+      EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:?Defina la URL del backend para el cliente Expo}
+      EXPO_PUBLIC_APP_ENV: ${EXPO_PUBLIC_APP_ENV:-development}
       EXPO_NO_TELEMETRY: "1"
     ports:
       - "8081:8081"

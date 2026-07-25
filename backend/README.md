@@ -182,6 +182,11 @@ como tarea de despliegue; el servicio `migration` de Docker Compose ejecuta
 `prisma migrate deploy` antes de habilitar la API. El arranque del proceso NestJS no
 modifica automaticamente el esquema de datos.
 
+Nest escucha en `0.0.0.0` para aceptar conexiones del contenedor y de Expo Go.
+En desarrollo, Compose publica TCP 3000 en la LAN; el firewall del host debe
+limitarlo a redes privadas. `GET /health` devuelve solamente `{"status":"ok"}` y
+permite comprobar conectividad sin autenticacion ni datos internos.
+
 Las etapas base y runtime usan `node:22-alpine` fijada por digest
 multi-arquitectura. La etiqueta conserva visible la linea de mantenimiento y el
 digest evita cambios de contenido no revisados. Una actualizacion requiere resolver

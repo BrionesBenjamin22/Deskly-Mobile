@@ -62,20 +62,69 @@ solicita un nuevo ingreso, porque el backend invalida las sesiones anteriores.
 
 El frontend usa variables publicas de Expo para configurar integraciones visibles desde la aplicacion.
 
-Archivo local esperado:
+Existe una plantilla por entorno. Solo debe copiarse una como `.env`, evitando
+mezclar o mantener varias configuraciones activas:
 
 ```bash
-cp .env.example .env
+# Desarrollo
+cp .env.development.example .env
+
+# Testing
+cp .env.testing.example .env
+
+# Produccion
+cp .env.production.example .env
 ```
 
 Variables disponibles:
 
-- `EXPO_PUBLIC_API_URL`: URL base del backend. Si no se define, la app usa `http://10.0.2.2:3000` en Android y `http://127.0.0.1:3000` en web/iOS.
+- `EXPO_PUBLIC_API_URL`: URL base unica del backend. Es obligatoria en Android
+  e iOS para no confundir emuladores con dispositivos fisicos. Solo web local
+  admite `http://127.0.0.1:3000` como valor predeterminado.
 - `EXPO_PUBLIC_APP_ENV`: entorno de ejecucion (`development`, `testing` o
   `production`). Cuando vale `production`, la URL de API debe usar HTTPS y la
   aplicacion falla al iniciar si la configuracion es insegura.
 
-En web local, usar `EXPO_PUBLIC_API_URL=http://127.0.0.1:3000` cuando el backend corre en la misma maquina. Esto evita problemas de resolucion IPv6 con `localhost` en Windows.
+La URL se valida al iniciar. Solo acepta HTTP/HTTPS y rechaza credenciales,
+query strings y fragmentos. Produccion exige HTTPS.
+
+### Matriz de conectividad
+
+| Ejecucion | `EXPO_PUBLIC_API_URL` |
+|---|---|
+| Web en el mismo equipo | `http://127.0.0.1:3000` |
+| Android Emulator | `http://10.0.2.2:3000` |
+| iOS Simulator | `http://127.0.0.1:3000` |
+| Expo Go en telefono | `http://IP_LAN_DEL_HOST:3000` |
+| Tunnel o testing remoto | URL HTTPS publica del backend |
+| Produccion | URL HTTPS estable del backend |
+
+Para Expo Go, el telefono y el equipo deben estar en la misma red, el backend
+debe escuchar en `0.0.0.0` y el firewall debe permitir TCP 3000 en redes
+privadas. Antes de abrir Expo, comprobar desde el telefono:
+
+```text
+http://IP_LAN_DEL_HOST:3000/health
+```
+
+La respuesta esperada es `{"status":"ok"}`. Si cambia la red o la IP asignada
+por DHCP, actualizar `mobile/.env` y reiniciar Metro con cache limpia:
+
+```bash
+pnpm exec expo start --clear --lan
+```
+
+No se prueban automaticamente varias URLs: una solicitud autenticada siempre se
+envia al unico origen configurado.
+
+### Proxy reverso y API gateway
+
+Deskly conserva un unico backend modular, por lo que un API gateway no aporta
+beneficios suficientes en esta etapa. En testing y produccion se recomienda un
+proxy reverso delante de Nest para ofrecer un dominio HTTPS estable, terminacion
+TLS, limites de tamaño y observabilidad. Un gateway debe reevaluarse cuando
+existan varios servicios desplegables o politicas transversales que no convenga
+mantener en el monolito.
 
 ## Pantalla de escritorios
 
@@ -152,6 +201,13 @@ Mensajes de exito de alta y edicion:
 ## Navegacion inferior
 
 La barra inferior muestra accesos a escritorios, reservas y perfil. Las acciones de cuenta se agrupan en el menu de perfil para evitar controles innecesarios en la navegacion principal.
+
+La visibilidad aplica minimo privilegio por rol:
+
+- `MIEMBRO`: Escritorios, Mis reservas, Pagos y Cuenta.
+- `GESTOR`: Reservas y Cuenta.
+- `ADMIN`: Panel, Gestion de usuarios y Cuenta.
+- Mientras el rol no este disponible, solo se muestra Cuenta.
 
 ## Contrato mock
 

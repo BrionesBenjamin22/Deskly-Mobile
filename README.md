@@ -97,9 +97,10 @@ backend sigue leyendo su configuracion de `backend/.env`, pero Compose reemplaza
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-El backend queda publicado solo en `127.0.0.1:3000`. Metro/Expo publica los puertos
-de desarrollo necesarios para conexiones externas. PostgreSQL no expone puertos al
-host y conserva sus datos en el volumen `postgres-data`.
+El backend de desarrollo queda publicado en `0.0.0.0:3000` para que Expo Go pueda
+acceder desde la red local. PostgreSQL no expone puertos al host y conserva sus
+datos en el volumen `postgres-data`. El puerto 3000 solo debe habilitarse en el
+firewall para redes privadas; testing y produccion deben usar un endpoint HTTPS.
 
 Antes de iniciar el backend, el servicio one-shot `migration` ejecuta
 `prisma migrate deploy`. La API solo arranca cuando todas las migraciones versionadas
@@ -112,7 +113,7 @@ multi-arquitectura para que una misma revision del repositorio use contenido
 inmutable. Al actualizar una imagen se debe verificar el digest oficial, ejecutar
 las validaciones Docker y cambiar en el mismo bloque todas sus referencias.
 Para Expo Go en un dispositivo fisico, configurar `EXPO_PUBLIC_API_URL` con la IP
-LAN del equipo antes de construir e iniciar el servicio mobile.
+LAN del equipo antes de iniciar Metro y comprobar `/health` desde el telefono.
 
 ## Convenciones de desarrollo
 

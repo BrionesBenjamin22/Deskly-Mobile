@@ -4,8 +4,8 @@
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | ID             | `INFRA-01`                                                                                                                     |
 | Modulo         | Mobile e infraestructura                                                                                                       |
-| Estado         | `PENDIENTE`                                                                                                                    |
-| Dependencia    | `PAYMENTS-07` pendiente; `MOBILE-RESERVATIONS-LOCATION` completada                                                             |
+| Estado         | `COMPLETADA`                                                                                                                   |
+| Dependencia    | Priorizada por aprobacion explicita del usuario; `MOBILE-RESERVATIONS-LOCATION` completada                                    |
 | Implementacion | `mobile/src/config`, variables Expo, proxy reverso, Docker Compose y despliegue backend                                        |
 | Validacion     | Expo web, emulador Android, dispositivo fisico en LAN, tunnel HTTPS, build, pruebas de configuracion y documentacion operativa |
 
@@ -93,7 +93,61 @@ Para el estado actual del proyecto, priorizar perfiles Expo con una unica URL ex
 
 ## Evidencia
 
-Pendiente. La implementacion debe comenzar solamente despues de completar `PAYMENTS-07`.
+La dependencia con `PAYMENTS-07` fue levantada por indicacion explicita del
+usuario porque la conectividad con Expo es requisito de aprobacion del producto.
+
+Implementacion y evidencia automatizada:
+
+- Se eligieron perfiles de entorno con una unica URL efectiva. Existen
+  plantillas separadas para development, testing y production; solo una se copia
+  como `.env`.
+- Web local conserva `127.0.0.1`; Android e iOS requieren URL explicita para no
+  confundir emulador y dispositivo fisico.
+- Produccion exige HTTPS. Toda URL rechaza protocolos ajenos a HTTP/HTTPS,
+  credenciales, query strings y fragmentos.
+- No existen fallbacks, descubrimiento de hosts ni reintentos hacia multiples
+  origenes.
+- Compose publica Nest en `0.0.0.0:3000`, carga
+  `backend/.env.development` y exige la URL que debe inyectar a Expo.
+- El entorno local ignorado por Git se configuro con la IP LAN detectada
+  `192.168.1.82`.
+- `GET /health` entrega exclusivamente `{"status":"ok"}`.
+- Resolucion mobile: 1 suite focalizada, 6 pruebas aprobadas.
+- Health backend: 1 suite focalizada, 2 pruebas aprobadas.
+- Compose: configuracion valida sin iniciar servicios.
+- Conectividad real desde el host: loopback y LAN respondieron HTTP 200 en
+  `/health`; el proceso temporal fue detenido.
+- Backend: build aprobado; 46 suites y 282 pruebas aprobadas.
+- Mobile: TypeScript aprobado; 18 suites y 64 pruebas aprobadas.
+- Expo web: export aprobado con 2108 modulos.
+- Formato focalizado: aprobado. El chequeo global detecto 91 archivos
+  historicos fuera del alcance y no fueron reformateados.
+- API gateway descartado por ahora porque existe un solo backend modular. Para
+  testing y produccion se recomienda un proxy reverso con URL HTTPS estable.
+- El primer login real desde Expo Go alcanzo el backend pero devolvio HTTP 500.
+  Se reprodujo con credenciales ficticias y se identifico Prisma `P2022`: la
+  base local no tenia la columna `users.token_version`.
+- Se aplico la migracion versionada
+  `20260725125000_add_user_token_version`; Prisma confirma que el esquema esta
+  actualizado y el mismo login ficticio ahora devuelve HTTP 401 con el contrato
+  seguro de credenciales incorrectas.
+- El icono `CircleAlert` del popup se representaba con orientacion incorrecta en
+  el dispositivo. El estado de error ahora usa `CircleX`, sin rotacion ni
+  ambiguedad de orientacion. La suite global de `StatusModal` cubre esta
+  seleccion.
+
+Validacion manual:
+
+- Expo Go alcanzo el backend desde el telefono conectado a la red local.
+- El primer login expuso la migracion pendiente mediante HTTP 500.
+- Despues de aplicar `20260725125000_add_user_token_version`, el usuario confirmo
+  que el login desde el celular funciona.
+- La conectividad, configuracion y flujo autenticado requeridos por `INFRA-01`
+  quedan aprobados.
+
+## Mensaje de commit propuesto
+
+`fix(infra): unificar la conectividad de Expo con el backend`
 
 ## Mensaje de commit propuesto
 
