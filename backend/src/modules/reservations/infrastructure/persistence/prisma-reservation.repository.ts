@@ -126,7 +126,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       this.prisma.reservation.findMany({
         where,
         include: reservationRelationsInclude,
-        orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+        orderBy: [{ status: 'asc' }, { date: 'asc' }, { startTime: 'asc' }],
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),
@@ -331,7 +331,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       UPDATE "reservations"
       SET "status" = 'COMPLETED'::"ReservationStatus",
           "updated_at" = NOW()
-      WHERE "status" = 'ACTIVE'::"ReservationStatus"
+      WHERE "status" IN ('ACTIVE'::"ReservationStatus", 'RESERVED'::"ReservationStatus")
         AND ("date" + "end_time") <= timezone('America/Argentina/Buenos_Aires', CURRENT_TIMESTAMP)
     `;
   }

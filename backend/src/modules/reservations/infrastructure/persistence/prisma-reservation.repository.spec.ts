@@ -31,22 +31,59 @@ const relatedReservation = {
   member: { fullName: 'Ada Lovelace' },
 };
 
-const createPrismaMock = () => ({
-  $executeRaw: jest.fn().mockResolvedValue(0),
-  $transaction: jest.fn((operations: Promise<unknown>[]) =>
-    Promise.all(operations),
-  ),
-  reservation: {
-    findMany: jest.fn().mockResolvedValue([relatedReservation]),
-    findUnique: jest.fn().mockResolvedValue(relatedReservation),
-    count: jest.fn().mockResolvedValue(1),
-  },
-  desk: { findUnique: jest.fn() },
-  workArea: { findUnique: jest.fn() },
-  locality: { findUnique: jest.fn() },
-});
+const createPrismaMock = () => {
+  let executedQuery = '';
+  return {
+    $executeRaw: jest.fn((query: TemplateStringsArray) => {
+      executedQuery = query.join('');
+      return Promise.resolve(0);
+    }),
+    getExecutedQuery: () => executedQuery,
+    $transaction: jest.fn((operations: Promise<unknown>[]) =>
+      Promise.all(operations),
+    ),
+    reservation: {
+      findMany: jest.fn().mockResolvedValue([relatedReservation]),
+      findUnique: jest.fn().mockResolvedValue(relatedReservation),
+      count: jest.fn().mockResolvedValue(1),
+    },
+    desk: { findUnique: jest.fn() },
+    workArea: { findUnique: jest.fn() },
+    locality: { findUnique: jest.fn() },
+  };
+};
 
 describe('PrismaReservationRepository related location persistence', () => {
+  it('finaliza reservas activas o reservadas cuyo horario ya termino', async () => {
+    const prisma = createPrismaMock();
+    const repository = new PrismaReservationRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repository.list({ page: 1, limit: 9 });
+
+    const query = prisma.getExecutedQuery();
+    expect(query).toContain(
+      `"status" IN ('ACTIVE'::"ReservationStatus", 'RESERVED'::"ReservationStatus")`,
+    );
+    expect(query).toContain('("date" + "end_time") <=');
+  });
+
+  it('prioriza estados vigentes antes de ordenar por fecha', async () => {
+    const prisma = createPrismaMock();
+    const repository = new PrismaReservationRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repository.list({ page: 1, limit: 9 });
+
+    expect(prisma.reservation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ status: 'asc' }, { date: 'asc' }, { startTime: 'asc' }],
+      }),
+    );
+  });
+
   it('loads and maps desk area and locality in the list query without N+1 queries', async () => {
     const prisma = createPrismaMock();
     const repository = new PrismaReservationRepository(

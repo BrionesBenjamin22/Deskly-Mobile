@@ -9,6 +9,28 @@ import { Reservation } from '../types/reservation.types';
 
 type ReservationActionStatus = 'idle' | 'loading' | 'success' | 'error';
 
+const RESERVATION_STATUS_PRIORITY: Record<Reservation['status'], number> = {
+  active: 0,
+  pending_payment: 1,
+  reserved: 2,
+  completed: 3,
+  cancelled: 4,
+};
+
+export function sortReservationsForDisplay(
+  reservations: Reservation[],
+): Reservation[] {
+  return [...reservations].sort((left, right) => {
+    const statusDifference =
+      RESERVATION_STATUS_PRIORITY[left.status] -
+      RESERVATION_STATUS_PRIORITY[right.status];
+    if (statusDifference !== 0) return statusDifference;
+    const dateDifference = left.date.localeCompare(right.date);
+    if (dateDifference !== 0) return dateDifference;
+    return left.startTime.localeCompare(right.startTime);
+  });
+}
+
 function getFriendlyErrorMessage(error: unknown) {
   if (error instanceof ReservationServiceError) {
     return error.message;
@@ -67,17 +89,25 @@ export function useReservations(
 
   const activeReservations = useMemo(
     () =>
-      reservations.filter((reservation) =>
-        ['reserved', 'active'].includes(reservation.status),
+      sortReservationsForDisplay(
+        reservations.filter((reservation) =>
+          ['active', 'pending_payment', 'reserved'].includes(
+            reservation.status,
+          ),
+        ),
       ),
     [reservations],
   );
 
   const reservationHistory = useMemo(
     () =>
-      reservations.filter(
-        (reservation) =>
-          !['reserved', 'active'].includes(reservation.status),
+      sortReservationsForDisplay(
+        reservations.filter(
+          (reservation) =>
+            !['active', 'pending_payment', 'reserved'].includes(
+              reservation.status,
+            ),
+        ),
       ),
     [reservations],
   );
