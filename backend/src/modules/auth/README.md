@@ -128,7 +128,9 @@ Requiere JWT y rol `ADMIN`. Restaura una cuenta desactivada o bloqueada por pena
 
 ## Sesion y JWT
 
-El token incluye `sub`, `email`, `username`, `role`, `active`, `iat` y `exp`. `JWT_EXPIRES_IN` acepta segundos, minutos u horas y no puede superar 3600 segundos. El valor recomendado y predeterminado es `1h`.
+El token incluye `sub`, `email`, `username`, `role`, `active`, `iat` y `exp`.
+`JWT_EXPIRES_IN` acepta segundos, minutos, horas o dias y no puede superar siete
+dias. El valor recomendado y predeterminado es `1h`.
 
 No se implementan refresh tokens ni almacenamiento de sesiones. Al expirar el access token, la revalidacion consiste en iniciar sesion nuevamente. El backend nunca prolonga silenciosamente el token.
 
@@ -138,6 +140,10 @@ No se implementan refresh tokens ni almacenamiento de sesiones. Al expirar el ac
 - DTOs con whitelist global, rechazo de campos desconocidos y longitudes acotadas.
 - contrasenas de 8 a 72 caracteres para respetar el limite efectivo de bcrypt.
 - consulta del usuario actual en cada request protegida para aplicar desactivaciones y cambios de rol inmediatamente.
+- limite por instancia y direccion de origen de 10 intentos de login, 5
+  registros y 30 consultas del estado de registro por minuto. En despliegues
+  con multiples replicas, el almacenamiento del throttler debe reemplazarse por
+  uno compartido.
 - errores HTTP sin hashes, secretos ni detalles internos.
 - auditoria transaccional de cambios de rol.
 - auditoria transaccional de bajas logicas mediante `UserStatusHistory`.

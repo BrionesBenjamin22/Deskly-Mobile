@@ -21,6 +21,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case';
 import { GetCurrentUserUseCase } from '../../application/use-cases/get-current-user.use-case';
@@ -57,6 +58,8 @@ export class AuthController {
   ) {}
 
   @Get('registration-status')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOkResponse({
     description: 'Indica si los proximos registros requieren datos de miembro.',
   })
@@ -65,6 +68,8 @@ export class AuthController {
   }
 
   @Post('register')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiCreatedResponse({ description: 'Usuario registrado correctamente.' })
   @ApiBadRequestResponse({
     description: 'Datos de registro invalidos o incompletos.',
@@ -95,6 +100,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @ApiOkResponse({ description: 'Sesion iniciada correctamente.' })
   @ApiUnauthorizedResponse({

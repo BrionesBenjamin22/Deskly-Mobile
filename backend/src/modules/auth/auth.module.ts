@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { BcryptPasswordHasherService } from './application/services/bcrypt-password-hasher.service';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
@@ -44,6 +45,7 @@ import { UsersController } from './interfaces/http/users.controller';
     RestoreUserAccessUseCase,
     JwtAuthGuard,
     RolesGuard,
+    ThrottlerGuard,
     { provide: AUTH_REPOSITORY, useClass: PrismaAuthRepository },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasherService },
   ],

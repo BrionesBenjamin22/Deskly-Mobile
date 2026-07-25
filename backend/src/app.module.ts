@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
@@ -13,6 +14,12 @@ import { PenaltiesModule } from './modules/penalties/penalties.module';
 @Module({
   imports: [
     ConfigModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 30,
+      },
+    ]),
     DatabaseModule,
     CommonModule,
     DesksModule,
