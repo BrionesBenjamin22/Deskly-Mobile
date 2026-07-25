@@ -17,6 +17,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
+    "admin:bootstrap": "ts-node src/commands/bootstrap-admin.ts",
     "prisma:studio": "prisma studio",
     "test": "jest",
     "test:watch": "jest --watch",

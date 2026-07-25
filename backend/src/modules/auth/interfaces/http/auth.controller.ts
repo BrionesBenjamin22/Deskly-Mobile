@@ -35,6 +35,7 @@ import {
   InvalidCredentialsError,
   InvalidCurrentPasswordError,
   MemberDataRequiredError,
+  SystemNotInitializedError,
   UserAlreadyExistsError,
   UserNotFoundError,
 } from '../../domain/errors/auth.errors';
@@ -81,6 +82,16 @@ export class AuthController {
     try {
       return await this.registerUseCase.execute(body);
     } catch (error) {
+      if (
+        error instanceof SystemNotInitializedError ||
+        (error instanceof Error && error.name === 'SystemNotInitializedError')
+      ) {
+        throw new ConflictException({
+          message: 'El sistema todavia no fue inicializado.',
+          error:
+            'Lo sentimos, un responsable debe crear la cuenta administradora antes de habilitar registros.',
+        });
+      }
       if (error instanceof MemberDataRequiredError) {
         throw new BadRequestException({
           message: 'Los datos del miembro son obligatorios.',

@@ -98,6 +98,9 @@ export function AuthScreen({
     null,
   );
   const [requiresMember, setRequiresMember] = useState<boolean | null>(null);
+  const [registrationAvailable, setRegistrationAvailable] = useState<
+    boolean | null
+  >(null);
   const [registrationStatusError, setRegistrationStatusError] = useState<
     string | null
   >(null);
@@ -106,11 +109,13 @@ export function AuthScreen({
 
   const loadRegistrationStatus = async () => {
     setRequiresMember(null);
+    setRegistrationAvailable(null);
     setRegistrationStatusError(null);
 
     try {
       const status = await getRegistrationStatus();
       setRequiresMember(status.requiresMember);
+      setRegistrationAvailable(status.registrationAvailable);
     } catch (error) {
       setRegistrationStatusError(getFriendlyError(error));
     }
@@ -167,9 +172,16 @@ export function AuthScreen({
   };
 
   const handleRegister = async () => {
-    if (requiresMember === null) {
+    if (requiresMember === null || registrationAvailable === null) {
       setStatusMessage(
         'Lo sentimos, no pudimos verificar los requisitos del registro. Intente nuevamente.',
+      );
+      setRequestStatus('error');
+      return;
+    }
+    if (!registrationAvailable) {
+      setStatusMessage(
+        'Lo sentimos, un responsable debe inicializar el sistema antes de habilitar registros.',
       );
       setRequestStatus('error');
       return;
@@ -271,8 +283,8 @@ export function AuthScreen({
               <AppText variant="body" color={colors.primaryLight}>
                 {mode === 'login'
                   ? 'Ingrese sus credenciales para continuar.'
-                  : requiresMember === false
-                    ? 'Cree la cuenta administradora inicial.'
+                  : registrationAvailable === false
+                    ? 'El registro estara disponible cuando un responsable inicialice el sistema.'
                     : requiresMember === true
                       ? 'Complete sus datos para registrarse como miembro.'
                       : 'Estamos verificando los requisitos del registro.'}
@@ -293,7 +305,7 @@ export function AuthScreen({
                 }}
                 onSubmit={handleLogin}
               />
-            ) : requiresMember === null ? (
+            ) : requiresMember === null || registrationAvailable === null ? (
               <View style={styles.registrationStatus}>
                 <AppText variant="body" color={colors.primaryLight}>
                   {registrationStatusError ??
@@ -306,6 +318,13 @@ export function AuthScreen({
                     onPress={() => void loadRegistrationStatus()}
                   />
                 ) : null}
+              </View>
+            ) : registrationAvailable === false ? (
+              <View style={styles.registrationStatus}>
+                <AppText variant="body" color={colors.primaryLight}>
+                  Un responsable debe ejecutar la inicializacion administrativa
+                  desde el backend antes de habilitar nuevas cuentas.
+                </AppText>
               </View>
             ) : (
               <RegisterForm

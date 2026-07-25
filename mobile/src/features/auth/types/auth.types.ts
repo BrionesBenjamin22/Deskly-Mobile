@@ -48,6 +48,7 @@ export type RegisterPayload = {
 
 export type RegistrationStatusResponse = {
   requiresMember: boolean;
+  registrationAvailable: boolean;
 };
 
 export type RegisterResponse = {

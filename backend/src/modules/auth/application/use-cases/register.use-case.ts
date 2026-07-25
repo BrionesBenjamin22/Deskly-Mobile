@@ -23,23 +23,19 @@ export class RegisterUseCase {
   ) {}
 
   async execute(input: RegisterInput) {
+    if (!input.member) throw new MemberDataRequiredError();
+
     const passwordHash = await this.passwordHasher.hash(input.password);
     const result = await this.repository.register({
       email: input.email.trim().toLowerCase(),
       username: input.username.trim().toLowerCase(),
       passwordHash,
-      member: input.member
-        ? {
-            fullName: input.member.fullName.trim(),
-            dni: input.member.dni,
-            phone: input.member.phone,
-          }
-        : undefined,
+      member: {
+        fullName: input.member.fullName.trim(),
+        dni: input.member.dni,
+        phone: input.member.phone,
+      },
     });
-
-    if (!result.isFirstUser && !result.user.member) {
-      throw new MemberDataRequiredError();
-    }
 
     return { user: toPublicUser(result.user) };
   }

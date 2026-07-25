@@ -5,6 +5,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { User } from '../../domain/entities/user.entity';
 import {
   MemberDataRequiredError,
+  SystemNotInitializedError,
   LastActiveAdminError,
   UserAlreadyInactiveError,
   UserAlreadyExistsError,
@@ -37,30 +38,26 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
           await transaction.$executeRaw`SELECT pg_advisory_xact_lock(192837465)`;
           const isFirstUser = (await transaction.user.count()) === 0;
 
-          if (!isFirstUser && !params.member)
-            throw new MemberDataRequiredError();
+          if (isFirstUser) throw new SystemNotInitializedError();
+          if (!params.member) throw new MemberDataRequiredError();
 
           const user = await transaction.user.create({
             data: {
               email: params.email,
               username: params.username,
               passwordHash: params.passwordHash,
-              role: isFirstUser ? UserRole.ADMIN : UserRole.MIEMBRO,
-              ...(!isFirstUser && params.member
-                ? {
-                    member: {
-                      create: {
-                        ...params.member,
-                        phone: BigInt(params.member.phone),
-                      },
-                    },
-                  }
-                : {}),
+              role: UserRole.MIEMBRO,
+              member: {
+                create: {
+                  ...params.member,
+                  phone: BigInt(params.member.phone),
+                },
+              },
             },
             include: userWithMember,
           });
 
-          return { user: this.toDomain(user), isFirstUser };
+          return { user: this.toDomain(user), isFirstUser: false };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );

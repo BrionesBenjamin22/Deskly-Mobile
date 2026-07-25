@@ -52,7 +52,39 @@ Registra usuario afectado, administrador actor, rol anterior, rol nuevo y fecha.
 
 ### GET /auth/registration-status
 
-Endpoint publico y sin datos personales. Responde `{ "requiresMember": false }` cuando todavia no existe ningun usuario y `{ "requiresMember": true }` para todos los registros posteriores. El frontend usa esta informacion solo para renderizar los campos correspondientes; la transaccion de registro vuelve a validar la regla.
+Endpoint publico y sin datos personales. Responde `requiresMember: true` en
+todos los casos y `registrationAvailable` indica si el administrador inicial ya
+fue creado. El frontend no habilita el formulario mientras el sistema no fue
+inicializado; la transaccion de registro vuelve a validar la regla.
+
+## Inicializacion administrativa
+
+El registro HTTP nunca asigna el rol `ADMIN`. Antes de habilitar registros, un
+responsable debe definir temporalmente:
+
+```env
+BOOTSTRAP_ADMIN_EMAIL=
+BOOTSTRAP_ADMIN_USERNAME=
+BOOTSTRAP_ADMIN_PASSWORD=
+```
+
+La contrasena debe tener entre 12 y 72 caracteres e incluir mayuscula,
+minuscula y numero. Luego se ejecuta:
+
+```bash
+pnpm admin:bootstrap
+```
+
+En la imagen backend compilada:
+
+```bash
+node dist/src/commands/bootstrap-admin.js
+```
+
+El comando obtiene un lock transaccional, exige una base sin usuarios, crea un
+unico `ADMIN` con bcrypt costo 12 y no imprime credenciales. Las tres variables
+de bootstrap deben retirarse inmediatamente despues. Una segunda ejecucion
+falla sin modificar datos.
 
 ### POST /auth/register
 
@@ -150,6 +182,7 @@ emitidos anteriormente dejan de ser validos inmediatamente.
 - errores HTTP sin hashes, secretos ni detalles internos.
 - auditoria transaccional de cambios de rol.
 - auditoria transaccional de bajas logicas mediante `UserStatusHistory`.
+- inicializacion administrativa fuera de los endpoints publicos.
 
 ## Variables de entorno
 

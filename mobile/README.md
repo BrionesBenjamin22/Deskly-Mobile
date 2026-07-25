@@ -28,9 +28,10 @@ Login:
 Registro:
 
 - consulta `GET /auth/registration-status` al abrir el formulario
-- si no existen usuarios, muestra solamente los datos de cuenta para crear el administrador inicial
-- si ya existen usuarios, agrega nombre y apellido, DNI y telefono para crear el miembro asociado
-- para registros posteriores solicita email, nombre de usuario, contrasena, nombre y apellido, DNI y telefono
+- si el backend todavia no fue inicializado, informa que un responsable debe
+  ejecutar el bootstrap administrativo y no muestra el formulario
+- el registro publico siempre solicita email, nombre de usuario, contrasena,
+  nombre y apellido, DNI y telefono, y solo crea miembros
 - replica limites y formatos previsibles del backend
 - consume `POST /auth/register`
 - vuelve al login con el email precargado y una confirmacion visible

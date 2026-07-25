@@ -12,18 +12,18 @@ function createRepository(): jest.Mocked<AuthRepositoryPort> {
 }
 
 describe('GetRegistrationStatusUseCase', () => {
-  it.each([
-    [false, false],
-    [true, true],
-  ])(
-    'returns requiresMember=%s when hasUsers=%s',
-    async (hasUsers, requiresMember) => {
+  it.each([false, true])(
+    'reports registration availability when hasUsers=%s',
+    async (hasUsers) => {
       const repository = createRepository();
       repository.hasUsers.mockResolvedValue(hasUsers);
 
       await expect(
         new GetRegistrationStatusUseCase(repository).execute(),
-      ).resolves.toEqual({ requiresMember });
+      ).resolves.toEqual({
+        requiresMember: true,
+        registrationAvailable: hasUsers,
+      });
     },
   );
 });

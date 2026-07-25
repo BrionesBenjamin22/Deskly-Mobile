@@ -11,8 +11,10 @@ export class GetRegistrationStatusUseCase {
   ) {}
 
   async execute() {
+    const initialized = await this.repository.hasUsers();
     return {
-      requiresMember: await this.repository.hasUsers(),
+      requiresMember: true,
+      registrationAvailable: initialized,
     };
   }
 }
