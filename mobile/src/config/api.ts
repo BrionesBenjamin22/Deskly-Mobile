@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+const appEnvironment = process.env.EXPO_PUBLIC_APP_ENV?.trim().toLowerCase();
 
 function getDefaultApiUrl() {
   if (Platform.OS === 'android') {
@@ -14,4 +15,25 @@ function getDefaultApiUrl() {
   return 'http://127.0.0.1:3000';
 }
 
-export const API_BASE_URL = (envApiUrl || getDefaultApiUrl()).replace(/\/$/, '');
+export function resolveApiBaseUrl(
+  configuredUrl = envApiUrl,
+  environment = appEnvironment,
+): string {
+  const apiUrl = (configuredUrl || getDefaultApiUrl()).replace(/\/$/, '');
+
+  if (environment === 'production') {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(apiUrl);
+    } catch {
+      throw new Error('EXPO_PUBLIC_API_URL debe ser una URL valida.');
+    }
+    if (parsedUrl.protocol !== 'https:') {
+      throw new Error('EXPO_PUBLIC_API_URL debe usar HTTPS en produccion.');
+    }
+  }
+
+  return apiUrl;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();

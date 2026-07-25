@@ -60,6 +60,9 @@ cp .env.example .env
 Variables disponibles:
 
 - `EXPO_PUBLIC_API_URL`: URL base del backend. Si no se define, la app usa `http://10.0.2.2:3000` en Android y `http://127.0.0.1:3000` en web/iOS.
+- `EXPO_PUBLIC_APP_ENV`: entorno de ejecucion (`development`, `testing` o
+  `production`). Cuando vale `production`, la URL de API debe usar HTTPS y la
+  aplicacion falla al iniciar si la configuracion es insegura.
 
 En web local, usar `EXPO_PUBLIC_API_URL=http://127.0.0.1:3000` cuando el backend corre en la misma maquina. Esto evita problemas de resolucion IPv6 con `localhost` en Windows.
 
