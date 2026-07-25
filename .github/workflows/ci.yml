@@ -14,7 +14,7 @@ permissions:
 
 env:
   NODE_VERSION: "22"
-  PNPM_VERSION: "10"
+  PNPM_VERSION: "10.33.2"
   CI: "1"
   EXPO_NO_TELEMETRY: "1"
   PAYMENT_GATEWAY: FAKE

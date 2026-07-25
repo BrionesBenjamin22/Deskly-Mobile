@@ -107,6 +107,10 @@ terminan correctamente; el contenedor no usa `db push` ni genera migraciones nue
 
 Los contenedores de aplicacion eliminan capacidades Linux, impiden escalamiento de
 privilegios y usan filesystem de solo lectura con directorios temporales acotados.
+Las imagenes oficiales de Node.js y PostgreSQL estan fijadas por digest
+multi-arquitectura para que una misma revision del repositorio use contenido
+inmutable. Al actualizar una imagen se debe verificar el digest oficial, ejecutar
+las validaciones Docker y cambiar en el mismo bloque todas sus referencias.
 Para Expo Go en un dispositivo fisico, configurar `EXPO_PUBLIC_API_URL` con la IP
 LAN del equipo antes de construir e iniciar el servicio mobile.
 

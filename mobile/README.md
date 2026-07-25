@@ -211,6 +211,10 @@ Docker. Las dependencias se instalan en una etapa independiente con lockfile y e
 proceso final corre como el usuario no privilegiado `expo`, con telemetria
 desactivada y `dumb-init`.
 
+La imagen `node:22-alpine` esta fijada por digest multi-arquitectura. La renovacion
+del digest debe ser explicita y debe aprobar la construccion de la etapa
+`development` antes de integrarse.
+
 `EXPO_PUBLIC_API_URL` se incorpora al bundle de Expo. En un dispositivo fisico se
 debe usar `http://<IP_LAN_DEL_HOST>:3000`; `127.0.0.1` solo apunta al host desde web
 o desde entornos donde el dispositivo comparte loopback.

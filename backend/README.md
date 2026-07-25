@@ -181,3 +181,8 @@ La configuracion se inyecta en tiempo de ejecucion. Como minimo requiere
 como tarea de despliegue; el servicio `migration` de Docker Compose ejecuta
 `prisma migrate deploy` antes de habilitar la API. El arranque del proceso NestJS no
 modifica automaticamente el esquema de datos.
+
+Las etapas base y runtime usan `node:22-alpine` fijada por digest
+multi-arquitectura. La etiqueta conserva visible la linea de mantenimiento y el
+digest evita cambios de contenido no revisados. Una actualizacion requiere resolver
+el nuevo digest oficial y reconstruir las etapas `migration` y `runtime`.
