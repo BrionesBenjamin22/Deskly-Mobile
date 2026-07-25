@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
@@ -274,6 +274,9 @@ export function DesksScreen({
   );
   const [reservationStatus, setReservationStatus] =
     useState<ReservationUiStatus>("idle");
+  const [canContinuePaymentInBackground, setCanContinuePaymentInBackground] =
+    useState(false);
+  const waitingForPaymentInBackground = useRef(false);
   const [reservationErrorMessage, setReservationErrorMessage] = useState(
     reservationStatusContent.error.description,
   );
@@ -414,6 +417,8 @@ export function DesksScreen({
     paymentOption: PaymentOption;
   }) => {
     handleCloseReservation();
+    waitingForPaymentInBackground.current = false;
+    setCanContinuePaymentInBackground(false);
     setReservationStatus("loading");
     setReservationErrorMessage(reservationStatusContent.error.description);
 
@@ -470,12 +475,16 @@ export function DesksScreen({
         throw new PaymentServiceError("La URL de pago no es segura.");
       }
       await Linking.openURL(checkout.checkoutUrl);
+      setCanContinuePaymentInBackground(true);
       const paymentStatus = await pollPaymentUntilTerminal(
         accessToken,
         checkout.paymentId,
         checkout.expiresAt,
       );
       if (paymentStatus !== "APPROVED") {
+        if (waitingForPaymentInBackground.current) {
+          return;
+        }
         throw new PaymentServiceError(
           "El pago aún no fue aprobado. La reserva no quedó confirmada.",
         );
@@ -484,8 +493,14 @@ export function DesksScreen({
       onReservationCreated?.();
       setReservationStatus("success");
     } catch (error) {
+      if (waitingForPaymentInBackground.current) {
+        return;
+      }
       setReservationErrorMessage(getFriendlyReservationError(error));
       setReservationStatus("error");
+    } finally {
+      waitingForPaymentInBackground.current = false;
+      setCanContinuePaymentInBackground(false);
     }
   };
 
@@ -797,16 +812,34 @@ export function DesksScreen({
         <StatusModal
           visible
           type={activeStatus.type}
-          title={activeStatus.title}
+          title={
+            canContinuePaymentInBackground
+              ? "Esperando confirmacion"
+              : activeStatus.title
+          }
           description={
             reservationStatus === "error"
               ? reservationErrorMessage
-              : activeStatus.description
+              : canContinuePaymentInBackground
+                ? "Deskly seguira consultando el pago. Puede continuar usando la aplicacion."
+                : activeStatus.description
           }
           onClose={
             reservationStatus === "loading"
               ? undefined
               : () => setReservationStatus("idle")
+          }
+          actionLabel={
+            canContinuePaymentInBackground ? "Dejar de esperar" : undefined
+          }
+          onAction={
+            canContinuePaymentInBackground
+              ? () => {
+                  waitingForPaymentInBackground.current = true;
+                  setCanContinuePaymentInBackground(false);
+                  setReservationStatus("idle");
+                }
+              : undefined
           }
         />
       ) : null}

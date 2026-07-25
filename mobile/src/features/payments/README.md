@@ -20,7 +20,10 @@ Flujo:
 5. Solo `APPROVED` confirma la reserva y se presenta como exito.
 6. Si el webhook no llego, las consultas autenticadas permiten que backend recupere el pago por referencia externa, lo valide y actualice la reserva.
 7. La pestaña Pagos queda reservada visualmente para reservas con un pago aprobado. Incluye temporalmente reservas pendientes durante la sincronizacion; si fue una seña, ofrece completar exclusivamente el saldo pendiente.
-8. Durante la espera el loader permanece animado. `Dejar de esperar` cierra solamente el modal bloqueante: la verificacion continua en segundo plano y muestra una confirmacion breve si el pago resulta aprobado.
+8. Durante la espera el loader permanece animado. Tanto al reservar desde
+   Escritorios como al completar saldo desde Pagos, `Dejar de esperar` cierra
+   solamente el modal bloqueante: la verificacion continua en segundo plano y
+   muestra una confirmacion breve si el pago resulta aprobado.
 
 ## Contratos
 
