@@ -15,4 +15,8 @@ El listado presenta primero las cuentas activas y luego las inactivas.
 
 ## Permisos y validaciones
 
-El item `Gestion Usuarios` solo aparece para `ADMIN`. La interfaz evita cambios sobre la cuenta actual; el backend vuelve a validar el rol, impide la autodesactivacion y protege al ultimo administrador activo.
+La pestaña `Gestion de usuarios` solo aparece para `ADMIN` y es su pantalla inicial. Para este rol, la barra inferior no expone escritorios, areas de trabajo, reservas ni pagos porque no dispone de acciones operativas sobre esos flujos.
+
+El menu de `Cuenta` se presenta sobre la pantalla y se cierra al tocar cualquier punto fuera de la tarjeta, ademas de cerrarse al elegir una accion.
+
+La interfaz evita cambios sobre la cuenta actual; el backend vuelve a validar el rol, impide la autodesactivacion y protege al ultimo administrador activo.

@@ -137,6 +137,9 @@ export default function App() {
     if (nextSession.user.role === 'GESTOR') {
       setActiveTab('reservations');
       setMountedTabs(new Set(['reservations']));
+    } else if (nextSession.user.role === 'ADMIN') {
+      setActiveTab('users');
+      setMountedTabs(new Set(['users']));
     } else {
       setActiveTab('desks');
       setMountedTabs(new Set(['desks']));

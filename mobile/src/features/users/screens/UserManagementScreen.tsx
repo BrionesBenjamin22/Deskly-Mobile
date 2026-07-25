@@ -125,7 +125,7 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
         </ScrollView>
 
         <BottomTabBar
-          activeTab="profile"
+          activeTab="users"
           userRole="ADMIN"
           onPressDesks={props.onPressDesks}
           onPressReservations={props.onPressReservations}
