@@ -1,5 +1,8 @@
 import type { AuthenticatedRequest } from '../../../auth/interfaces/http/auth-request';
+import { ForbiddenException } from '@nestjs/common';
+import { GetReservationByIdUseCase } from '../../application/use-cases/get-reservation-by-id.use-case';
 import { ListReservationsUseCase } from '../../application/use-cases/list-reservations.use-case';
+import { UpdateReservationUseCase } from '../../application/use-cases/update-reservation.use-case';
 import { Reservation } from '../../domain/entities/reservation.entity';
 import type { ReservationRepositoryPort } from '../../domain/ports/reservation-repository.port';
 import { ReservationsController } from './reservations.controller';
@@ -142,4 +145,96 @@ describe('ReservationsController secured listing', () => {
       ]),
     );
   });
+
+  it('rejects reading a reservation owned by another member', async () => {
+    const repository = createRepositoryMock();
+    repository.findById.mockResolvedValue(reservations[2]);
+    const controller = new ReservationsController(
+      {} as never,
+      new ListReservationsUseCase(repository),
+      new GetReservationByIdUseCase(repository),
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      controller.findById(
+        reservations[2].id!,
+        createAuthenticatedRequest('MIEMBRO', authenticatedMemberId),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('allows a gestor to read a reservation from any member', async () => {
+    const repository = createRepositoryMock();
+    repository.findById.mockResolvedValue(reservations[2]);
+    const controller = new ReservationsController(
+      {} as never,
+      new ListReservationsUseCase(repository),
+      new GetReservationByIdUseCase(repository),
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      controller.findById(
+        reservations[2].id!,
+        createAuthenticatedRequest('GESTOR'),
+      ),
+    ).resolves.toMatchObject({
+      reservationId: 'reservation-from-another-member',
+      memberId: 'member-2',
+    });
+  });
+
+  it('rejects updating a reservation owned by another member', async () => {
+    const repository = createRepositoryMock();
+    repository.findById.mockResolvedValue(reservations[2]);
+    const updateUseCase = {
+      execute: jest.fn(),
+    } as unknown as UpdateReservationUseCase;
+    const controller = new ReservationsController(
+      {} as never,
+      new ListReservationsUseCase(repository),
+      new GetReservationByIdUseCase(repository),
+      updateUseCase,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      controller.update(
+        reservations[2].id!,
+        { startTime: '10:00' },
+        createAuthenticatedRequest('MIEMBRO', authenticatedMemberId),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(updateUseCase.execute).not.toHaveBeenCalled();
+  });
 });
+
+function createAuthenticatedRequest(
+  role: 'ADMIN' | 'GESTOR' | 'MIEMBRO',
+  memberId?: string,
+): AuthenticatedRequest {
+  return {
+    user: {
+      id: 'user-1',
+      username: 'authenticated-user',
+      email: 'user@deskly.test',
+      role,
+      active: true,
+      member: memberId
+        ? {
+            id: memberId,
+            fullName: 'Ada Lovelace',
+            dni: 12345678,
+            phone: 1112345678,
+            active: true,
+          }
+        : null,
+    },
+  } as unknown as AuthenticatedRequest;
+}

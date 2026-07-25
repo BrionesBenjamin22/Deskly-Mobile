@@ -32,7 +32,9 @@ DELETE /reservations/:id
 }
 ```
 
-El alta y el listado requieren JWT. Los miembros solo pueden crear reservas propias y solo reciben sus propias reservas; gestores y administradores conservan la consulta operativa global.
+Todos los endpoints de reserva requieren JWT. Los miembros solo pueden crear,
+consultar, editar y cancelar reservas propias; gestores y administradores
+conservan la consulta y modificacion operativa global.
 
 ## Respuesta
 
@@ -116,6 +118,8 @@ Cancelacion:
 - Las reservas `CANCELLED` no bloquean disponibilidad.
 - La base de datos impide superposiciones activas para el mismo escritorio mediante constraint GiST.
 - Solo se pueden editar o cancelar reservas reservadas.
+- El detalle y la edicion validan en backend que un miembro sea propietario de
+  la reserva. La restriccion visual del cliente no reemplaza este control.
 - El ciclo es `RESERVED` -> `ACTIVE` -> `COMPLETED`.
 - La creación exige el pago inicial y registra la reserva como `RESERVED`; la llegada validada por el gestor la lleva a `ACTIVE`.
 - Las reservas `ACTIVE` pasan a `COMPLETED` al superar su horario de fin.

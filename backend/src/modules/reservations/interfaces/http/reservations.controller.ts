@@ -107,20 +107,27 @@ export class ReservationsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOkResponse({
     description: 'Detalle de la reserva.',
     type: ReservationResponseDto,
   })
   @ApiNotFoundResponse({ description: 'Reserva no encontrada.' })
-  async findById(@Param('id', ParseUUIDPipe) id: string) {
+  async findById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
     try {
-      return await this.getReservationByIdUseCase.execute(id);
+      const reservation = await this.getReservationByIdUseCase.execute(id);
+      this.assertReservationAccess(reservation.memberId, request);
+      return reservation;
     } catch (error) {
       this.handleError(error);
     }
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOkResponse({
     description: 'Reserva actualizada correctamente.',
     type: ReservationResponseDto,
@@ -133,8 +140,11 @@ export class ReservationsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateReservationBodyDto,
+    @Req() request: AuthenticatedRequest,
   ) {
     try {
+      const reservation = await this.getReservationByIdUseCase.execute(id);
+      this.assertReservationAccess(reservation.memberId, request);
       return await this.updateReservationUseCase.execute({ id, ...body });
     } catch (error) {
       this.handleError(error);
@@ -213,6 +223,22 @@ export class ReservationsController {
       return await this.validateArrivalUseCase.execute(id);
     } catch (error) {
       this.handleError(error);
+    }
+  }
+
+  private assertReservationAccess(
+    memberId: string,
+    request: AuthenticatedRequest,
+  ): void {
+    if (
+      request.user.role === 'MIEMBRO' &&
+      request.user.member?.id !== memberId
+    ) {
+      throw new ForbiddenException({
+        message: 'No puede acceder a una reserva de otro miembro.',
+        error:
+          'Lo sentimos, seleccione una reserva propia e intente nuevamente.',
+      });
     }
   }
 
