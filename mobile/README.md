@@ -36,7 +36,14 @@ Registro:
 - consume `POST /auth/register`
 - vuelve al login con el email precargado y una confirmacion visible
 
-Los errores de formulario se muestran junto al campo y resaltan el input. Los errores de API, red y timeout se presentan mediante `StatusModal` con un llamado a la accion. En esta etapa no se agrega persistencia segura del token ni recuperacion automatica de sesion; esas responsabilidades quedan separadas para el siguiente paso del flujo de autenticacion.
+Los errores de formulario se muestran junto al campo y resaltan el input. Los errores de API, red y timeout se presentan mediante `StatusModal` con un llamado a la accion.
+
+En Android e iOS se persiste exclusivamente el access token mediante
+`expo-secure-store`. Al iniciar, la aplicacion valida ese token con
+`GET /auth/me` antes de mostrar contenido autenticado y reconstruye el perfil
+desde la respuesta autoritativa del backend. Un token rechazado se elimina; un
+fallo transitorio de red no lo descarta. En web la sesion permanece solo en
+memoria para evitar almacenar credenciales en `localStorage`.
 
 ## Perfil y cierre de sesion
 
@@ -46,7 +53,10 @@ La barra inferior incorpora la opcion `Perfil`. Al seleccionarla abre un menu re
 - `Cambiar cuenta`: descarta la sesion en memoria y vuelve al login con una indicacion visible.
 - `Cerrar sesion`: descarta el access token y los datos de usuario en memoria, reinicia la navegacion y confirma el cierre mediante `StatusModal`.
 
-El backend utiliza JWT stateless, por lo que el logout no crea una blacklist ni una sesion persistida: el cliente deja de enviar el token descartado.
+El backend utiliza JWT stateless, por lo que el logout no crea una blacklist. El
+cliente elimina primero el token de SecureStore y solo entonces cierra la
+sesion visible. Despues de cambiar la contrasena tambien elimina la credencial y
+solicita un nuevo ingreso, porque el backend invalida las sesiones anteriores.
 
 ## Variables de entorno
 

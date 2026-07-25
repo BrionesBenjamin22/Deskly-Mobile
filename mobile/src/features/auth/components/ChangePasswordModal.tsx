@@ -22,6 +22,7 @@ type Props = {
   visible: boolean;
   accessToken: string;
   onClose: () => void;
+  onPasswordChanged: () => void;
 };
 
 type FormValues = {
@@ -85,7 +86,12 @@ const initialValues: FormValues = {
 
 type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
 
-export function ChangePasswordModal({ visible, accessToken, onClose }: Props) {
+export function ChangePasswordModal({
+  visible,
+  accessToken,
+  onClose,
+  onPasswordChanged,
+}: Props) {
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<RequestStatus>('idle');
@@ -146,6 +152,14 @@ export function ChangePasswordModal({ visible, accessToken, onClose }: Props) {
     setStatus('idle');
     setErrorMessage('');
     onClose();
+  };
+
+  const handleSuccessClose = () => {
+    setValues(initialValues);
+    setErrors({});
+    setStatus('idle');
+    setErrorMessage('');
+    onPasswordChanged();
   };
 
   return (
@@ -243,8 +257,8 @@ export function ChangePasswordModal({ visible, accessToken, onClose }: Props) {
         visible={status === 'success'}
         type="success"
         title="Contraseña actualizada"
-        description="Su contraseña fue cambiada correctamente."
-        onClose={handleClose}
+        description="Su contraseña fue cambiada correctamente. Por seguridad, deberá ingresar nuevamente."
+        onClose={handleSuccessClose}
       />
 
       <StatusModal
