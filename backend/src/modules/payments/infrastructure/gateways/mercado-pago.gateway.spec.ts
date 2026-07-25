@@ -36,6 +36,7 @@ const payment = (status = 'approved', currency_id = 'ARS') => ({
 const sdk = (overrides: Partial<MercadoPagoSdkClients> = {}) => ({
   createPreference: jest.fn(),
   getPayment: jest.fn(),
+  searchPayments: jest.fn(),
   refundPayment: jest.fn(),
   ...overrides,
 });
@@ -233,6 +234,55 @@ describe('MercadoPagoGateway', () => {
       ).rejects.toMatchObject({ retryable: false });
     },
   );
+
+  it('recupera un pago por referencia externa cuando el webhook no llego', async () => {
+    const clients = sdk({
+      searchPayments: jest.fn().mockResolvedValue({
+        paging: { total: 1, limit: 20, offset: 0 },
+        results: [payment('approved')],
+      }),
+    });
+
+    await expect(
+      new MercadoPagoGateway(config, clients).findPaymentByExternalReference(
+        'reservation:1',
+        {
+          externalReference: 'reservation:1',
+          amountMinorUnits: 12345,
+          currency: 'ARS',
+        },
+      ),
+    ).resolves.toMatchObject({
+      externalPaymentId: '123',
+      status: 'APPROVED',
+    });
+    expect(clients.searchPayments).toHaveBeenCalledWith(
+      {
+        external_reference: 'reservation:1',
+        sort: 'date_last_updated',
+        criteria: 'desc',
+        limit: 20,
+      },
+      { timeout: config.timeoutMs },
+    );
+  });
+
+  it('no inventa un pago cuando la referencia externa no tiene resultados', async () => {
+    const clients = sdk({
+      searchPayments: jest.fn().mockResolvedValue({ results: [] }),
+    });
+
+    await expect(
+      new MercadoPagoGateway(config, clients).findPaymentByExternalReference(
+        'reservation:1',
+        {
+          externalReference: 'reservation:1',
+          amountMinorUnits: 12345,
+          currency: 'ARS',
+        },
+      ),
+    ).resolves.toBeNull();
+  });
 
   it('verifica firma HMAC y extrae solo datos minimos', async () => {
     const rawBody = JSON.stringify({

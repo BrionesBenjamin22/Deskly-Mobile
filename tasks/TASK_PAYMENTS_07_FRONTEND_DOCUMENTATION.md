@@ -145,7 +145,21 @@ busqueda de secretos y datos sensibles
 - El polling mobile permanece activo hasta el vencimiento del checkout para mostrar confirmacion despues de volver del proveedor y refrescar Pagos.
 - La investigacion posterior sobre URLs de Expo, dispositivos y posible API gateway se registro como `INFRA-01` sin modificar configuracion global.
 
+## Correccion de confirmacion iniciada el 24 de julio de 2026
+
+- Se reprodujo el bloqueo: el polling consultaba solamente el intento local y una preferencia no posee todavia el ID real del pago. Sin webhook, el intento permanecia `PENDING`.
+- `PaymentGatewayPort` incorpora busqueda por referencia externa. El adaptador oficial usa `Payment.search` y valida referencia exacta, importe ARS y moneda antes de vincular el ID externo.
+- Las consultas autenticadas de intento y por reserva sincronizan estados no terminales. `APPROVED` se guarda mediante la transaccion existente que confirma la reserva; el retorno visual nunca aprueba.
+- Se implementaron `GET /payments/return/success`, `pending` y `failure` como pagina estatica de cierre del checkout. No procesa IDs, importes ni estados enviados por el navegador.
+- Pagos incluye reservas `PENDING_PAYMENT`, `RESERVED` y `ACTIVE`, espera la sincronizacion antes de pedir la cotizacion y pagina localmente 9 resultados aprobados.
+- Reservas prioriza estados vigentes en backend antes de paginar y en mobile presenta activas, pendientes de pago y reservadas antes de finalizadas y canceladas.
+- Evidencia focalizada: backend 3 suites/36 pruebas y mobile 2 suites/3 pruebas aprobadas.
+- Evidencia completa: backend 42 suites/251 pruebas; mobile 13 suites/40 pruebas; E2E PostgreSQL 2 suites/8 pruebas sobre 17 migraciones limpias; build backend, TypeScript mobile, lint focalizado y export web con 2101 modulos aprobados.
+- La base Docker de desarrollo inspeccionada estaba saludable pero vacia; no contenia la reserva real del 1 de agosto, por lo que la correccion se valido de forma determinista sin modificar datos del usuario.
+
 ## Validacion manual pendiente
+
+- Repetir una compra sandbox con la correccion para validar la pagina de retorno, el mensaje de confirmacion, la aparicion en Pagos y el saldo restante de una seña.
 
 - retorno desde Mercado Pago con mensaje “Reserva confirmada” luego de pagar.
 - aparición de la reserva en Pagos.

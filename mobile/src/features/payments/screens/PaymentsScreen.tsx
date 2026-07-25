@@ -79,8 +79,10 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
     type: "loading" | "success" | "error";
     title: string;
     description: string;
+    canContinueInBackground?: boolean;
   } | null>(null);
   const operationKeys = useRef(new Map<string, string>());
+  const waitingInBackground = useRef(false);
   const totalPending = items.reduce(
     (total, item) => total + item.pendingMinorUnits,
     0,
@@ -103,6 +105,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
     const idempotencyKey =
       operationKeys.current.get(operationId) ?? createPaymentOperationKey();
     operationKeys.current.set(operationId, idempotencyKey);
+    waitingInBackground.current = false;
     setBusyReservation(quote.reservationId);
     setFeedback({
       type: "loading",
@@ -124,7 +127,8 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
         type: "loading",
         title: "Esperando confirmacion",
         description:
-          "Volver del checkout no confirma el pago. Consultamos el estado informado por Deskly.",
+          "Consultamos el estado informado por Deskly. Puede seguir usando la aplicacion y le avisaremos si se aprueba.",
+        canContinueInBackground: true,
       });
       const status = await pollPayment(
         props.accessToken,
@@ -139,7 +143,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
           title: "Pago confirmado",
           description: "Deskly verifico el pago y actualizo la reserva.",
         });
-      } else {
+      } else if (!waitingInBackground.current) {
         setFeedback({
           type: "error",
           title: status ? statusLabels[status] : "Pago aun pendiente",
@@ -148,8 +152,9 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
         });
       }
     } catch (error) {
-      showError(error);
+      if (!waitingInBackground.current) showError(error);
     } finally {
+      waitingInBackground.current = false;
       setBusyReservation(null);
     }
   };
@@ -289,6 +294,17 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
           description={feedback.description}
           onClose={
             feedback.type === "loading" ? undefined : () => setFeedback(null)
+          }
+          actionLabel={
+            feedback.canContinueInBackground ? "Dejar de esperar" : undefined
+          }
+          onAction={
+            feedback.canContinueInBackground
+              ? () => {
+                  waitingInBackground.current = true;
+                  setFeedback(null);
+                }
+              : undefined
           }
         />
       ) : null}

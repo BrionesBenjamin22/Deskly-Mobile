@@ -56,7 +56,9 @@ export function BottomTabBar({
   const visibleTabs =
     userRole === 'GESTOR'
       ? tabs.filter((tab) => tab.key === 'reservations' || tab.key === 'profile')
-      : tabs;
+      : userRole === 'ADMIN'
+        ? tabs.filter((tab) => tab.key !== 'payments')
+        : tabs;
 
   const runProfileAction = (action?: () => void) => {
     setIsProfileMenuOpen(false);

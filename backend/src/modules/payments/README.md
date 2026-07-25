@@ -33,7 +33,7 @@ El host debe mantener el reloj sincronizado mediante NTP. La preferencia usa una
 
 - `MercadoPagoConfig`: mantiene el access token y el timeout exclusivamente en backend.
 - `Preference`: crea una preferencia de Checkout Pro por intento con importe, moneda, referencia, expiracion, URLs e idempotencia construidos por el backend.
-- `Payment`: obtiene el estado definitivo para webhooks, polling y conciliacion; su respuesta se contrasta contra referencia, importe y moneda internos.
+- `Payment`: obtiene el estado definitivo para webhooks, polling y conciliacion. Si el webhook no llega, busca el pago por la referencia externa unica y contrasta referencia, importe y moneda internos.
 - `PaymentRefund`: ejecuta el reembolso total idempotente cuando la politica de concurrencia detecta una aprobacion duplicada.
 - `MercadoPagoSdkClients`: fachada inyectable del adaptador. Permite simular el SDK sin red ni credenciales y evita acoplar casos de uso o dominio a sus tipos.
 
@@ -41,10 +41,13 @@ La verificacion del webhook no se delega al transporte: valida el cuerpo crudo, 
 
 La preferencia y el pago son recursos externos diferentes. Crear Checkout Pro guarda solamente la URL de la preferencia; no utiliza su ID como si fuera un pago. Cuando llega una notificacion, el backend consulta el ID real del pago, correlaciona mediante la referencia unica `payment:<id interno>`, valida importe y moneda, y recien entonces persiste el identificador real y aplica la transicion.
 
+Las consultas autenticadas de un intento o de los pagos de una reserva tambien sincronizan estados no terminales. Si todavia no existe `externalPaymentId`, `Payment.search` recupera candidatos por `external_reference`; solo se vincula el resultado cuya referencia, importe y moneda coinciden con el intento autoritativo. Luego la misma transaccion que persiste `APPROVED` confirma la reserva y elimina el hold. Un fallo externo reintentable conserva el estado local para permitir una consulta posterior.
+
 | Caso de uso                | Cliente SDK                   | Validaciones automatizadas                                                                                                                             |
 | -------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Crear checkout             | `Preference`                  | Payload autoritativo ARS, URLs backend, expiracion, idempotencia y allowlist HTTPS de los dominios oficiales `mercadopago.com` y `mercadopago.com.ar`. |
 | Consultar o conciliar pago | `Payment`                     | Mapeo conservador de estados y coincidencia de referencia, importe y moneda.                                                                           |
+| Recuperar webhook perdido  | `Payment.search`              | Referencia externa exacta, importe y moneda autoritativos antes de vincular el ID real.                                                                 |
 | Procesar webhook           | `Payment` luego de HMAC local | Firma valida, datos minimos, anti-replay transaccional y confirmacion solo con estado verificado.                                                      |
 | Reembolsar duplicado       | `PaymentRefund` y `Payment`   | Idempotencia del reembolso y lectura posterior del estado definitivo.                                                                                  |
 | Fallo externo              | Todos                         | Timeout, desconexion, 408, 429 y 5xx reintentables; errores sanitizados sin secretos.                                                                  |
@@ -57,7 +60,7 @@ Gestiona intentos de pago autenticados para reservas. El backend calcula importe
 
 ## Contratos HTTP
 
-Todos los endpoints requieren JWT.
+Los endpoints de checkout, consulta, cotizacion y operacion requieren JWT.
 
 ```http
 POST /payments/checkout
@@ -65,7 +68,10 @@ GET /payments/:id
 GET /reservations/:id/payments
 GET /reservations/:id/payment-quote
 POST /payments/operations/reconcile
+GET /payments/return/:result
 ```
+
+`GET /payments/return/:result` es publico y admite `success`, `pending` o `failure`. Devuelve una pagina estatica para cerrar el checkout y volver a la instancia de Deskly que inicio la operacion. No recibe decisiones de negocio ni aprueba pagos mediante parametros del navegador.
 
 `POST /payments/checkout` exige el header `Idempotency-Key` de 8 a 160 caracteres y acepta solamente:
 
@@ -85,6 +91,7 @@ POST /payments/operations/reconcile
 - El precio es ARS 1.500 por hora bajo la version `ARS_1500_HOUR_DEPOSIT_30_V1`.
 - Crear una reserva genera solamente un hold tecnico `PENDING_PAYMENT` por 15 minutos; todavia no es una reserva confirmada.
 - El checkout inicial conserva ese hold. Solo un pago `APPROVED`, verificado por webhook o conciliacion, cambia la reserva a `RESERVED`.
+- Si el webhook se retrasa o se pierde, una consulta autenticada recupera el pago por referencia externa y aplica las mismas validaciones y transaccion.
 - Si la seña queda aprobada, la reserva se confirma y un checkout posterior `FULL` cobra exclusivamente el saldo restante.
 - La cotizacion informa `totalMinorUnits`, `approvedMinorUnits` y `pendingMinorUnits`. Despues de una seña solo ofrece la opcion `FULL` por el remanente.
 - Una clave repetida con los mismos datos reutiliza el intento; con datos diferentes devuelve conflicto.

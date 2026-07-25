@@ -133,4 +133,38 @@ describe("PaymentsScreen checkout seguro", () => {
     expect(await screen.findByText("Pago aun pendiente")).toBeOnTheScreen();
     jest.useRealTimers();
   });
+
+  it("deja de bloquear la pantalla y notifica si el pago se aprueba despues", async () => {
+    let approvePayment!: (
+      value: Awaited<ReturnType<typeof getPaymentAttempt>>,
+    ) => void;
+    mockedAttempt.mockReturnValue(
+      new Promise((resolve) => {
+        approvePayment = resolve;
+      }),
+    );
+    render(<PaymentsScreen accessToken="access-token" />);
+    fireEvent.press(screen.getByText(/Completar pago/));
+    fireEvent.press(await screen.findByText(/Pagar total/));
+
+    expect(await screen.findByText("Esperando confirmacion")).toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Dejar de esperar"));
+    expect(screen.queryByText("Esperando confirmacion")).toBeNull();
+
+    await act(async () => {
+      approvePayment({
+        paymentId: "payment-1",
+        reservationId: "reservation-1",
+        amountMinorUnits: 600_000,
+        currency: "ARS",
+        option: "FULL",
+        pricingVersion: "v1",
+        status: "APPROVED",
+        checkoutUrl: null,
+        expiresAt: "2026-07-21T12:15:00.000Z",
+      });
+    });
+
+    expect(await screen.findByText("Pago confirmado")).toBeOnTheScreen();
+  });
 });

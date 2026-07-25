@@ -26,6 +26,9 @@ type PreferenceBody = Parameters<Preference['create']>[0]['body'];
 type SdkRequestOptions = NonNullable<
   Parameters<Preference['create']>[0]['requestOptions']
 >;
+type PaymentSearchOptions = NonNullable<
+  NonNullable<Parameters<Payment['search']>[0]>['options']
+>;
 
 export type MercadoPagoSdkClients = {
   createPreference(
@@ -33,6 +36,10 @@ export type MercadoPagoSdkClients = {
     requestOptions: SdkRequestOptions,
   ): Promise<unknown>;
   getPayment(id: string, requestOptions: SdkRequestOptions): Promise<unknown>;
+  searchPayments(
+    options: PaymentSearchOptions,
+    requestOptions: SdkRequestOptions,
+  ): Promise<unknown>;
   refundPayment(
     id: string,
     requestOptions: SdkRequestOptions,
@@ -53,6 +60,8 @@ function createMercadoPagoSdkClients(
     createPreference: (body, requestOptions) =>
       preference.create({ body, requestOptions }),
     getPayment: (id, requestOptions) => payment.get({ id, requestOptions }),
+    searchPayments: (options, requestOptions) =>
+      payment.search({ options, requestOptions }),
     refundPayment: (id, requestOptions) =>
       refund.total({ payment_id: id, requestOptions }),
   };
@@ -100,7 +109,7 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
         },
       ),
     );
-    const id = this.string(response, 'id');
+    this.string(response, 'id');
     const checkoutUrl = this.string(
       response,
       this.config.production ? 'init_point' : 'sandbox_init_point',
@@ -140,6 +149,51 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
         false,
       );
     return snapshot;
+  }
+
+  async findPaymentByExternalReference(
+    externalReference: string,
+    expectation: GatewayPaymentExpectation,
+  ): Promise<GatewayPaymentSnapshot | null> {
+    const response = await this.callSdk(() =>
+      this.sdk.searchPayments(
+        {
+          external_reference: externalReference,
+          sort: 'date_last_updated',
+          criteria: 'desc',
+          limit: 20,
+        },
+        { timeout: this.config.timeoutMs },
+      ),
+    );
+    const results = response.results;
+    if (!Array.isArray(results))
+      throw new PaymentGatewayError(
+        'El proveedor de pagos devolvio una respuesta invalida.',
+        false,
+      );
+    const exactMatches = results
+      .filter(
+        (item): item is JsonObject =>
+          Boolean(item) &&
+          typeof item === 'object' &&
+          !Array.isArray(item) &&
+          (item as JsonObject).external_reference === externalReference,
+      )
+      .map((item) => this.paymentSnapshot(item));
+    if (exactMatches.length === 0) return null;
+    const matchingPayment = exactMatches.find(
+      (snapshot) =>
+        snapshot.externalReference === expectation.externalReference &&
+        snapshot.amountMinorUnits === expectation.amountMinorUnits &&
+        snapshot.currency === expectation.currency,
+    );
+    if (!matchingPayment)
+      throw new PaymentGatewayError(
+        'Los datos informados por el proveedor no coinciden con el pago.',
+        false,
+      );
+    return matchingPayment;
   }
 
   async refundPayment(

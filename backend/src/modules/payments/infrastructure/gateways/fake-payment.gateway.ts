@@ -69,6 +69,14 @@ export class FakePaymentGateway implements PaymentGatewayPort {
     return this.cloneSnapshot(this.requirePayment(externalPaymentId));
   }
 
+  async findPaymentByExternalReference(externalReference: string) {
+    await Promise.resolve();
+    const payment = [...this.payments.values()].find(
+      (item) => item.externalReference === externalReference,
+    );
+    return payment ? this.cloneSnapshot(payment) : null;
+  }
+
   async verifyAndParseWebhook(request: GatewayWebhookRequest) {
     await Promise.resolve();
     const received = request.headers['x-fake-signature'];

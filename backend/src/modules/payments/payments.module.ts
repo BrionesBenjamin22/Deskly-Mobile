@@ -8,6 +8,7 @@ import { ReconcileStalePaymentsUseCase } from './application/use-cases/reconcile
 import {
   GetPaymentAttemptUseCase,
   ListReservationPaymentsUseCase,
+  SynchronizePaymentAttemptUseCase,
 } from './application/use-cases/query-payment-attempts.use-cases';
 import { PAYMENT_ATTEMPT_REPOSITORY } from './domain/ports/payment-attempt-repository.port';
 import { PAYMENT_GATEWAY } from './domain/ports/payment-gateway.port';
@@ -25,10 +26,12 @@ import {
 import { PaymentWebhooksController } from './interfaces/http/payment-webhooks.controller';
 import { PaymentOperationsController } from './interfaces/http/payment-operations.controller';
 import { PaymentQuotesController } from './interfaces/http/payment-quotes.controller';
+import { PaymentReturnsController } from './interfaces/http/payment-returns.controller';
 
 @Module({
   imports: [AuthModule, ReservationsModule],
   controllers: [
+    PaymentReturnsController,
     PaymentsController,
     ReservationPaymentsController,
     PaymentWebhooksController,
@@ -40,6 +43,7 @@ import { PaymentQuotesController } from './interfaces/http/payment-quotes.contro
     GetPaymentQuoteUseCase,
     ProcessPaymentWebhookUseCase,
     ReconcileStalePaymentsUseCase,
+    SynchronizePaymentAttemptUseCase,
     GetPaymentAttemptUseCase,
     ListReservationPaymentsUseCase,
     {

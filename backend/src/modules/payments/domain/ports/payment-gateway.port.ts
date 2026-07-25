@@ -64,6 +64,10 @@ export interface PaymentGatewayPort {
     externalPaymentId: string,
     expectation?: GatewayPaymentExpectation,
   ): Promise<GatewayPaymentSnapshot>;
+  findPaymentByExternalReference(
+    externalReference: string,
+    expectation: GatewayPaymentExpectation,
+  ): Promise<GatewayPaymentSnapshot | null>;
   verifyAndParseWebhook(
     request: GatewayWebhookRequest,
   ): Promise<GatewayNotification>;
