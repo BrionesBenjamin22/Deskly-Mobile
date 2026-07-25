@@ -1,62 +1,94 @@
 # Deskly
 
-Aplicación mobile para la gestión operativa de centros de coworking. El repositorio contiene una API REST en NestJS y una aplicación Expo/React Native, con PostgreSQL y Prisma como capa de persistencia.
+Aplicación mobile para la gestión operativa de centros de coworking. El
+repositorio contiene una API REST en NestJS y una aplicación Expo/React Native,
+con PostgreSQL y Prisma como capa de persistencia.
 
-## Estado actual del desarrollo
+## Estado actual
 
-El proyecto se encuentra en una fase de **MVP funcional avanzado e integración de módulos**. Los flujos principales de autenticación, usuarios, escritorios, reservas, pagos y penalizaciones ya tienen implementación backend y consumo mobile. La infraestructura local con Docker Compose también está preparada.
+Deskly se encuentra en una etapa de MVP funcional avanzado. Están integrados los
+flujos principales de autenticación, administración, escritorios, áreas de
+trabajo, reservas, pagos y penalizaciones.
 
-El último bloque desarrollado incorpora la jerarquía **localidad → área de trabajo → escritorio**:
+El flujo de reserva exige un pago antes de confirmar la operación. Mercado Pago
+Checkout Pro se integra mediante un adaptador backend y un proveedor fake se
+conserva para pruebas deterministas. Una reserva solo pasa a `RESERVED` cuando el
+backend verifica un pago `APPROVED`; volver desde el navegador no confirma la
+operación por sí solo.
 
-- persistencia, migración y contratos backend para localidades y áreas;
-- consultas de localidades, áreas y disponibilidad por fecha y horario;
-- filtros de escritorios por localidad y área;
-- validación del estado activo del área y la localidad antes de reservar;
-- pantalla mobile de áreas agrupadas por localidad;
-- navegación desde un área disponible hacia sus escritorios;
-- asignación del área al crear o editar un escritorio.
+La aplicación mobile funciona en web, emuladores y dispositivos físicos con Expo.
+La URL de la API se resuelve por entorno y exige HTTPS en producción. En mobile
+nativo la sesión se persiste con SecureStore; en web permanece únicamente en
+memoria.
 
-La base funcional está construida, pero el producto aún no está en fase de cierre o producción. El siguiente tramo debe completar la validación integral por roles, los historiales y la auditoría visibles, la persistencia segura de sesión, la cobertura e2e y la preparación de CI/CD.
+## Módulos
 
-## Módulos implementados
+| Módulo                        | Estado                                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| Autenticación y perfil        | Login, registro, perfil, cambio de contraseña, revocación por versión de token y sesión segura |
+| Gestión de usuarios           | Listado, roles, restauración de acceso y baja lógica para `ADMIN`                              |
+| Panel administrativo          | CRUD de escritorios, tipos, amenities, localidades y áreas de trabajo                          |
+| Escritorios                   | Catálogo, disponibilidad, filtros, capacidad, amenities y ubicación                            |
+| Localidades y áreas           | CRUD, dirección, coordenadas, mapa y relaciones activas                                        |
+| Reservas                      | Hold previo al pago, ciclo de estados, cancelación, check-in y ordenamiento operativo          |
+| Pagos                         | Checkout Pro, seña o pago total, saldo pendiente, webhooks, conciliación e idempotencia        |
+| Penalizaciones                | Registro de ausencias, bloqueos y consulta según rol                                           |
+| Historial y auditoría visible | Implementación parcial; continúa como trabajo transversal                                      |
 
-| Módulo | Backend | Mobile | Estado |
-|---|---|---|---|
-| Autenticación y perfil | Implementado | Implementado | Funcional; sesión en memoria |
-| Gestión de usuarios | Implementado | Implementado | Funcional para `ADMIN` |
-| Escritorios y catálogos | Implementado | Implementado | Funcional |
-| Localidades y áreas | Implementado | Implementado | Último bloque integrado |
-| Reservas | Implementado | Implementado | Funcional según rol |
-| Pagos | Implementado | Implementado | Flujo base disponible |
-| Penalizaciones | Implementado | Implementado | Flujo base disponible |
-| Historial y auditoría visible | Parcial | Pendiente de completar | Cierre transversal pendiente |
+## Roles y navegación
+
+La autorización se valida en el backend y la aplicación mobile oculta las
+secciones que cada rol no puede utilizar:
+
+- `MIEMBRO`: escritorios, reservas propias, pagos propios y cuenta.
+- `GESTOR`: gestión operativa de reservas, check-in, penalizaciones y cuenta.
+- `ADMIN`: panel de elementos del sistema, gestión de usuarios y cuenta.
+
+Las restricciones visuales no reemplazan los guards, roles ni controles de
+propiedad del backend.
+
+## Pagos
+
+El backend es la fuente autoritativa para importes, moneda, referencia externa y
+estado:
+
+- moneda `ARS` y tarifa calculada por backend;
+- checkout idempotente mediante `Idempotency-Key`;
+- seña del 30 % o pago del total pendiente;
+- validación HMAC y anti-replay en webhooks;
+- comparación de referencia, importe y moneda antes de aprobar;
+- conciliación de pagos pendientes cuando el webhook se demora;
+- rate limiting por usuario en checkout y sincronización, y por IP en webhooks;
+- timeout y errores externos sanitizados;
+- URLs de checkout limitadas a dominios HTTPS de Mercado Pago.
+
+La documentación operativa y de seguridad se encuentra en
+[`backend/src/modules/payments`](./backend/src/modules/payments).
 
 ## Tecnologías
 
-- Backend: NestJS 11 y TypeScript
-- Mobile: React Native 0.81 y Expo 54
-- Base de datos: PostgreSQL
-- ORM: Prisma 7
-- Autenticación: JWT y Passport
-- Documentación API: Swagger
-- Pruebas backend: Jest y Supertest
-- Infraestructura: Docker y Docker Compose
-- Package manager principal: pnpm
+- Backend: NestJS 11, TypeScript y Swagger.
+- Mobile: React Native 0.81 y Expo 54.
+- Persistencia: PostgreSQL y Prisma 7.
+- Autenticación: JWT, Passport y bcrypt.
+- Pagos: Mercado Pago Checkout Pro.
+- Pruebas: Jest, Supertest y Testing Library.
+- Infraestructura: Docker, Docker Compose y GitHub Actions.
+- Package manager: pnpm 10.
 
 ## Arquitectura
 
-El backend utiliza una arquitectura hexagonal, también conocida como ports and adapters.
+El backend utiliza arquitectura hexagonal:
 
-La regla principal es que el dominio y los casos de uso no dependen de frameworks, base de datos ni transporte HTTP. El mobile se organiza por features con pantallas, componentes, hooks, services, tipos y validaciones. Su navegación actual es state-based y se coordina desde `mobile/App.tsx`.
+- `domain`: entidades, value objects, reglas y puertos;
+- `application`: casos de uso, DTOs internos y servicios;
+- `infrastructure`: Prisma, gateways y adaptadores externos;
+- `interfaces`: controladores HTTP, DTOs y guards;
+- `common` y `config`: comportamiento transversal y configuración validada.
 
-Capas esperadas:
-
-- `domain`: reglas de negocio, modelos de dominio, contratos y errores propios del negocio.
-- `application`: casos de uso, DTOs internos y puertos que necesita la aplicacion.
-- `infrastructure`: adaptadores tecnicos como Prisma, persistencia, configuracion, integraciones externas y servicios concretos.
-- `interfaces`: entrada y salida hacia usuarios o sistemas externos, por ejemplo controladores HTTP.
-- `common`: utilidades transversales acotadas.
-- `config`: carga y validacion de variables de entorno.
+El mobile se organiza por features con screens, componentes, hooks, services,
+tipos y validaciones. La navegación es state-based y se coordina desde
+`mobile/App.tsx`.
 
 ## Estructura
 
@@ -64,22 +96,46 @@ Capas esperadas:
 Deskly-Mobile/
   backend/
   mobile/
-  docs/
+  tasks/
+  .github/workflows/
 ```
 
-## Backend
+`tasks/README.md` es el registro canónico de tareas, dependencias y estado de las
+etapas.
+
+## Configuración por entorno
+
+Los valores reales permanecen fuera de Git. El repositorio incluye plantillas
+separadas:
+
+```text
+backend/.env.development.example
+backend/.env.testing.example
+backend/.env.production.example
+mobile/.env.development.example
+mobile/.env.testing.example
+mobile/.env.production.example
+```
+
+No deben incluirse tokens, contraseñas ni secretos en variables `EXPO_PUBLIC_*`,
+porque Expo las incorpora al bundle.
+
+## Ejecución local
+
+### Backend
 
 ```bash
 cd backend
 pnpm install
-cp .env.example .env
 pnpm prisma:generate
+pnpm prisma migrate deploy
 pnpm start:dev
 ```
 
-El backend requiere `DATABASE_URL` y `JWT_SECRET`. Incluye módulos de autenticación, usuarios, escritorios, localidades, áreas de trabajo, reservas, pagos y penalizaciones, manteniendo dominio, casos de uso, repositorios y controladores separados por responsabilidad.
+El backend requiere como mínimo una conexión PostgreSQL y un secreto JWT válidos.
+Mercado Pago solo exige sus credenciales cuando `PAYMENT_GATEWAY=MERCADO_PAGO`.
 
-## Mobile
+### Mobile
 
 ```bash
 cd mobile
@@ -87,53 +143,98 @@ pnpm install
 pnpm start
 ```
 
-## Desarrollo con Docker Compose
+En un dispositivo físico, `EXPO_PUBLIC_API_URL` debe apuntar a la IP LAN del
+equipo, por ejemplo `http://192.168.1.20:3000`. `127.0.0.1` representa al propio
+dispositivo. Producción requiere una URL HTTPS.
 
-Copiar `.env.example` como `.env` en la raiz y definir una contrasena local. El
-backend sigue leyendo su configuracion de `backend/.env`, pero Compose reemplaza
-`DATABASE_URL` para conectarlo a PostgreSQL por la red interna.
+## Docker Compose
+
+Copiar `.env.example` como `.env` en la raíz y completar únicamente los valores
+locales requeridos:
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-El backend de desarrollo queda publicado en `0.0.0.0:3000` para que Expo Go pueda
-acceder desde la red local. PostgreSQL no expone puertos al host y conserva sus
-datos en el volumen `postgres-data`. El puerto 3000 solo debe habilitarse en el
-firewall para redes privadas; testing y produccion deben usar un endpoint HTTPS.
+El entorno:
 
-Antes de iniciar el backend, el servicio one-shot `migration` ejecuta
-`prisma migrate deploy`. La API solo arranca cuando todas las migraciones versionadas
-terminan correctamente; el contenedor no usa `db push` ni genera migraciones nuevas.
+- ejecuta migraciones antes de iniciar la API;
+- mantiene PostgreSQL en una red interna sin publicar su puerto;
+- expone el backend en `0.0.0.0:3000` para Expo Go;
+- ejecuta procesos con usuarios sin privilegios;
+- utiliza filesystems de solo lectura y elimina capacidades Linux;
+- fija imágenes oficiales por digest;
+- incorpora healthchecks para base, backend y mobile.
 
-Los contenedores de aplicacion eliminan capacidades Linux, impiden escalamiento de
-privilegios y usan filesystem de solo lectura con directorios temporales acotados.
-Las imagenes oficiales de Node.js y PostgreSQL estan fijadas por digest
-multi-arquitectura para que una misma revision del repositorio use contenido
-inmutable. Al actualizar una imagen se debe verificar el digest oficial, ejecutar
-las validaciones Docker y cambiar en el mismo bloque todas sus referencias.
-Para Expo Go en un dispositivo fisico, configurar `EXPO_PUBLIC_API_URL` con la IP
-LAN del equipo antes de iniciar Metro y comprobar `/health` desde el telefono.
+El puerto 3000 debe habilitarse solo en redes privadas de desarrollo.
 
-## Convenciones de desarrollo
+## Seguridad
 
-- Cada entidad nueva debe respetar arquitectura hexagonal.
-- Los servicios de infraestructura no deben filtrarse hacia el dominio.
-- Los cambios backend que agreguen endpoints deben documentar contratos, payloads y errores.
-- Las pantallas home deben paginar con 9 items.
-- Los historiales de cambios deben paginar con 3 items cuando exista endpoint.
-- Los formularios de edicion deben enviar solo diferencias reales.
-- Las validaciones previsibles deben resolverse en frontend con mensajes por campo antes de ejecutar la peticion.
-- El backend debe conservar validaciones de tipo y reglas de negocio como barrera de contrato.
-- Los mensajes de exito deben ser visibles, concretos y seguir el estilo institucional del sistema.
-- La accion de salir no debe mostrarse como boton directo en la barra inferior.
-- No ejecutar commits automaticamente; al finalizar un modulo se debe proponer el mensaje de commit.
+Controles relevantes:
 
-## Próximos pasos
+- DTOs con whitelist y rechazo de campos no declarados;
+- guards JWT, roles y controles de propiedad;
+- contraseñas hasheadas con bcrypt;
+- rate limiting en autenticación y pagos;
+- invalidación de sesiones después de cambios críticos;
+- secretos limitados al backend y archivos reales de entorno ignorados;
+- CORS y HTTPS productivo configurables;
+- respuestas y logs sin cuerpos del proveedor ni credenciales;
+- acciones de CI fijadas por SHA y sin persistencia de credenciales;
+- dependencias productivas auditadas sin vulnerabilidades conocidas al cierre de
+  `SECURITY-08`.
 
-1. Ejecutar una prueba integral del bloque de localidades, áreas, escritorios y reservas en backend y mobile.
-2. Completar endpoints y vistas de historial/auditoría para las entidades que aún no los exponen.
-3. Incorporar persistencia segura y restauración controlada de sesión en mobile.
-4. Ampliar pruebas e2e de permisos, estados de reserva, penalizaciones y pagos.
-5. Mantener sincronizados los contratos, payloads y errores de la documentación modular.
-6. Preparar CI/CD, healthchecks de despliegue y configuración por ambiente.
+En despliegues con varias réplicas, el almacenamiento en memoria del throttler
+debe reemplazarse por un backend compartido, por ejemplo Redis.
+
+## Validación
+
+### Backend
+
+```bash
+cd backend
+pnpm build
+pnpm test -- --runInBand
+pnpm test:e2e -- --runInBand
+pnpm audit --prod
+```
+
+### Mobile
+
+```bash
+cd mobile
+pnpm run check:expo
+pnpm run typecheck
+pnpm test -- --runInBand
+pnpm run export:web
+pnpm audit --prod
+```
+
+La validación más reciente de seguridad y pagos aprobó 47 suites y 287 pruebas
+backend, junto con el E2E PostgreSQL de Payments de 1 suite y 7 pruebas. Mobile
+aprobó 19 suites y 69 pruebas en su última barrera completa.
+
+## CI/CD
+
+GitHub Actions valida cambios backend, mobile, migraciones, auditorías de
+dependencias y builds Docker. Las acciones externas y las imágenes utilizadas por
+el pipeline están fijadas de forma inmutable.
+
+Los secretos de CI deben configurarse en GitHub; no existen credenciales reales
+versionadas.
+
+## Pendientes conocidos
+
+- completar el historial y la auditoría visible en las entidades que todavía no
+  exponen el flujo completo;
+- finalizar la validación manual integral de Payments en sandbox;
+- automatizar la geocodificación de direcciones como evolución del panel
+  administrativo;
+- incorporar almacenamiento distribuido para rate limiting antes de escalar el
+  backend horizontalmente;
+- completar la configuración productiva de proxy reverso, TLS, monitoreo y
+  despliegue cloud.
+
+La documentación estable de cada módulo está en sus respectivos README. Los
+planes ejecutables y tareas pendientes se mantienen exclusivamente en
+[`tasks`](./tasks).
