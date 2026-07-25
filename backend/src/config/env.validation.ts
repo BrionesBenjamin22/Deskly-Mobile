@@ -19,6 +19,13 @@ export function validateEnvironment(
     }
   }
 
+  const jwtSecret = getStringValue(config.JWT_SECRET);
+  if (jwtSecret.length < 32 || /^change[_-]?me/i.test(jwtSecret)) {
+    throw new Error(
+      'JWT_SECRET must contain at least 32 characters and must not use a placeholder',
+    );
+  }
+
   const getString = (key: string, fallback?: string): string => {
     const value = config[key] ?? fallback;
 
@@ -42,10 +49,14 @@ export function validateEnvironment(
     PORT: Number(config.PORT ?? 3000),
     FRONTEND_URL: getString('FRONTEND_URL', 'http://localhost:5173'),
     DATABASE_URL: getString('DATABASE_URL'),
-    JWT_SECRET: getString('JWT_SECRET'),
+    JWT_SECRET: jwtSecret,
     JWT_EXPIRES_IN: validateJwtExpiration(getString('JWT_EXPIRES_IN', '1h')),
     PAYMENT_GATEWAY: paymentGateway as 'FAKE' | 'MERCADO_PAGO',
   };
+}
+
+function getStringValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 function validateMercadoPagoEnvironment(config: Record<string, unknown>): void {
