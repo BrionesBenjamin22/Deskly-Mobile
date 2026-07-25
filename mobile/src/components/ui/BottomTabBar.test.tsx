@@ -14,10 +14,24 @@ describe('BottomTabBar permissions', () => {
     expect(screen.queryByText('Mis reservas')).toBeNull();
   });
 
-  it('mantiene Pagos visible para miembros', () => {
+  it('muestra solo acciones operativas permitidas para miembros', () => {
     render(<BottomTabBar activeTab="payments" userRole="MIEMBRO" />);
 
+    expect(screen.getByText('Escritorios')).toBeOnTheScreen();
+    expect(screen.getByText('Mis reservas')).toBeOnTheScreen();
     expect(screen.getByText('Pagos')).toBeOnTheScreen();
+    expect(screen.getByText('Cuenta')).toBeOnTheScreen();
+    expect(screen.queryByText('Panel')).toBeNull();
+    expect(screen.queryByText('GestiÃ³n de usuarios')).toBeNull();
+  });
+
+  it('aplica minimo privilegio cuando el rol no esta disponible', () => {
+    render(<BottomTabBar activeTab="profile" />);
+
+    expect(screen.getByText('Cuenta')).toBeOnTheScreen();
+    expect(screen.queryByText('Panel')).toBeNull();
+    expect(screen.queryByText('GestiÃ³n de usuarios')).toBeNull();
+    expect(screen.queryByText('Pagos')).toBeNull();
   });
 
   it('cierra el menu de Cuenta al tocar fuera', () => {

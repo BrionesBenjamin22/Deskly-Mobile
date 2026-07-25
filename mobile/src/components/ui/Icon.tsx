@@ -10,6 +10,7 @@ import {
 import {
   Building2,
   Calendar,
+  Check,
   ChevronDown,
   ChevronRight,
   CircleAlert,
@@ -35,6 +36,7 @@ import { colors } from '../../theme/colors';
 export type IconName =
   | 'building'
   | 'calendar'
+  | 'check'
   | 'chevronDown'
   | 'chevronRight'
   | 'circleAlert'
@@ -64,6 +66,7 @@ type IconProps = {
 const icons: Record<IconName, LucideIcon> = {
   building: Building2,
   calendar: Calendar,
+  check: Check,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
   circleAlert: CircleAlert,
@@ -129,7 +132,9 @@ export function Icon({
       style={[styles.icon, { height: size, width: size }, style]}
     >
       {isLoading ? (
-        <Animated.View style={{ transform: [{ rotate }] }}>{content}</Animated.View>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          {content}
+        </Animated.View>
       ) : (
         content
       )}

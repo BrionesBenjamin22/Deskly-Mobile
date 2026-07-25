@@ -24,7 +24,7 @@ const statusConfig: Record<
   { icon: IconName; iconColor: string; circleColor: string }
 > = {
   success: {
-    icon: 'circleCheck',
+    icon: 'check',
     iconColor: statusColors.success,
     circleColor: statusColors.successSoft,
   },
@@ -34,7 +34,7 @@ const statusConfig: Record<
     circleColor: colors.gray,
   },
   error: {
-    icon: 'circleAlert',
+    icon: 'x',
     iconColor: statusColors.error,
     circleColor: statusColors.errorSoft,
   },

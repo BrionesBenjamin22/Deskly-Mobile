@@ -68,7 +68,9 @@ export function BottomTabBar({
   };
   const visibleTabs =
     userRole === 'GESTOR'
-      ? tabs.filter((tab) => tab.key === 'reservations' || tab.key === 'profile')
+      ? tabs.filter(
+          (tab) => tab.key === 'reservations' || tab.key === 'profile',
+        )
       : userRole === 'ADMIN'
         ? tabs.filter(
             (tab) =>
@@ -76,7 +78,15 @@ export function BottomTabBar({
               tab.key === 'users' ||
               tab.key === 'profile',
           )
-        : tabs;
+        : userRole === 'MIEMBRO'
+          ? tabs.filter(
+              (tab) =>
+                tab.key === 'desks' ||
+                tab.key === 'reservations' ||
+                tab.key === 'payments' ||
+                tab.key === 'profile',
+            )
+          : tabs.filter((tab) => tab.key === 'profile');
 
   const runProfileAction = (action?: () => void) => {
     setIsProfileMenuOpen(false);
