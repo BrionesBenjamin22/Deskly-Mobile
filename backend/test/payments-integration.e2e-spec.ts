@@ -180,7 +180,7 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
       .expect(403);
   });
 
-  it('crea un unico checkout ante diez solicitudes simultaneas', async () => {
+  it('crea un unico checkout ante solicitudes simultaneas dentro del limite', async () => {
     const call = () =>
       request(app.getHttpServer())
         .post('/payments/checkout')
@@ -188,7 +188,9 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
         .set('Idempotency-Key', 'e2e-checkout-003')
         .send({ reservationId, option: 'DEPOSIT' })
         .expect(201);
-    const responses = await Promise.all(Array.from({ length: 10 }, call));
+    // Una solicitud autenticada e invalida anterior ya consumio una posicion
+    // del limite del handler para este usuario durante esta ventana.
+    const responses = await Promise.all(Array.from({ length: 4 }, call));
     const first = responses[0];
     expect(
       responses.every((item) => item.body.paymentId === first.body.paymentId),

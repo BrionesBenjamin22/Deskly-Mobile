@@ -5,6 +5,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
+  THROTTLER_LIMIT,
+  THROTTLER_TTL,
+} from '@nestjs/throttler/dist/throttler.constants';
+import {
   InvalidWebhookSignatureError,
   PaymentGatewayError,
 } from '../../domain/errors/payment-domain.errors';
@@ -61,5 +65,22 @@ describe('PaymentWebhooksController', () => {
     await expect(controller.process(request() as never)).rejects.toBeInstanceOf(
       expected,
     );
+  });
+
+  it('admite hasta 120 notificaciones por minuto e IP', () => {
+    expect(
+      Reflect.getMetadata(
+        `${THROTTLER_LIMIT}default`,
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        PaymentWebhooksController.prototype.process,
+      ),
+    ).toBe(120);
+    expect(
+      Reflect.getMetadata(
+        `${THROTTLER_TTL}default`,
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        PaymentWebhooksController.prototype.process,
+      ),
+    ).toBe(60_000);
   });
 });

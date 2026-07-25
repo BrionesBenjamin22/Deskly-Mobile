@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthModule } from '../auth/auth.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { CreatePaymentUseCase } from './application/use-cases/create-payment.use-case';
@@ -46,6 +47,7 @@ import { PaymentReturnsController } from './interfaces/http/payment-returns.cont
     SynchronizePaymentAttemptUseCase,
     GetPaymentAttemptUseCase,
     ListReservationPaymentsUseCase,
+    ThrottlerGuard,
     {
       provide: PAYMENT_ATTEMPT_REPOSITORY,
       useClass: PrismaPaymentAttemptRepository,

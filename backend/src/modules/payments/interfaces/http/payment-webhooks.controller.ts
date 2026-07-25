@@ -8,8 +8,10 @@ import {
   Req,
   ServiceUnavailableException,
   UnprocessableEntityException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Request } from 'express';
 
 import { ProcessPaymentWebhookUseCase } from '../../application/use-cases/process-payment-webhook.use-case';
@@ -27,6 +29,8 @@ export class PaymentWebhooksController {
   constructor(private readonly processWebhook: ProcessPaymentWebhookUseCase) {}
 
   @Post()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   async process(@Req() request: RawWebhookRequest) {
     const rawBody = request.rawBody?.toString('utf8') ?? '';

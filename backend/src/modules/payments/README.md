@@ -47,7 +47,7 @@ Las consultas autenticadas de un intento o de los pagos de una reserva tambien s
 | -------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Crear checkout             | `Preference`                  | Payload autoritativo ARS, URLs backend, expiracion, idempotencia y allowlist HTTPS de los dominios oficiales `mercadopago.com` y `mercadopago.com.ar`. |
 | Consultar o conciliar pago | `Payment`                     | Mapeo conservador de estados y coincidencia de referencia, importe y moneda.                                                                           |
-| Recuperar webhook perdido  | `Payment.search`              | Referencia externa exacta, importe y moneda autoritativos antes de vincular el ID real.                                                                 |
+| Recuperar webhook perdido  | `Payment.search`              | Referencia externa exacta, importe y moneda autoritativos antes de vincular el ID real.                                                                |
 | Procesar webhook           | `Payment` luego de HMAC local | Firma valida, datos minimos, anti-replay transaccional y confirmacion solo con estado verificado.                                                      |
 | Reembolsar duplicado       | `PaymentRefund` y `Payment`   | Idempotencia del reembolso y lectura posterior del estado definitivo.                                                                                  |
 | Fallo externo              | Todos                         | Timeout, desconexion, 408, 429 y 5xx reintentables; errores sanitizados sin secretos.                                                                  |
@@ -105,6 +105,26 @@ GET /payments/return/:result
 - `MIEMBRO`: solo pagos de sus propias reservas.
 - `ADMIN` y `GESTOR`: consulta operativa de cualquier pago.
 
+## Limitacion de consumo
+
+Las operaciones que pueden crear o consultar recursos en el proveedor poseen
+limites independientes:
+
+- `POST /payments/checkout`: 5 solicitudes por minuto y usuario autenticado.
+- `GET /payments/:id`: 30 solicitudes por minuto y usuario autenticado.
+- `GET /reservations/:id/payments`: 30 solicitudes por minuto y usuario
+  autenticado.
+- `POST /webhooks/payments`: 120 notificaciones por minuto e IP.
+
+El guard JWT se ejecuta antes del throttler en las operaciones autenticadas, por
+lo que dos usuarios que comparten una red no consumen el mismo contador. El
+webhook utiliza IP porque no posee una sesion Deskly. Superar el limite responde
+`429` antes de invocar el caso de uso o el proveedor.
+
+El almacenamiento actual del throttler es local al proceso. Antes de ejecutar
+varias replicas del backend debe reemplazarse por almacenamiento compartido,
+por ejemplo Redis, para que el limite sea global.
+
 ## Respuesta de checkout
 
 ```json
@@ -128,3 +148,4 @@ GET /payments/return/:result
 - `403`: pago o reserva ajenos.
 - `404`: pago o reserva inexistentes.
 - `409`: reserva no pagable, checkout incompatible, clave reutilizada o proveedor no disponible.
+- `429`: limite temporal de solicitudes excedido.

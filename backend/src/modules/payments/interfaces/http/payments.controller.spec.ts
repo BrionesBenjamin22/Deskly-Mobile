@@ -1,6 +1,18 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ExecutionContext,
+} from '@nestjs/common';
+import {
+  THROTTLER_LIMIT,
+  THROTTLER_TTL,
+} from '@nestjs/throttler/dist/throttler.constants';
 import { PaymentIdempotencyConflictError } from '../../domain/errors/payment-domain.errors';
-import { PaymentsController } from './payments.controller';
+import {
+  paymentUserTracker,
+  PaymentsController,
+  ReservationPaymentsController,
+} from './payments.controller';
 
 describe('PaymentsController', () => {
   const request = { user: { member: { id: 'member-1' } } } as never;
@@ -64,5 +76,52 @@ describe('PaymentsController', () => {
         request,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('limita checkout a 5 solicitudes por minuto', () => {
+    expect(
+      Reflect.getMetadata(
+        `${THROTTLER_LIMIT}default`,
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        PaymentsController.prototype.checkout,
+      ),
+    ).toBe(5);
+    expect(
+      Reflect.getMetadata(
+        `${THROTTLER_TTL}default`,
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        PaymentsController.prototype.checkout,
+      ),
+    ).toBe(60_000);
+  });
+
+  it('limita las consultas que sincronizan pagos a 30 por minuto', () => {
+    expect(
+      Reflect.getMetadata(
+        `${THROTTLER_LIMIT}default`,
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        PaymentsController.prototype.findById,
+      ),
+    ).toBe(30);
+    expect(
+      Reflect.getMetadata(
+        `${THROTTLER_LIMIT}default`,
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        ReservationPaymentsController.prototype.listByReservation,
+      ),
+    ).toBe(30);
+  });
+
+  it('aísla el contador por usuario autenticado', () => {
+    const context = {} as ExecutionContext;
+    expect(
+      paymentUserTracker(
+        { user: { id: 'user-1' }, ip: '192.168.1.10' },
+        context,
+      ),
+    ).toBe('user:user-1');
+    expect(paymentUserTracker({ ip: '192.168.1.10' }, context)).toBe(
+      'ip:192.168.1.10',
+    );
   });
 });

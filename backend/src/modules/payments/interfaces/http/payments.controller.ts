@@ -14,6 +14,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  Throttle,
+  ThrottlerGetTrackerFunction,
+  ThrottlerGuard,
+} from '@nestjs/throttler';
+import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
@@ -38,9 +43,16 @@ import { ReservationNotFoundError } from '../../domain/errors/reservation-not-fo
 import { PaymentNotFoundError } from '../../domain/errors/payment-not-found.error';
 import { CreatePaymentBodyDto } from './dto/create-payment-body.dto';
 
+export const paymentUserTracker: ThrottlerGetTrackerFunction = (
+  request: AuthenticatedRequest & { ip?: string },
+) =>
+  request.user?.id
+    ? `user:${request.user.id}`
+    : `ip:${request.ip ?? 'unknown'}`;
+
 @ApiTags('Payments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
 @Controller('payments')
 export class PaymentsController {
   constructor(
@@ -49,6 +61,13 @@ export class PaymentsController {
   ) {}
 
   @Post('checkout')
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60_000,
+      getTracker: paymentUserTracker,
+    },
+  })
   @ApiCreatedResponse({
     description: 'Checkout creado o recuperado de forma idempotente.',
   })
@@ -117,6 +136,13 @@ export class PaymentsController {
   }
 
   @Get(':id')
+  @Throttle({
+    default: {
+      limit: 30,
+      ttl: 60_000,
+      getTracker: paymentUserTracker,
+    },
+  })
   async findById(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
@@ -134,12 +160,19 @@ export class PaymentsController {
 
 @ApiTags('Payments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
 @Controller('reservations')
 export class ReservationPaymentsController {
   constructor(private readonly listPayments: ListReservationPaymentsUseCase) {}
 
   @Get(':id/payments')
+  @Throttle({
+    default: {
+      limit: 30,
+      ttl: 60_000,
+      getTracker: paymentUserTracker,
+    },
+  })
   async listByReservation(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
