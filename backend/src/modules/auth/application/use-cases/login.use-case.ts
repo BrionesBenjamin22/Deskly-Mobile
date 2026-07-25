@@ -43,6 +43,7 @@ export class LoginUseCase {
         username: user.username,
         role: user.role,
         active: user.active,
+        tokenVersion: user.tokenVersion,
       },
       {
         subject: user.id,

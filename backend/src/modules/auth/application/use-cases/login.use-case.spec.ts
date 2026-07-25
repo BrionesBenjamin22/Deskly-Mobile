@@ -81,6 +81,7 @@ describe('LoginUseCase', () => {
         username: activeUser.username,
         role: 'MIEMBRO',
         active: true,
+        tokenVersion: 0,
       },
       { subject: activeUser.id, expiresIn: '1h' },
     ]);

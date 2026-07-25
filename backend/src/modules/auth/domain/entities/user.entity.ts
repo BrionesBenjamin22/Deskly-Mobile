@@ -17,6 +17,7 @@ export type UserProps = {
   role: UserRoleValue;
   active: boolean;
   blockedUntil?: Date | null;
+  tokenVersion?: number;
   member?: MemberData | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -45,6 +46,9 @@ export class User {
   }
   get blockedUntil(): Date | null | undefined {
     return this.props.blockedUntil;
+  }
+  get tokenVersion(): number {
+    return this.props.tokenVersion ?? 0;
   }
   get member(): MemberData | null | undefined {
     return this.props.member;

@@ -12,7 +12,7 @@ import { toPublicUser } from '../../../application/dto/auth.output';
 import { AUTH_REPOSITORY } from '../../../domain/ports/auth-repository.port';
 import type { AuthRepositoryPort } from '../../../domain/ports/auth-repository.port';
 
-type TokenPayload = { sub?: string };
+type TokenPayload = { sub?: string; tokenVersion?: number };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -35,6 +35,7 @@ export class JwtAuthGuard implements CanActivate {
       const user = await this.repository.findById(payload.sub);
       if (
         !user ||
+        payload.tokenVersion !== user.tokenVersion ||
         !user.active ||
         user.member?.active === false ||
         (user.blockedUntil?.getTime() ?? 0) > Date.now()

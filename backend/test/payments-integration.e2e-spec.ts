@@ -89,8 +89,14 @@ describe('Payments autenticados (e2e PostgreSQL)', () => {
     memberId = user.member!.id;
     reservationId = reservation.id;
     const jwt = app.get(JwtService);
-    token = await jwt.signAsync({}, { subject: user.id });
-    otherToken = await jwt.signAsync({}, { subject: other.id });
+    token = await jwt.signAsync(
+      { tokenVersion: user.tokenVersion },
+      { subject: user.id },
+    );
+    otherToken = await jwt.signAsync(
+      { tokenVersion: other.tokenVersion },
+      { subject: other.id },
+    );
   });
 
   afterAll(async () => {

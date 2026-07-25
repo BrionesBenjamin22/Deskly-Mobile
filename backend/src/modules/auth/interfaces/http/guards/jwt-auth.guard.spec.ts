@@ -46,7 +46,10 @@ describe('JwtAuthGuard', () => {
       role: 'ADMIN',
       active: true,
     });
-    jwtService.verifyAsync.mockResolvedValue({ sub: user.id });
+    jwtService.verifyAsync.mockResolvedValue({
+      sub: user.id,
+      tokenVersion: user.tokenVersion,
+    });
     repository.findById.mockResolvedValue(user);
     const { context, request } = createContext('Bearer valid-token');
 
@@ -63,6 +66,28 @@ describe('JwtAuthGuard', () => {
       UnauthorizedException,
     );
     expect(repository.findById.mock.calls).toHaveLength(0);
+  });
+
+  it('invalidates an existing session after a password change', async () => {
+    const user = new User({
+      id: 'cc2fbfe5-e99e-41b4-909f-99bd8f8687f7',
+      email: 'member@deskly.test',
+      username: 'member',
+      passwordHash: 'new-hash',
+      role: 'MIEMBRO',
+      active: true,
+      tokenVersion: 2,
+    });
+    jwtService.verifyAsync.mockResolvedValue({
+      sub: user.id,
+      tokenVersion: 1,
+    });
+    repository.findById.mockResolvedValue(user);
+    const { context } = createContext('Bearer previous-token');
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('returns 401 when the bearer token is missing', async () => {

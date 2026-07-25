@@ -128,11 +128,14 @@ Requiere JWT y rol `ADMIN`. Restaura una cuenta desactivada o bloqueada por pena
 
 ## Sesion y JWT
 
-El token incluye `sub`, `email`, `username`, `role`, `active`, `iat` y `exp`.
+El token incluye `sub`, `email`, `username`, `role`, `active`, `tokenVersion`,
+`iat` y `exp`.
 `JWT_EXPIRES_IN` acepta segundos, minutos, horas o dias y no puede superar siete
 dias. El valor recomendado y predeterminado es `1h`.
 
 No se implementan refresh tokens ni almacenamiento de sesiones. Al expirar el access token, la revalidacion consiste en iniciar sesion nuevamente. El backend nunca prolonga silenciosamente el token.
+Cada cambio de contrasena incrementa `tokenVersion`; todos los access tokens
+emitidos anteriormente dejan de ser validos inmediatamente.
 
 ## Seguridad y errores
 

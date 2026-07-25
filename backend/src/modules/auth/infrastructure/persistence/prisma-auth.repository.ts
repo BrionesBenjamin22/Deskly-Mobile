@@ -136,7 +136,10 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
   async changePassword(params: ChangePasswordParams): Promise<void> {
     await this.prisma.user.update({
       where: { id: params.userId },
-      data: { passwordHash: params.newPasswordHash },
+      data: {
+        passwordHash: params.newPasswordHash,
+        tokenVersion: { increment: 1 },
+      },
     });
   }
 
@@ -299,6 +302,7 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
       role: user.role,
       active: user.active,
       blockedUntil: user.blockedUntil,
+      tokenVersion: user.tokenVersion,
       member: user.member
         ? {
             id: user.member.id,
