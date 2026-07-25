@@ -17,8 +17,8 @@ env:
   PNPM_VERSION: "10"
   CI: "1"
   EXPO_NO_TELEMETRY: "1"
-  DATABASE_URL: postgresql://deskly:deskly_ci@127.0.0.1:5432/deskly_ci?schema=public
-  JWT_SECRET: ci-secret-change-me
+  DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+  JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
   PAYMENT_GATEWAY: FAKE
 
 jobs:
@@ -155,7 +155,7 @@ jobs:
         env:
           POSTGRES_DB: deskly_ci
           POSTGRES_USER: deskly
-          POSTGRES_PASSWORD: deskly_ci
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
