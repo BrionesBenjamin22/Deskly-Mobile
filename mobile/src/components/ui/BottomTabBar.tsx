@@ -12,6 +12,7 @@ type BottomTab =
   | 'reservations'
   | 'payments'
   | 'settings'
+  | 'catalog'
   | 'users'
   | 'profile';
 
@@ -25,6 +26,7 @@ export type BottomTabBarProps = {
   onPressLogout?: () => void;
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
+  onPressAdminCatalog?: () => void;
   onPressChangePassword?: () => void;
   userRole?: UserRole;
 };
@@ -33,6 +35,7 @@ const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
   { key: 'desks', label: 'Escritorios', icon: 'home' },
   { key: 'reservations', label: 'Mis reservas', icon: 'calendar' },
   { key: 'payments', label: 'Pagos', icon: 'wallet' },
+  { key: 'catalog', label: 'Panel', icon: 'building' },
   { key: 'users', label: 'Gestión de usuarios', icon: 'users' },
   // Configuracion existe como flujo interno, pero no se expone en la barra inferior por decision de producto.
   //{ key: 'settings', label: 'Configuracion', icon: 'user' },
@@ -49,6 +52,7 @@ export function BottomTabBar({
   onPressPayments,
   onPressSettings,
   onPressUserManagement,
+  onPressAdminCatalog,
   onPressChangePassword,
   userRole,
 }: BottomTabBarProps) {
@@ -58,6 +62,7 @@ export function BottomTabBar({
     reservations: onPressReservations,
     payments: onPressPayments,
     settings: onPressSettings,
+    catalog: onPressAdminCatalog,
     users: onPressUserManagement,
     profile: onPressProfile,
   };
@@ -65,7 +70,12 @@ export function BottomTabBar({
     userRole === 'GESTOR'
       ? tabs.filter((tab) => tab.key === 'reservations' || tab.key === 'profile')
       : userRole === 'ADMIN'
-        ? tabs.filter((tab) => tab.key === 'users' || tab.key === 'profile')
+        ? tabs.filter(
+            (tab) =>
+              tab.key === 'catalog' ||
+              tab.key === 'users' ||
+              tab.key === 'profile',
+          )
         : tabs;
 
   const runProfileAction = (action?: () => void) => {

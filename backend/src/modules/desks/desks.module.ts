@@ -27,12 +27,18 @@ import { DeskAvailabilityController } from './interfaces/http/desk-availability.
 import { DeskCatalogController } from './interfaces/http/desk-catalog.controller';
 import { DesksController } from './interfaces/http/desks.controller';
 import { WorkAreasController } from './interfaces/http/work-areas.controller';
+import { AuthModule } from '../auth/auth.module';
+import { LocalitiesService } from './application/services/localities.service';
+import { WorkAreasService } from './application/services/work-areas.service';
+import { LocalitiesController } from './interfaces/http/localities.controller';
 
 @Module({
+  imports: [AuthModule],
   controllers: [
     DeskAvailabilityController,
     DeskCatalogController,
     DesksController,
+    LocalitiesController,
     WorkAreasController,
   ],
   providers: [
@@ -55,6 +61,8 @@ import { WorkAreasController } from './interfaces/http/work-areas.controller';
     UpdateAmenityUseCase,
     UpdateDeskUseCase,
     UpdateDeskDescriptionUseCase,
+    LocalitiesService,
+    WorkAreasService,
     {
       provide: DESK_REPOSITORY,
       useClass: PrismaDeskRepository,

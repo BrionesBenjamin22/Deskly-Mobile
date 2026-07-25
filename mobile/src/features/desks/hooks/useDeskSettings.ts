@@ -30,7 +30,7 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Lo sentimos, no pudimos procesar la solicitud. Intente nuevamente.';
 }
 
-export function useDeskSettings() {
+export function useDeskSettings(accessToken?: string) {
   const [desks, setDesks] = useState<Desk[]>([]);
   const [descriptions, setDescriptions] = useState<DeskDescription[]>([]);
   const [amenities, setAmenities] = useState<DeskAmenity[]>([]);
@@ -93,10 +93,10 @@ export function useDeskSettings() {
 
     try {
       if (deskId) {
-        await updateDesk(deskId, payload);
+        await updateDesk(deskId, payload, accessToken);
         setSuccessMessage('Los cambios del escritorio se guardaron correctamente.');
       } else {
-        await createDesk(payload);
+        await createDesk(payload, accessToken);
         setSuccessMessage('El escritorio se creo correctamente.');
       }
 
@@ -116,7 +116,7 @@ export function useDeskSettings() {
     setSuccessMessage(null);
 
     try {
-      await deleteDesk(deskId);
+      await deleteDesk(deskId, accessToken);
       setSuccessMessage('Escritorio dado de baja correctamente.');
       await loadSettings();
     } catch (error) {
@@ -133,10 +133,10 @@ export function useDeskSettings() {
 
     try {
       if (amenityId) {
-        await updateAmenity(amenityId, payload);
+        await updateAmenity(amenityId, payload, accessToken);
         setSuccessMessage('Los cambios del amenity se guardaron correctamente.');
       } else {
-        await createAmenity(payload);
+        await createAmenity(payload, accessToken);
         setSuccessMessage('El amenity se creo correctamente.');
       }
 
@@ -156,7 +156,7 @@ export function useDeskSettings() {
     setSuccessMessage(null);
 
     try {
-      await deleteAmenity(amenityId);
+      await deleteAmenity(amenityId, accessToken);
       setSuccessMessage('Amenities eliminado correctamente.');
       await loadSettings();
     } catch (error) {

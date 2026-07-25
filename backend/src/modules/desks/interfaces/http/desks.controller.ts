@@ -11,6 +11,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -33,6 +34,9 @@ import { CreateDeskBodyDto } from './dto/create-desk-body.dto';
 import { DeskResponseDto } from './dto/desk-response.dto';
 import { ListDesksQueryDto } from './dto/list-desks-query.dto';
 import { UpdateDeskBodyDto } from './dto/update-desk-body.dto';
+import { Roles } from '../../../auth/interfaces/http/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Desks')
 @Controller('desks')
@@ -46,6 +50,8 @@ export class DesksController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({
     description: 'Escritorio creado correctamente.',
     type: DeskResponseDto,
@@ -80,6 +86,8 @@ export class DesksController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({
     description: 'Escritorio actualizado correctamente.',
     type: DeskResponseDto,
@@ -101,6 +109,8 @@ export class DesksController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Escritorio eliminado logicamente.' })
   @ApiNotFoundResponse({ description: 'Escritorio no encontrado.' })

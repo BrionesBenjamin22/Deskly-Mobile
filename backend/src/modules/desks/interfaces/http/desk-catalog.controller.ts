@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiConflictResponse,
@@ -36,6 +37,9 @@ import { CreateAmenityBodyDto } from './dto/create-amenity-body.dto';
 import { CreateDeskDescriptionBodyDto } from './dto/create-desk-description-body.dto';
 import { UpdateAmenityBodyDto } from './dto/update-amenity-body.dto';
 import { UpdateDeskDescriptionBodyDto } from './dto/update-desk-description-body.dto';
+import { Roles } from '../../../auth/interfaces/http/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Desk catalog')
 @Controller()
@@ -60,6 +64,8 @@ export class DeskCatalogController {
   }
 
   @Post('desk-descriptions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({ description: 'Descripcion creada correctamente.' })
   createDescription(@Body() body: CreateDeskDescriptionBodyDto) {
     return this.createDeskDescriptionUseCase.execute(body);
@@ -77,6 +83,8 @@ export class DeskCatalogController {
   }
 
   @Patch('desk-descriptions/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({ description: 'Descripcion actualizada correctamente.' })
   @ApiNotFoundResponse({ description: 'Descripcion no encontrada.' })
   async updateDescription(
@@ -91,6 +99,8 @@ export class DeskCatalogController {
   }
 
   @Delete('desk-descriptions/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Descripcion eliminada correctamente.' })
   @ApiNotFoundResponse({ description: 'Descripcion no encontrada.' })
@@ -112,6 +122,8 @@ export class DeskCatalogController {
   }
 
   @Post('amenities')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({ description: 'Amenities creado correctamente.' })
   createAmenity(@Body() body: CreateAmenityBodyDto) {
     return this.createAmenityUseCase.execute(body);
@@ -129,6 +141,8 @@ export class DeskCatalogController {
   }
 
   @Patch('amenities/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({ description: 'Amenities actualizado correctamente.' })
   @ApiNotFoundResponse({ description: 'Amenities no encontrado.' })
   async updateAmenity(
@@ -143,6 +157,8 @@ export class DeskCatalogController {
   }
 
   @Delete('amenities/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Amenities eliminado correctamente.' })
   @ApiNotFoundResponse({ description: 'Amenities no encontrado.' })

@@ -2,7 +2,7 @@
 |---|---|
 | `ID` | `ADMIN-01` |
 | `Modulo` | Mobile y backend, administracion de elementos del sistema |
-| `Estado` | `PENDIENTE` |
+| `Estado` | `COMPLETADA` |
 | `Dependencia` | Navegacion administrativa consolidada; definicion de las entidades administrables |
 | `Implementacion` | `mobile/src/features`, modulos backend correspondientes y documentacion tecnica |
 | `Validacion` | Tests unitarios de permisos y formularios, tests backend, contratos HTTP, build, flujo manual y `git diff --check` |
@@ -17,9 +17,11 @@ Implementar una pantalla exclusiva para administradores que liste los elementos 
 
 La navegacion del administrador dispone de una entrada directa a Gestion de usuarios. La incorporacion del catalogo administrativo fue solicitada como una fase posterior y no forma parte del ajuste actual de navegacion.
 
+El inventario implementado comprende escritorios, tipos de escritorio, amenities, areas de trabajo y localidades.
+
 ## Riesgos heredados
 
-- Todavia debe definirse la lista autoritativa de entidades que podra administrar este catalogo.
+- Los CRUD de areas de trabajo y localidades se concentran en un servicio y un controlador por entidad.
 - Cada alta debe reutilizar contratos existentes o completar de forma coherente el flujo frontend/backend.
 - Los permisos actuales de algunos endpoints deben revisarse antes de exponer acciones administrativas.
 
@@ -55,8 +57,19 @@ La navegacion del administrador dispone de una entrada directa a Gestion de usua
 
 ## Evidencia
 
-Pendiente. La implementacion no fue iniciada.
+- Mobile: 15 suites y 49 pruebas aprobadas.
+- El formulario de escritorios permite agregar y quitar amenities asociados, con cobertura automatizada.
+- Altas, ediciones y eliminaciones muestran confirmaciones visuales de exito o error mediante `StatusModal`.
+- Las mutaciones autenticadas conservan simultaneamente los headers JSON y Bearer, con prueba de regresion.
+- Backend: 45 suites y 273 pruebas aprobadas.
+- Seguridad especifica: 15 casos de endpoints administrativos aprobados.
+- Servicios de localidades y areas: 4 reglas de dominio aprobadas.
+- TypeScript mobile sin errores.
+- Build backend aprobado.
+- Export web de Expo aprobado.
+- ESLint y Prettier aprobados en los archivos backend modificados.
+- Prueba manual con sesion ADMIN aprobada: alta de localidad recibida y procesada correctamente despues de corregir los headers autenticados.
 
 ## Mensaje de commit propuesto
 
-Se definira al completar y validar la etapa.
+`feat(administracion): incorporar panel de elementos del sistema`

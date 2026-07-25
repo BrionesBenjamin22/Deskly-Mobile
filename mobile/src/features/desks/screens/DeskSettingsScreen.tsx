@@ -16,6 +16,7 @@ import { DeskPayload } from '../services/desks.service';
 import { UserRole } from '../../auth/types/auth.types';
 
 type DeskSettingsScreenProps = {
+  accessToken?: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressProfile?: () => void;
@@ -203,6 +204,7 @@ export function DeskSettingsScreen({
   onPressChangePassword,
   userRole,
   onDeskCreated,
+  accessToken,
 }: DeskSettingsScreenProps) {
   const {
     amenities,
@@ -218,7 +220,7 @@ export function DeskSettingsScreen({
     saveDesk,
     successMessage,
     workAreas,
-  } = useDeskSettings();
+  } = useDeskSettings(accessToken);
   const [editingDesk, setEditingDesk] = useState<Desk | null>(null);
   const [editingAmenity, setEditingAmenity] = useState<DeskAmenity | null>(
     null,

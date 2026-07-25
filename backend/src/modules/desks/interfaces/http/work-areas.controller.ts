@@ -1,34 +1,46 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBadRequestResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { GetAvailableWorkAreasUseCase } from '../../application/use-cases/get-available-work-areas.use-case';
-import { ListLocalitiesUseCase } from '../../application/use-cases/list-localities.use-case';
-import { ListWorkAreasUseCase } from '../../application/use-cases/list-work-areas.use-case';
+import { WorkAreasService } from '../../application/services/work-areas.service';
 import { InvalidReservationDateError } from '../../domain/errors/invalid-reservation-date.error';
 import { InvalidTimeFormatError } from '../../domain/errors/invalid-time-format.error';
 import { InvalidTimeRangeError } from '../../domain/errors/invalid-time-range.error';
 import { GetAvailableDesksQueryDto } from './dto/get-available-desks-query.dto';
 import { ListWorkAreasQueryDto } from './dto/list-work-areas-query.dto';
+import {
+  CreateWorkAreaBodyDto,
+  UpdateWorkAreaBodyDto,
+} from './dto/work-area-body.dto';
+import { Roles } from '../../../auth/interfaces/http/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Work areas')
 @Controller()
 export class WorkAreasController {
   constructor(
-    private readonly listLocalitiesUseCase: ListLocalitiesUseCase,
-    private readonly listWorkAreasUseCase: ListWorkAreasUseCase,
+    private readonly workAreasService: WorkAreasService,
     private readonly getAvailableWorkAreasUseCase: GetAvailableWorkAreasUseCase,
   ) {}
-
-  @Get('localities')
-  @ApiOkResponse({ description: 'Listado de localidades activas.' })
-  listLocalities() {
-    return this.listLocalitiesUseCase.execute();
-  }
 
   @Get('work-areas')
   @ApiOkResponse({ description: 'Listado de areas de trabajo activas.' })
   listWorkAreas(@Query() query: ListWorkAreasQueryDto) {
-    return this.listWorkAreasUseCase.execute(query);
+    return this.workAreasService.list(query.localityId, true);
   }
 
   @Get('work-areas/availability')
@@ -54,5 +66,35 @@ export class WorkAreasController {
 
       throw error;
     }
+  }
+
+  @Get('work-areas/:id')
+  find(@Param('id', ParseUUIDPipe) id: string) {
+    return this.workAreasService.find(id);
+  }
+
+  @Post('work-areas')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
+  create(@Body() body: CreateWorkAreaBodyDto) {
+    return this.workAreasService.create(body);
+  }
+
+  @Patch('work-areas/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateWorkAreaBodyDto,
+  ) {
+    return this.workAreasService.update(id, body);
+  }
+
+  @Delete('work-areas/:id')
+  @HttpCode(204)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.workAreasService.remove(id);
   }
 }

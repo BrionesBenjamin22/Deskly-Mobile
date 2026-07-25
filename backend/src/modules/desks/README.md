@@ -6,6 +6,17 @@ Gestion de escritorios, areas de trabajo, localidades y consulta de disponibilid
 
 Cada area de trabajo puede almacenar su direccion concreta y un par opcional de coordenadas. La localidad representa solamente la ciudad o localidad generica, por ejemplo Chascomus o La Plata. La direccion no se persiste en `Locality` ni se duplica en los escritorios o reservas.
 
+Las lecturas permanecen publicas para sostener disponibilidad y reservas. Las mutaciones `POST`, `PATCH` y `DELETE` de escritorios, tipos y amenities requieren JWT y rol `ADMIN` o `GESTOR`. Las bajas de escritorios son logicas; los tipos y amenities asociados no pueden eliminarse.
+
+`LocalitiesService` con `LocalitiesController` y `WorkAreasService` con `WorkAreasController` concentran el CRUD de ubicaciones sin separar cada operacion en un caso de uso. Sus mutaciones tambien requieren `ADMIN` o `GESTOR`.
+
+- `POST/PATCH/DELETE /localities`
+- `GET /localities/:id`
+- `POST/PATCH/DELETE /work-areas`
+- `GET /work-areas/:id`
+
+Las eliminaciones son bajas logicas. Una localidad con areas activas y un area con escritorios activos devuelven conflicto hasta que sus relaciones sean resueltas.
+
 Las ubicaciones iniciales de las areas operativas se asignan mediante la migracion `20260717000000_assign_work_area_locations`. La relacion se define por UUID para que el orden de consulta o un cambio del nombre visible no alteren el punto mostrado en el mapa.
 
 ## Endpoints

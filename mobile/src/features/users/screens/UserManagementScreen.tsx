@@ -26,6 +26,7 @@ type UserManagementScreenProps = {
   onPressLogout: () => void;
   onPressSwitchAccount: () => void;
   onPressUserManagement: () => void;
+  onPressAdminCatalog: () => void;
   onPressChangePassword?: () => void;
 };
 
@@ -134,6 +135,7 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
           onPressLogout={props.onPressLogout}
           onPressSwitchAccount={props.onPressSwitchAccount}
           onPressUserManagement={props.onPressUserManagement}
+          onPressAdminCatalog={props.onPressAdminCatalog}
           onPressChangePassword={props.onPressChangePassword}
         />
       </View>

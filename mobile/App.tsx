@@ -15,8 +15,16 @@ import { ChangePasswordModal } from './src/features/auth/components/ChangePasswo
 import { ProfileScreen } from './src/features/auth/screens/ProfileScreen';
 import { LoginResponse } from './src/features/auth/types/auth.types';
 import { UserManagementScreen } from './src/features/users/screens/UserManagementScreen';
+import { AdminCatalogScreen } from './src/features/admin/screens/AdminCatalogScreen';
 
-type AppTab = 'desks' | 'reservations' | 'payments' | 'settings' | 'profile' | 'users';
+type AppTab =
+  | 'desks'
+  | 'reservations'
+  | 'payments'
+  | 'settings'
+  | 'profile'
+  | 'catalog'
+  | 'users';
 type DeskFlowScreen = 'areas' | 'desks';
 
 type AuthFeedback = {
@@ -138,8 +146,8 @@ export default function App() {
       setActiveTab('reservations');
       setMountedTabs(new Set(['reservations']));
     } else if (nextSession.user.role === 'ADMIN') {
-      setActiveTab('users');
-      setMountedTabs(new Set(['users']));
+      setActiveTab('catalog');
+      setMountedTabs(new Set(['catalog']));
     } else {
       setActiveTab('desks');
       setMountedTabs(new Set(['desks']));
@@ -257,6 +265,7 @@ export default function App() {
         {session && mountedTabs.has('settings') ? (
           <AnimatedTabScreen isActive={activeTab === 'settings'}>
             <DeskSettingsScreen
+              accessToken={session.access_token}
               userRole={session.user.role}
               onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
@@ -302,6 +311,21 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressAdminCatalog={() => handleTabChange('catalog')}
+              onPressChangePassword={() => setShowChangePassword(true)}
+            />
+          </AnimatedTabScreen>
+        ) : null}
+
+        {session?.user.role === 'ADMIN' && mountedTabs.has('catalog') ? (
+          <AnimatedTabScreen isActive={activeTab === 'catalog'}>
+            <AdminCatalogScreen
+              accessToken={session.access_token}
+              onPressAdminCatalog={() => handleTabChange('catalog')}
+              onPressUserManagement={() => handleTabChange('users')}
+              onPressProfile={() => handleTabChange('profile')}
+              onPressLogout={handleLogout}
+              onPressSwitchAccount={handleSwitchAccount}
               onPressChangePassword={() => setShowChangePassword(true)}
             />
           </AnimatedTabScreen>

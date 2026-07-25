@@ -63,6 +63,27 @@ export type AmenityPayload = {
   name?: string;
 };
 
+export type DeskDescriptionPayload = {
+  name?: string;
+  description?: string;
+  peopleCapacity?: number;
+};
+
+export type LocalityPayload = {
+  name?: string;
+  active?: boolean;
+};
+
+export type WorkAreaPayload = {
+  name?: string;
+  description?: string;
+  localityId?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  active?: boolean;
+};
+
 type ApiErrorBody = {
   error?: string;
   message?: string | string[];
@@ -79,6 +100,7 @@ export class DeskServiceError extends Error {
   ) {
     super(message);
     this.name = 'DeskServiceError';
+    Object.setPrototypeOf(this, DeskServiceError.prototype);
   }
 }
 
@@ -107,12 +129,12 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
-      ...init,
     });
   } catch (error) {
     const isTimeout =
@@ -283,6 +305,36 @@ export function listLocalities() {
   return requestJson<Locality[]>('/localities');
 }
 
+export function createLocality(
+  payload: LocalityPayload,
+  accessToken?: string,
+) {
+  return requestJson<Locality>('/localities', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateLocality(
+  id: string,
+  payload: LocalityPayload,
+  accessToken?: string,
+) {
+  return requestJson<Locality>(`/localities/${id}`, {
+    method: 'PATCH',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLocality(id: string, accessToken?: string) {
+  return requestJson<void>(`/localities/${id}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  });
+}
+
 export function listWorkAreas(localityId?: string) {
   const params = new URLSearchParams();
 
@@ -293,6 +345,36 @@ export function listWorkAreas(localityId?: string) {
   const query = params.toString();
 
   return requestJson<WorkArea[]>(`/work-areas${query ? `?${query}` : ''}`);
+}
+
+export function createWorkArea(
+  payload: WorkAreaPayload,
+  accessToken?: string,
+) {
+  return requestJson<WorkArea>('/work-areas', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateWorkArea(
+  id: string,
+  payload: WorkAreaPayload,
+  accessToken?: string,
+) {
+  return requestJson<WorkArea>(`/work-areas/${id}`, {
+    method: 'PATCH',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteWorkArea(id: string, accessToken?: string) {
+  return requestJson<void>(`/work-areas/${id}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  });
 }
 
 export async function listAvailableWorkAreas(params: GetAvailableDesksParams) {
@@ -322,27 +404,38 @@ export async function listDesks(page = 1, limit = 9) {
   return requestJson<ListDesksResponse>(`/desks?${params}`);
 }
 
-export function createDesk(payload: DeskPayload) {
+function bearerHeaders(accessToken?: string) {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
+}
+
+export function createDesk(payload: DeskPayload, accessToken?: string) {
   validateDeskPayloadTypes(payload);
 
   return requestJson<Desk>('/desks', {
     method: 'POST',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizePayload(payload)),
   });
 }
 
-export function updateDesk(id: string, payload: DeskPayload) {
+export function updateDesk(
+  id: string,
+  payload: DeskPayload,
+  accessToken?: string,
+) {
   validateDeskPayloadTypes(payload);
 
   return requestJson<Desk>(`/desks/${id}`, {
     method: 'PATCH',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizePayload(payload)),
   });
 }
 
-export function deleteDesk(id: string) {
+export function deleteDesk(id: string, accessToken?: string) {
   return requestJson<void>(`/desks/${id}`, {
     method: 'DELETE',
+    headers: bearerHeaders(accessToken),
   });
 }
 
@@ -350,30 +443,67 @@ export function listDeskDescriptions() {
   return requestJson<DeskDescription[]>('/desk-descriptions');
 }
 
+export function createDeskDescription(
+  payload: DeskDescriptionPayload,
+  accessToken?: string,
+) {
+  return requestJson<DeskDescription>('/desk-descriptions', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateDeskDescription(
+  id: string,
+  payload: DeskDescriptionPayload,
+  accessToken?: string,
+) {
+  return requestJson<DeskDescription>(`/desk-descriptions/${id}`, {
+    method: 'PATCH',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteDeskDescription(id: string, accessToken?: string) {
+  return requestJson<void>(`/desk-descriptions/${id}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  });
+}
+
 export function listAmenities() {
   return requestJson<DeskAmenity[]>('/amenities');
 }
 
-export function createAmenity(payload: AmenityPayload) {
+export function createAmenity(payload: AmenityPayload, accessToken?: string) {
   validateAmenityPayloadTypes(payload);
 
   return requestJson<DeskAmenity>('/amenities', {
     method: 'POST',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizeAmenityPayload(payload)),
   });
 }
 
-export function updateAmenity(id: string, payload: AmenityPayload) {
+export function updateAmenity(
+  id: string,
+  payload: AmenityPayload,
+  accessToken?: string,
+) {
   validateAmenityPayloadTypes(payload);
 
   return requestJson<DeskAmenity>(`/amenities/${id}`, {
     method: 'PATCH',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizeAmenityPayload(payload)),
   });
 }
 
-export function deleteAmenity(id: string) {
+export function deleteAmenity(id: string, accessToken?: string) {
   return requestJson<void>(`/amenities/${id}`, {
     method: 'DELETE',
+    headers: bearerHeaders(accessToken),
   });
 }
