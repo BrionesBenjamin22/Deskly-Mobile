@@ -168,6 +168,12 @@ El entorno:
 
 El puerto 3000 debe habilitarse solo en redes privadas de desarrollo.
 
+GitHub Actions no consume el `.env` raíz ni requiere secretos persistentes para
+sus validaciones. El workflow levanta una base PostgreSQL efímera, genera un
+`JWT_SECRET` temporal y utiliza `PAYMENT_GATEWAY=FAKE`. Las credenciales de
+Mercado Pago se configuran exclusivamente en entornos manuales donde el
+proveedor real esté activo.
+
 ## Seguridad
 
 Controles relevantes:

@@ -1,11 +1,11 @@
-| Campo          | Contenido                                                                                 |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| ID             | `INFRA-02`                                                                                |
-| Modulo         | Infraestructura CI y validacion backend/mobile                                            |
-| Estado         | `EN_PROGRESO`                                                                             |
-| Dependencia    | `SECURITY-06`, `SECURITY-07`                                                              |
-| Implementacion | `.github/workflows/ci.yml`, fuentes TypeScript validadas por Prettier                     |
-| Validacion     | Formato, lint, builds, tests unitarios, E2E PostgreSQL, export Expo y `git diff --check`  |
+| Campo          | Contenido                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| ID             | `INFRA-02`                                                                                  |
+| Modulo         | Infraestructura CI y validacion backend/mobile                                              |
+| Estado         | `EN_PROGRESO`                                                                               |
+| Dependencia    | `SECURITY-06`, `SECURITY-07`                                                                |
+| Implementacion | `.github/workflows/ci.yml`, ejemplos de entorno y fuentes TypeScript validadas por Prettier |
+| Validacion     | Formato, lint, builds, tests unitarios, E2E PostgreSQL, export Expo y `git diff --check`    |
 
 # Estabilizacion del workflow de CI
 
@@ -45,6 +45,8 @@ credenciales persistentes.
 - Inicializar PostgreSQL E2E con autenticacion `trust` limitada al contenedor
   efimero del runner.
 - Generar un secreto JWT aleatorio y efimero durante el job.
+- Documentar que CI no depende de archivos `.env` ni secretos persistentes.
+- Mantener completos y coherentes los ejemplos de configuracion por entorno.
 - Reproducir los comandos exactos del workflow.
 
 ## Fuera de alcance

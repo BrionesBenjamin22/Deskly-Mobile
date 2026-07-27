@@ -8,7 +8,9 @@ El backend expone los contratos necesarios para consultar disponibilidad, gestio
 
 ## Variables de entorno
 
-Crear `.env` desde `.env.example`.
+Crear el archivo correspondiente al entorno a partir de
+`.env.development.example`, `.env.testing.example` o
+`.env.production.example`. Los archivos con valores reales no se versionan.
 
 ```env
 NODE_ENV=development
@@ -169,6 +171,7 @@ Comandos base:
 pnpm build
 pnpm test
 ```
+
 # Contenedor Docker
 
 El `Dockerfile` usa etapas separadas para instalar dependencias, compilar NestJS y
