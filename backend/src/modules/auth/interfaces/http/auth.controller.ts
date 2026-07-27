@@ -131,7 +131,8 @@ export class AuthController {
       if (error instanceof InactiveUserError) {
         throw new UnauthorizedException({
           message: 'Su cuenta se encuentra desactivada.',
-          error: 'Su cuenta fue desactivada por un administrador. Contacte al administrador para restaurar el acceso.',
+          error:
+            'Su cuenta fue desactivada por un administrador. Contacte al administrador para restaurar el acceso.',
           errorCode: 'ACCOUNT_INACTIVE',
         });
       }
@@ -166,7 +167,9 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({ description: 'Contraseña actualizada correctamente.' })
   @ApiBadRequestResponse({ description: 'Datos invalidos o incompletos.' })
-  @ApiUnauthorizedResponse({ description: 'Contraseña actual incorrecta o sesion invalida.' })
+  @ApiUnauthorizedResponse({
+    description: 'Contraseña actual incorrecta o sesion invalida.',
+  })
   async changePassword(
     @Req() request: AuthenticatedRequest,
     @Body() body: ChangePasswordBodyDto,
@@ -182,7 +185,8 @@ export class AuthController {
       if (error instanceof InvalidCurrentPasswordError) {
         throw new UnauthorizedException({
           message: 'La contraseña actual es incorrecta.',
-          error: 'Lo sentimos, la contraseña actual no coincide. Intente nuevamente.',
+          error:
+            'Lo sentimos, la contraseña actual no coincide. Intente nuevamente.',
         });
       }
       if (error instanceof UserNotFoundError) {
@@ -201,7 +205,9 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({ description: 'Perfil actualizado correctamente.' })
   @ApiBadRequestResponse({ description: 'Datos invalidos o incompletos.' })
-  @ApiConflictResponse({ description: 'Email o nombre de usuario ya registrado.' })
+  @ApiConflictResponse({
+    description: 'Email o nombre de usuario ya registrado.',
+  })
   @ApiUnauthorizedResponse({ description: 'Sesion invalida o expirada.' })
   async updateProfile(
     @Req() request: AuthenticatedRequest,

@@ -165,7 +165,7 @@ jobs:
         env:
           POSTGRES_DB: deskly_ci
           POSTGRES_USER: deskly
-          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -201,21 +201,23 @@ jobs:
       - name: Generar cliente Prisma
         run: pnpm prisma:generate
         env:
-          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          DATABASE_URL: postgresql://deskly@localhost:5432/deskly_ci
 
       - name: Ejecutar migraciones Prisma
         run: pnpm exec prisma migrate deploy
         env:
-          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          DATABASE_URL: postgresql://deskly@localhost:5432/deskly_ci
 
       - name: Preparar reportes
         run: mkdir -p reports
 
+      - name: Generar secreto JWT efimero
+        run: echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Ejecutar tests E2E
         run: pnpm test:e2e -- --runInBand --json --outputFile=reports/jest-e2e-results.json
         env:
-          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
+          DATABASE_URL: postgresql://deskly@localhost:5432/deskly_ci
 
       - name: Subir resultados backend E2E
         if: always()

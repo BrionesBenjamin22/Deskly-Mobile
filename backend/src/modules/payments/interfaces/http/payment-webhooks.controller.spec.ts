@@ -71,14 +71,12 @@ describe('PaymentWebhooksController', () => {
     expect(
       Reflect.getMetadata(
         `${THROTTLER_LIMIT}default`,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         PaymentWebhooksController.prototype.process,
       ),
     ).toBe(120);
     expect(
       Reflect.getMetadata(
         `${THROTTLER_TTL}default`,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         PaymentWebhooksController.prototype.process,
       ),
     ).toBe(60_000);

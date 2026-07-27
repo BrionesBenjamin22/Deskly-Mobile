@@ -19,15 +19,14 @@ export class GetAvailableWorkAreasUseCase {
   ): Promise<WorkAreaAvailabilityOutput> {
     const reservationDate = ReservationDate.create(input.date);
     const timeSlot = TimeSlot.create(input.startTime, input.endTime);
-    const areas =
-      await this.deskRepository.findAvailableWorkAreasByTimeSlot({
-        date: reservationDate.value,
-        startTime: timeSlot.startTime,
-        endTime: timeSlot.endTime,
-        ...(input.zone ? { zone: input.zone } : {}),
-        ...(input.areaId ? { areaId: input.areaId } : {}),
-        ...(input.localityId ? { localityId: input.localityId } : {}),
-      });
+    const areas = await this.deskRepository.findAvailableWorkAreasByTimeSlot({
+      date: reservationDate.value,
+      startTime: timeSlot.startTime,
+      endTime: timeSlot.endTime,
+      ...(input.zone ? { zone: input.zone } : {}),
+      ...(input.areaId ? { areaId: input.areaId } : {}),
+      ...(input.localityId ? { localityId: input.localityId } : {}),
+    });
 
     return {
       areas: areas.map(({ area, availableDeskCount, totalDeskCount }) => ({

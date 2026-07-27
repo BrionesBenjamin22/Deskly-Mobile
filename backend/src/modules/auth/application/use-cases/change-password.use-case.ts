@@ -13,7 +13,8 @@ import type { PasswordHasherPort } from '../../domain/ports/password-hasher.port
 export class ChangePasswordUseCase {
   constructor(
     @Inject(AUTH_REPOSITORY) private readonly repository: AuthRepositoryPort,
-    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasherPort,
+    @Inject(PASSWORD_HASHER)
+    private readonly passwordHasher: PasswordHasherPort,
   ) {}
 
   async execute(input: {

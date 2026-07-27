@@ -260,16 +260,13 @@ export class PrismaAuthRepository implements AuthRepositoryPort {
         if (params.username) updateData.username = params.username;
 
         if (params.fullName || params.phone) {
-          updateData.member = {
-            update: {},
-          };
+          const memberUpdate: Prisma.MemberUpdateWithoutUserInput = {};
+          if (params.fullName) memberUpdate.fullName = params.fullName;
+          if (params.phone) memberUpdate.phone = BigInt(params.phone);
 
-          if (params.fullName) {
-            (updateData.member as any).update.fullName = params.fullName;
-          }
-          if (params.phone) {
-            (updateData.member as any).update.phone = BigInt(params.phone);
-          }
+          updateData.member = {
+            update: memberUpdate,
+          };
         }
 
         const user = await transaction.user.update({

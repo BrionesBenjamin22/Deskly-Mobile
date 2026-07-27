@@ -1,5 +1,4 @@
 import { Reservation } from '../../../reservations/domain/entities/reservation.entity';
-import { InvalidPaymentAttemptError } from '../../domain/errors/payment-domain.errors';
 import { ReservationNotFoundError } from '../../domain/errors/reservation-not-found.error';
 import { GetPaymentQuoteUseCase } from './get-payment-quote.use-case';
 import { PaymentAccessDeniedError } from './query-payment-attempts.use-cases';

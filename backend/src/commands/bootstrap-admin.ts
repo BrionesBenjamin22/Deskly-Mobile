@@ -3,10 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { resolveEnvFilePaths } from '../config/env-files';
-import {
-  bootstrapAdmin,
-  type BootstrapDatabase,
-} from '../modules/auth/application/services/bootstrap-admin.service';
+import { bootstrapAdmin } from '../modules/auth/application/services/bootstrap-admin.service';
 
 async function main(): Promise<void> {
   loadEnvironment({ path: resolveEnvFilePaths(), quiet: true });
@@ -17,10 +14,7 @@ async function main(): Promise<void> {
     adapter: new PrismaPg({ connectionString }),
   });
   try {
-    await bootstrapAdmin(
-      prisma as unknown as BootstrapDatabase,
-      process.env,
-    );
+    await bootstrapAdmin(prisma, process.env);
     console.log('Administrador inicial creado correctamente.');
   } finally {
     await prisma.$disconnect();

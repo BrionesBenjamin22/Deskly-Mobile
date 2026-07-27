@@ -4,7 +4,10 @@ import * as bcrypt from 'bcrypt';
 export type BootstrapEnvironment = Record<string, string | undefined>;
 
 export type BootstrapTransaction = {
-  $executeRaw(query: TemplateStringsArray, ...values: unknown[]): Promise<number>;
+  $executeRaw(
+    query: TemplateStringsArray,
+    ...values: unknown[]
+  ): Promise<number>;
   user: {
     count(): Promise<number>;
     create(input: {
@@ -28,7 +31,10 @@ export type BootstrapDatabase = {
 export async function bootstrapAdmin(
   database: BootstrapDatabase,
   environment: BootstrapEnvironment,
-  hashPassword: (password: string, rounds: number) => Promise<string> = bcrypt.hash,
+  hashPassword: (
+    password: string,
+    rounds: number,
+  ) => Promise<string> = bcrypt.hash,
 ): Promise<void> {
   const email = required(environment, 'BOOTSTRAP_ADMIN_EMAIL')
     .trim()

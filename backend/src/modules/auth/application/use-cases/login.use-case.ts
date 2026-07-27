@@ -33,7 +33,8 @@ export class LoginUseCase {
       : false;
 
     if (!user || !validPassword) throw new InvalidCredentialsError();
-    if (!user.active || user.member?.active === false) throw new InactiveUserError();
+    if (!user.active || user.member?.active === false)
+      throw new InactiveUserError();
     if (user.blockedUntil && user.blockedUntil.getTime() > Date.now())
       throw new BlockedUserError(user.blockedUntil);
 

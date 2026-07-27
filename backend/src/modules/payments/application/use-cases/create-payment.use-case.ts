@@ -12,7 +12,10 @@ import { ReservationNotFoundError } from '../../domain/errors/reservation-not-fo
 import { PAYMENT_ATTEMPT_REPOSITORY } from '../../domain/ports/payment-attempt-repository.port';
 import type { PaymentAttemptRepositoryPort } from '../../domain/ports/payment-attempt-repository.port';
 import { PAYMENT_GATEWAY } from '../../domain/ports/payment-gateway.port';
-import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
+import type {
+  CreateGatewayPaymentResult,
+  PaymentGatewayPort,
+} from '../../domain/ports/payment-gateway.port';
 import {
   PAYMENT_HOLD_DURATION_MINUTES,
   PAYMENT_PRICING_VERSION,
@@ -138,7 +141,7 @@ export class CreatePaymentUseCase {
           expiresAt,
         }),
       ));
-    let checkout;
+    let checkout: CreateGatewayPaymentResult;
     try {
       checkout = await this.gateway.createPayment({
         paymentId: payment.id!,

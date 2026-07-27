@@ -82,14 +82,12 @@ describe('PaymentsController', () => {
     expect(
       Reflect.getMetadata(
         `${THROTTLER_LIMIT}default`,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         PaymentsController.prototype.checkout,
       ),
     ).toBe(5);
     expect(
       Reflect.getMetadata(
         `${THROTTLER_TTL}default`,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         PaymentsController.prototype.checkout,
       ),
     ).toBe(60_000);
@@ -99,14 +97,12 @@ describe('PaymentsController', () => {
     expect(
       Reflect.getMetadata(
         `${THROTTLER_LIMIT}default`,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         PaymentsController.prototype.findById,
       ),
     ).toBe(30);
     expect(
       Reflect.getMetadata(
         `${THROTTLER_LIMIT}default`,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         ReservationPaymentsController.prototype.listByReservation,
       ),
     ).toBe(30);
