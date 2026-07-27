@@ -14,7 +14,7 @@ describe('payments service seguro', () => {
       pricingVersion: 'v1',
       options: [],
     };
-    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => quote,
     } as Response);
@@ -33,7 +33,7 @@ describe('payments service seguro', () => {
   });
 
   it('crea checkout sin enviar monto, moneda, miembro ni estado', async () => {
-    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
         paymentId: 'payment-1',
@@ -64,7 +64,7 @@ describe('payments service seguro', () => {
   });
 
   it('preserva prototipo y mensaje seguro del error', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue({
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
       json: async () => ({ error: 'Revise la reserva e intente nuevamente.' }),
     } as Response);

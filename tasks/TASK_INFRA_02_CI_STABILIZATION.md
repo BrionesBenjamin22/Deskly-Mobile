@@ -21,6 +21,13 @@ El run `30173683409` del commit `35446a3` aprobo los builds de backend, Expo y
 Docker. Fallaron el formato backend, las validaciones backend/mobile y la
 inicializacion del servicio PostgreSQL E2E.
 
+Una ejecucion posterior en Linux confirmo dos diferencias adicionales:
+
+- los tests mobile usaban el global de Node `global`, no disponible en el
+  contrato TypeScript de la aplicacion;
+- `pnpm test -- --ci` transmitia un separador literal a Jest, que interpretaba
+  las opciones como patrones y no encontraba pruebas ejecutables.
+
 La reproduccion local confirmo 89 archivos backend fuera del formato esperado.
 Los tests y TypeScript aprobaron localmente:
 
@@ -47,6 +54,8 @@ credenciales persistentes.
 - Generar un secreto JWT aleatorio y efimero durante el job.
 - Documentar que CI no depende de archivos `.env` ni secretos persistentes.
 - Mantener completos y coherentes los ejemplos de configuracion por entorno.
+- Usar `globalThis` en pruebas mobile y transmitir opciones Jest sin el
+  separador literal de pnpm.
 - Reproducir los comandos exactos del workflow.
 
 ## Fuera de alcance

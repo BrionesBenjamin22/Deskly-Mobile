@@ -138,7 +138,7 @@ jobs:
         run: mkdir -p reports
 
       - name: Ejecutar tests unitarios con cobertura
-        run: pnpm test:cov -- --ci --runInBand --json --outputFile=reports/jest-results.json
+        run: pnpm test:cov --ci --runInBand --json --outputFile=reports/jest-results.json
 
       - name: Subir cobertura backend
         if: always()
@@ -217,7 +217,7 @@ jobs:
         run: echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Ejecutar tests E2E
-        run: pnpm test:e2e -- --runInBand --json --outputFile=reports/jest-e2e-results.json
+        run: pnpm test:e2e --runInBand --json --outputFile=reports/jest-e2e-results.json
         env:
           DATABASE_URL: postgresql://deskly@localhost:5432/deskly_ci
 
@@ -329,7 +329,7 @@ jobs:
         run: mkdir -p reports
 
       - name: Ejecutar tests mobile con cobertura
-        run: pnpm test -- --ci --runInBand --coverage --json --outputFile=reports/jest-results.json
+        run: pnpm test --ci --runInBand --coverage --json --outputFile=reports/jest-results.json
 
       - name: Subir cobertura mobile
         if: always()

@@ -43,7 +43,7 @@ function buildApiReservation(overrides: ApiReservationOverrides = {}) {
 }
 
 function mockListResponse(reservations: ReturnType<typeof buildApiReservation>[]) {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({
       reservations,

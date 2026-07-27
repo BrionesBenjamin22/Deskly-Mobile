@@ -5,7 +5,7 @@ describe('desks.service authenticated mutations', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    global.fetch = fetchMock;
+    globalThis.fetch = fetchMock;
     fetchMock.mockResolvedValue({
       ok: true,
       status: 201,
