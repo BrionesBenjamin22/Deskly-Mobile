@@ -5,6 +5,7 @@ export type UpdateDeskInput = {
   name?: string | null;
   peopleCapacity?: number;
   descriptionId?: string | null;
+  areaId?: string;
   zone?: DeskZoneValue | null;
   amenityIds?: string[];
   enabled?: boolean;

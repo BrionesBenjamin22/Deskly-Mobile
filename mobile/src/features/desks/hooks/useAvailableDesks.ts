@@ -8,6 +8,8 @@ type UseAvailableDesksParams = {
   startTime: string;
   endTime: string;
   zone?: DeskZone;
+  areaId?: string;
+  localityId?: string;
   refreshKey?: number;
 };
 
@@ -24,6 +26,8 @@ export function useAvailableDesks({
   startTime,
   endTime,
   zone,
+  areaId,
+  localityId,
   refreshKey = 0,
 }: UseAvailableDesksParams) {
   const [desks, setDesks] = useState<Desk[]>([]);
@@ -35,7 +39,7 @@ export function useAvailableDesks({
     setIsLoading(true);
     setErrorMessage(null);
 
-    getAvailableDesks({ date, startTime, endTime, zone })
+    getAvailableDesks({ date, startTime, endTime, zone, areaId, localityId })
       .then((availableDesks) => {
         if (!isMounted) {
           return;
@@ -60,7 +64,7 @@ export function useAvailableDesks({
     return () => {
       isMounted = false;
     };
-  }, [date, endTime, startTime, zone]);
+  }, [areaId, date, endTime, localityId, startTime, zone]);
 
   useEffect(() => loadDesks(), [loadDesks, refreshKey]);
 

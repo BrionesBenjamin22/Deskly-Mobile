@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -10,6 +11,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -25,11 +27,16 @@ import { DeleteDeskUseCase } from '../../application/use-cases/delete-desk.use-c
 import { GetDeskByIdUseCase } from '../../application/use-cases/get-desk-by-id.use-case';
 import { ListDesksUseCase } from '../../application/use-cases/list-desks.use-case';
 import { UpdateDeskUseCase } from '../../application/use-cases/update-desk.use-case';
+import { DeskNameAlreadyExistsError } from '../../domain/errors/desk-name-already-exists.error';
 import { DeskNotFoundError } from '../../domain/errors/desk-not-found.error';
+import { WorkAreaNotFoundError } from '../../domain/errors/work-area-not-found.error';
 import { CreateDeskBodyDto } from './dto/create-desk-body.dto';
 import { DeskResponseDto } from './dto/desk-response.dto';
 import { ListDesksQueryDto } from './dto/list-desks-query.dto';
 import { UpdateDeskBodyDto } from './dto/update-desk-body.dto';
+import { Roles } from '../../../auth/interfaces/http/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Desks')
 @Controller('desks')
@@ -43,6 +50,8 @@ export class DesksController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({
     description: 'Escritorio creado correctamente.',
     type: DeskResponseDto,
@@ -77,6 +86,8 @@ export class DesksController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({
     description: 'Escritorio actualizado correctamente.',
     type: DeskResponseDto,
@@ -98,6 +109,8 @@ export class DesksController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Escritorio eliminado logicamente.' })
   @ApiNotFoundResponse({ description: 'Escritorio no encontrado.' })
@@ -115,6 +128,21 @@ export class DesksController {
         message: error.message,
         error:
           'Lo sentimos, no pudimos recuperar la informacion del escritorio. Intente nuevamente.',
+      });
+    }
+
+    if (error instanceof DeskNameAlreadyExistsError) {
+      throw new ConflictException({
+        message: error.message,
+        error: 'Ya existe un escritorio con ese nombre.',
+      });
+    }
+
+    if (error instanceof WorkAreaNotFoundError) {
+      throw new NotFoundException({
+        message: error.message,
+        error:
+          'Lo sentimos, no pudimos recuperar la informacion del area de trabajo. Seleccione otra e intente nuevamente.',
       });
     }
 

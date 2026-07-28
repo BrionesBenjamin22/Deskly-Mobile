@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, Matches } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  Matches,
+} from 'class-validator';
 
 enum DeskZoneDto {
   A = 'A',
@@ -41,4 +47,12 @@ export class GetAvailableDesksQueryDto {
   @IsOptional()
   @IsEnum(DeskZoneDto, { message: 'La zona debe ser A, B o C.' })
   zone?: DeskZoneDto;
+
+  @IsOptional()
+  @IsUUID('4', { message: 'El area de trabajo debe ser un UUID valido.' })
+  areaId?: string;
+
+  @IsOptional()
+  @IsUUID('4', { message: 'La localidad debe ser un UUID valido.' })
+  localityId?: string;
 }

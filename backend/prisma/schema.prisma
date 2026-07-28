@@ -12,8 +12,36 @@ datasource db {
 }
 
 enum ReservationStatus {
+  PENDING_PAYMENT
+  RESERVED
   ACTIVE
+  COMPLETED
   CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  LEGACY
+  FAKE
+  MERCADO_PAGO
+}
+
+enum PaymentCurrency {
+  ARS
+}
+
+enum PaymentOption {
+  DEPOSIT
+  FULL
 }
 
 enum DeskZone {
@@ -22,25 +50,146 @@ enum DeskZone {
   C
 }
 
+enum UserRole {
+  ADMIN
+  GESTOR
+  MIEMBRO
+}
+
+enum PenaltyType {
+  ABSENCE
+  LATE_CANCELLATION
+}
+
+enum InfractionLevel {
+  WARNING
+  PENALTY
+}
+
+model User {
+  id                  String              @id @default(uuid()) @db.Uuid
+  email               String              @unique @db.VarChar(255)
+  username            String              @unique @db.VarChar(60)
+  passwordHash        String              @map("password_hash") @db.VarChar(255)
+  role                UserRole            @default(MIEMBRO)
+  active              Boolean             @default(true)
+  blockedUntil        DateTime?           @map("blocked_until")
+  tokenVersion        Int                 @default(0) @map("token_version")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  member              Member?
+  roleChanges         UserRoleHistory[]   @relation("RoleChangeTarget")
+  changedRoles        UserRoleHistory[]   @relation("RoleChangeActor")
+  statusChanges       UserStatusHistory[] @relation("StatusChangeTarget")
+  changedStatuses     UserStatusHistory[] @relation("StatusChangeActor")
+  registeredPenalties Penalty[]           @relation("PenaltyRegistrar")
+
+  @@index([active])
+  @@map("users")
+}
+
+model UserStatusHistory {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  changedById    String   @map("changed_by_id") @db.Uuid
+  previousActive Boolean  @map("previous_active")
+  newActive      Boolean  @map("new_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  user           User     @relation("StatusChangeTarget", fields: [userId], references: [id], onDelete: Restrict)
+  changedBy      User     @relation("StatusChangeActor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([changedById])
+  @@map("user_status_history")
+}
+
+model Member {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @unique @map("user_id") @db.Uuid
+  fullName     String        @map("full_name") @db.VarChar(200)
+  dni          Int           @unique
+  phone        BigInt
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reservations Reservation[]
+  penalties    Penalty[]
+  payments     Payment[]
+
+  @@index([active])
+  @@map("members")
+}
+
+model UserRoleHistory {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  changedById  String   @map("changed_by_id") @db.Uuid
+  previousRole UserRole @map("previous_role")
+  newRole      UserRole @map("new_role")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation("RoleChangeTarget", fields: [userId], references: [id], onDelete: Restrict)
+  changedBy    User     @relation("RoleChangeActor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([changedById])
+  @@map("user_role_history")
+}
+
 model Desk {
-  id            String           @id @default(uuid()) @db.Uuid
-  code          String           @unique @default(dbgenerated("gen_random_uuid()::text")) @db.VarChar(36)
-  name          String?          @db.VarChar(120)
+  id             String           @id @default(uuid()) @db.Uuid
+  code           String           @unique @default(dbgenerated("gen_random_uuid()::text")) @db.VarChar(36)
+  name           String?          @db.VarChar(120)
   peopleCapacity Int              @default(1) @map("people_capacity")
-  descriptionId String?          @map("description_id") @db.Uuid
-  zone          DeskZone?
-  enabled       Boolean          @default(true)
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-  deletedAt     DateTime?        @map("deleted_at")
-  description   DeskDescription? @relation(fields: [descriptionId], references: [id], onDelete: Restrict)
-  amenities     DeskAmenity[]
-  reservations  Reservation[]
+  descriptionId  String?          @map("description_id") @db.Uuid
+  areaId         String           @default("11111111-1111-4111-8111-111111111111") @map("area_id") @db.Uuid
+  zone           DeskZone?
+  enabled        Boolean          @default(true)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  deletedAt      DateTime?        @map("deleted_at")
+  description    DeskDescription? @relation(fields: [descriptionId], references: [id], onDelete: Restrict)
+  area           WorkArea         @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  amenities      DeskAmenity[]
+  reservations   Reservation[]
 
   @@index([enabled, deletedAt])
   @@index([descriptionId])
+  @@index([areaId])
   @@index([zone])
   @@map("desks")
+}
+
+model Locality {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @unique @db.VarChar(120)
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  areas     WorkArea[]
+
+  @@index([active])
+  @@map("localities")
+}
+
+model WorkArea {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(255)
+  localityId  String   @map("locality_id") @db.Uuid
+  address     String?  @db.VarChar(255)
+  latitude    Float?
+  longitude   Float?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  locality    Locality @relation(fields: [localityId], references: [id], onDelete: Restrict)
+  desks       Desk[]
+
+  @@unique([localityId, name])
+  @@index([active])
+  @@index([localityId, active])
+  @@map("work_areas")
 }
 
 model DeskDescription {
@@ -80,15 +229,96 @@ model DeskAmenity {
 model Reservation {
   id          String            @id @default(uuid()) @db.Uuid
   deskId      String            @map("desk_id") @db.Uuid
+  memberId    String            @map("member_id") @db.Uuid
   date        DateTime          @db.Date
   startTime   DateTime          @map("start_time") @db.Time(0)
   endTime     DateTime          @map("end_time") @db.Time(0)
-  status      ReservationStatus @default(ACTIVE)
+  status      ReservationStatus @default(RESERVED)
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
   cancelledAt DateTime?         @map("cancelled_at")
+  checkedInAt DateTime?         @map("checked_in_at")
+  holdExpiresAt DateTime?       @map("hold_expires_at")
   desk        Desk              @relation(fields: [deskId], references: [id], onDelete: Restrict)
+  payments    Payment[]
+  member      Member            @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  penalty     Penalty?
 
   @@index([deskId, date, status, startTime, endTime])
+  @@index([memberId, date])
   @@map("reservations")
+}
+
+model Penalty {
+  id             String          @id @default(uuid()) @db.Uuid
+  reservationId  String          @unique @map("reservation_id") @db.Uuid
+  memberId       String          @map("member_id") @db.Uuid
+  registeredById String?         @map("registered_by_id") @db.Uuid
+  type           PenaltyType
+  level          InfractionLevel
+  reason         String          @db.VarChar(500)
+  registeredAt   DateTime        @default(now()) @map("registered_at")
+  activeUntil    DateTime        @map("active_until")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  reservation    Reservation     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  member         Member          @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  registeredBy   User?           @relation("PenaltyRegistrar", fields: [registeredById], references: [id], onDelete: Restrict)
+
+  @@index([memberId, activeUntil, level])
+  @@index([registeredById])
+  @@map("penalties")
+}
+
+model Payment {
+  id                   String          @id @default(uuid()) @db.Uuid
+  reservationId        String          @map("reservation_id") @db.Uuid
+  memberId             String          @map("member_id") @db.Uuid
+  date                 DateTime        @map("payment_date") @db.Date
+  amountMinorUnits     BigInt          @map("amount_minor_units")
+  currency             PaymentCurrency @default(ARS)
+  option               PaymentOption
+  pricingVersion       String          @map("pricing_version") @db.VarChar(80)
+  provider             PaymentProvider
+  status               PaymentStatus   @default(PENDING)
+  idempotencyKey       String          @map("idempotency_key") @db.VarChar(160)
+  operationFingerprint String          @map("operation_fingerprint") @db.VarChar(128)
+  externalPaymentId    String?         @map("external_payment_id") @db.VarChar(160)
+  externalReference    String          @map("external_reference") @db.VarChar(160)
+  checkoutUrl          String?         @map("checkout_url") @db.VarChar(2048)
+  failureReason        String?         @map("failure_reason") @db.VarChar(500)
+  expiresAt            DateTime        @map("expires_at")
+  approvedAt           DateTime?       @map("approved_at")
+  cancelledAt          DateTime?       @map("cancelled_at")
+  refundedAt           DateTime?       @map("refunded_at")
+  version              Int             @default(0)
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+  reservation          Reservation     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  member               Member          @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  events               PaymentEvent[]
+
+  @@index([reservationId])
+  @@index([memberId, createdAt])
+  @@index([date])
+  @@index([status, expiresAt])
+  @@unique([provider, idempotencyKey])
+  @@unique([provider, externalPaymentId])
+  @@map("payments")
+}
+
+model PaymentEvent {
+  id              String          @id @default(uuid()) @db.Uuid
+  paymentId       String          @map("payment_id") @db.Uuid
+  provider        PaymentProvider
+  externalEventId String          @map("external_event_id") @db.VarChar(160)
+  previousStatus  PaymentStatus   @map("previous_status")
+  newStatus       PaymentStatus   @map("new_status")
+  occurredAt      DateTime        @map("occurred_at")
+  processedAt     DateTime        @default(now()) @map("processed_at")
+  metadata        Json?
+  payment         Payment         @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, externalEventId])
+  @@index([paymentId, occurredAt])
+  @@map("payment_events")
 }

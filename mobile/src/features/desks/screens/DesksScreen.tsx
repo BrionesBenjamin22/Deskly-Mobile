@@ -1,82 +1,122 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText } from '../../../components/ui/AppText';
-import { BottomTabBar } from '../../../components/ui/BottomTabBar';
-import { Icon } from '../../../components/ui/Icon';
-import { ScreenContainer } from '../../../components/ui/ScreenContainer';
-import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
-import { colors } from '../../../theme/colors';
-import { radii, spacing } from '../../../theme/spacing';
-import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
-import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
-import { DeskList } from '../components/DeskList';
-import { ReservationBottomSheet } from '../components/ReservationBottomSheet';
-import { useAvailableDesks } from '../hooks/useAvailableDesks';
-import { Desk, DeskZone } from '../types/desk.types';
+import { AppText } from "../../../components/ui/AppText";
+import { BottomTabBar } from "../../../components/ui/BottomTabBar";
+import { Icon } from "../../../components/ui/Icon";
+import { ScreenContainer } from "../../../components/ui/ScreenContainer";
+import {
+  StatusModal,
+  StatusModalType,
+} from "../../../components/ui/StatusModal";
+import { colors } from "../../../theme/colors";
+import { radii, spacing } from "../../../theme/spacing";
+import { CalendarPicker } from "../components/CalendarPicker";
+import {
+  DateSelector,
+  getDeskDateOptions,
+  DeskDateOption,
+} from "../components/DateSelector";
+import { DesksFeedbackCard } from "../components/DesksFeedbackCard";
+import { DeskList } from "../components/DeskList";
+import { ReservationBottomSheet } from "../components/ReservationBottomSheet";
+import { useAvailableDesks } from "../hooks/useAvailableDesks";
+import { Desk, DeskZone, Locality, WorkArea } from "../types/desk.types";
+import { listLocalities, listWorkAreas } from "../services/desks.service";
 import {
   createReservation,
+  listReservations,
   ReservationServiceError,
-} from '../../reservations/services/reservations.service';
+} from "../../reservations/services/reservations.service";
+import { UserRole } from "../../auth/types/auth.types";
+import {
+  createPaymentCheckout,
+  createPaymentOperationKey,
+  getPaymentAttempt,
+  getPaymentQuote,
+  PaymentServiceError,
+} from "../../payments/services/payments.service";
+import type {
+  PaymentOption,
+  PaymentStatus,
+} from "../../payments/types/payment.types";
 
-type ReservationUiStatus = 'idle' | 'loading' | 'success' | 'error';
-type ZoneFilter = DeskZone | 'all';
-type FilterDropdownId = 'startTime' | 'endTime' | 'zone';
+type ReservationUiStatus = "idle" | "loading" | "success" | "error";
+type ZoneFilter = DeskZone | "all";
+type FilterDropdownId = "startTime" | "endTime" | "zone" | "locality" | "area";
+
+export type DeskAvailabilityContext = {
+  date: string;
+  startTime: string;
+  endTime: string;
+};
 
 type DesksScreenProps = {
+  accessToken: string;
+  initialAvailabilityContext?: Partial<DeskAvailabilityContext>;
+  selectedWorkArea?: WorkArea | null;
+  onBackToWorkAreas?: (context: DeskAvailabilityContext) => void;
   onPressReservations?: () => void;
-  onPressSettings?: () => void;
+  onPressPayments?: () => void;
+  onPressProfile?: () => void;
   onPressLogout?: () => void;
+  onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  onPressChangePassword?: () => void;
+  userRole?: UserRole;
   onReservationCreated?: () => void;
+  externalRefreshKey?: number;
 };
 
 const reservationStatusContent: Record<
-  Exclude<ReservationUiStatus, 'idle'>,
+  Exclude<ReservationUiStatus, "idle">,
   { type: StatusModalType; title: string; description: string }
 > = {
   loading: {
-    type: 'loading',
-    title: 'Procesando reserva...',
-    description: 'Estamos confirmando tu reserva. Esto puede tomar unos segundos.',
+    type: "loading",
+    title: "Preparando pago seguro...",
+    description: "La reserva se confirmará únicamente después del pago.",
   },
   success: {
-    type: 'success',
-    title: 'Reserva confirmada',
-    description: 'Tu escritorio fue reservado correctamente.',
+    type: "success",
+    title: "Reserva confirmada",
+    description: "Tu escritorio fue reservado correctamente.",
   },
   error: {
-    type: 'error',
-    title: 'No pudimos confirmar tu reserva',
+    type: "error",
+    title: "No pudimos confirmar tu reserva",
     description:
-      'Hubo un problema al procesarla. Revise su conexion e intente nuevamente.',
+      "Hubo un problema al procesarla. Revise su conexion e intente nuevamente.",
   },
 };
 
 const zoneOptions: { label: string; value: ZoneFilter }[] = [
-  { label: 'Todas', value: 'all' },
-  { label: 'Zona A', value: 'A' },
-  { label: 'Zona B', value: 'B' },
-  { label: 'Zona C', value: 'C' },
+  { label: "Todas", value: "all" },
+  { label: "Zona A", value: "A" },
+  { label: "Zona B", value: "B" },
+  { label: "Zona C", value: "C" },
 ];
 
+const allOption = { label: "Todas", value: "all" };
+
 const timeOptions = [
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
+  "08:00",
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
 ];
 
 function timeToMinutes(value: string) {
-  const [hours, minutes] = value.split(':').map(Number);
+  const [hours, minutes] = value.split(":").map(Number);
 
   return hours * 60 + minutes;
 }
@@ -86,7 +126,19 @@ function getFriendlyReservationError(error: unknown) {
     return error.message;
   }
 
-  return 'Lo sentimos, no pudimos confirmar tu reserva. Revise los datos e intente nuevamente.';
+  return "Lo sentimos, no pudimos confirmar tu reserva. Revise los datos e intente nuevamente.";
+}
+
+function timesOverlap(
+  start1: string,
+  end1: string,
+  start2: string,
+  end2: string,
+): boolean {
+  return (
+    timeToMinutes(start1) < timeToMinutes(end2) &&
+    timeToMinutes(end1) > timeToMinutes(start2)
+  );
 }
 
 function getSelectedDateLabel(dateValue: string) {
@@ -96,16 +148,27 @@ function getSelectedDateLabel(dateValue: string) {
     return dateValue;
   }
 
-  return new Intl.DateTimeFormat('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return new Intl.DateTimeFormat("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   }).format(date);
 }
 
 function getZoneFilterLabel(value: ZoneFilter) {
-  return zoneOptions.find((option) => option.value === value)?.label ?? 'Todas';
+  return zoneOptions.find((option) => option.value === value)?.label ?? "Todas";
+}
+
+function getFilterLabel<TItem extends { id: string; name: string }>(
+  value: string,
+  items: TItem[],
+) {
+  if (value === "all") {
+    return "Todas";
+  }
+
+  return items.find((item) => item.id === value)?.name ?? "Todas";
 }
 
 type FilterDropdownProps<TValue extends string> = {
@@ -131,7 +194,11 @@ function FilterDropdown<TValue extends string>({
 
   return (
     <View style={styles.dropdownField}>
-      <AppText variant="caption" color={colors.blackOverlay} style={styles.dropdownLabel}>
+      <AppText
+        variant="caption"
+        color={colors.blackOverlay}
+        style={styles.dropdownLabel}
+      >
         {label}
       </AppText>
 
@@ -186,40 +253,153 @@ function FilterDropdown<TValue extends string>({
 }
 
 export function DesksScreen({
+  accessToken,
+  initialAvailabilityContext,
+  selectedWorkArea,
+  onBackToWorkAreas,
   onPressReservations,
-  onPressSettings,
+  onPressPayments,
+  onPressProfile,
   onPressLogout,
+  onPressSwitchAccount,
+  onPressUserManagement,
+  onPressChangePassword,
+  userRole,
   onReservationCreated,
+  externalRefreshKey = 0,
 }: DesksScreenProps) {
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDate, setSelectedDate] = useState(
-    () => getDeskDateOptions()[0].id,
+    () => initialAvailabilityContext?.date ?? getDeskDateOptions()[0].id,
   );
   const [reservationStatus, setReservationStatus] =
-    useState<ReservationUiStatus>('idle');
+    useState<ReservationUiStatus>("idle");
+  const [canContinuePaymentInBackground, setCanContinuePaymentInBackground] =
+    useState(false);
+  const waitingForPaymentInBackground = useRef(false);
   const [reservationErrorMessage, setReservationErrorMessage] = useState(
     reservationStatusContent.error.description,
   );
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('18:00');
-  const [selectedZone, setSelectedZone] = useState<ZoneFilter>('all');
-  const [openDropdown, setOpenDropdown] = useState<FilterDropdownId | null>(null);
+  const [startTime, setStartTime] = useState(
+    () => initialAvailabilityContext?.startTime ?? "09:00",
+  );
+  const [endTime, setEndTime] = useState(
+    () => initialAvailabilityContext?.endTime ?? "18:00",
+  );
+  const [selectedZone, setSelectedZone] = useState<ZoneFilter>("all");
+  const [localities, setLocalities] = useState<Locality[]>([]);
+  const [workAreas, setWorkAreas] = useState<WorkArea[]>([]);
+  const [selectedLocalityId, setSelectedLocalityId] = useState("all");
+  const [selectedAreaId, setSelectedAreaId] = useState("all");
+  const [openDropdown, setOpenDropdown] = useState<FilterDropdownId | null>(
+    null,
+  );
   const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  const quickDates = useMemo(() => getDeskDateOptions(new Date(), 30), []);
+  const isCalendarDate = !quickDates
+    .slice(0, 10)
+    .some((d) => d.id === selectedDate);
+  const selectedWorkAreaLocalityId = selectedWorkArea?.localityId;
+  const effectiveAreaId = selectedWorkArea?.id ?? selectedAreaId;
+  const effectiveLocalityId =
+    selectedWorkArea?.localityId ?? selectedLocalityId;
+
+  useEffect(() => {
+    if (!selectedWorkArea) {
+      return;
+    }
+
+    setSelectedAreaId(selectedWorkArea.id);
+    if (selectedWorkAreaLocalityId) {
+      setSelectedLocalityId(selectedWorkAreaLocalityId);
+    }
+    setOpenDropdown(null);
+  }, [selectedWorkArea, selectedWorkAreaLocalityId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listLocalities()
+      .then((items) => {
+        if (isMounted) setLocalities(items);
+      })
+      .catch(() => {
+        if (isMounted) setLocalities([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listWorkAreas(selectedLocalityId === "all" ? undefined : selectedLocalityId)
+      .then((items) => {
+        if (isMounted) setWorkAreas(items);
+      })
+      .catch(() => {
+        if (isMounted) setWorkAreas([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedLocalityId]);
+
+  const calendarDateLabel = useMemo(() => {
+    if (!isCalendarDate) return null;
+    const date = new Date(`${selectedDate}T00:00:00`);
+    return new Intl.DateTimeFormat("es-AR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(date);
+  }, [selectedDate, isCalendarDate]);
+
   const { desks, errorMessage, isLoading } = useAvailableDesks({
     date: selectedDate,
     startTime,
     endTime,
-    refreshKey: availabilityRefreshKey,
-    ...(selectedZone === 'all' ? {} : { zone: selectedZone }),
+    refreshKey: availabilityRefreshKey + externalRefreshKey,
+    ...(selectedZone === "all" ? {} : { zone: selectedZone }),
+    ...(effectiveLocalityId === "all"
+      ? {}
+      : { localityId: effectiveLocalityId }),
+    ...(effectiveAreaId === "all" ? {} : { areaId: effectiveAreaId }),
   });
-  const availableCount = desks.filter(
-    (desk) => desk.enabled && desk.status === 'available',
+  const visibleDesks = selectedWorkArea
+    ? desks.filter(
+        (desk) =>
+          desk.areaId === selectedWorkArea.id ||
+          desk.area?.id === selectedWorkArea.id,
+      )
+    : desks;
+  const availableCount = visibleDesks.filter(
+    (desk) => desk.enabled && desk.status === "available",
   ).length;
   const startTimeOptions = timeOptions.slice(0, -1);
   const endTimeOptions = timeOptions.filter(
     (time) => timeToMinutes(time) > timeToMinutes(startTime),
   );
+  const localityOptions = [
+    allOption,
+    ...localities.map((locality) => ({
+      label: locality.name,
+      value: locality.id,
+    })),
+  ];
+  const areaOptions = [
+    allOption,
+    ...workAreas.map((area) => ({
+      label: area.name,
+      value: area.id,
+    })),
+  ];
 
   const handleOpenReservation = (desk: Desk) => {
     setSelectedDesk(desk);
@@ -234,29 +414,98 @@ export function DesksScreen({
     date: string;
     startTime: string;
     endTime: string;
+    paymentOption: PaymentOption;
   }) => {
     handleCloseReservation();
-    setReservationStatus('loading');
+    waitingForPaymentInBackground.current = false;
+    setCanContinuePaymentInBackground(false);
+    setReservationStatus("loading");
     setReservationErrorMessage(reservationStatusContent.error.description);
 
     try {
-      await createReservation({
+      const reservationGroups = await Promise.all([
+        listReservations(accessToken, 1, 50, "RESERVED"),
+        listReservations(accessToken, 1, 50, "ACTIVE"),
+      ]);
+      const allActive = reservationGroups.flatMap(
+        (group) => group.reservations,
+      );
+
+      const conflict = allActive.find(
+        (r) =>
+          r.date === payload.date &&
+          timesOverlap(
+            r.startTime,
+            r.endTime,
+            payload.startTime,
+            payload.endTime,
+          ),
+      );
+
+      if (conflict) {
+        setReservationErrorMessage(
+          `Ya tenés una reserva activa en ${conflict.deskName} de ${conflict.startTime} a ${conflict.endTime}. Los horarios se superponen.`,
+        );
+        setReservationStatus("error");
+        return;
+      }
+
+      const reservation = await createReservation(accessToken, {
         deskId: payload.desk.id,
         date: payload.date,
         startTime: payload.startTime,
         endTime: payload.endTime,
       });
+      const quote = await getPaymentQuote(accessToken, reservation.id);
+      const selectedOption = quote.options.find(
+        (option) => option.option === payload.paymentOption,
+      );
+      if (!selectedOption) {
+        throw new PaymentServiceError(
+          "La opción de pago seleccionada ya no está disponible.",
+        );
+      }
+      const checkout = await createPaymentCheckout(accessToken, {
+        reservationId: reservation.id,
+        option: payload.paymentOption,
+        idempotencyKey: createPaymentOperationKey(),
+      });
+      const checkoutUrl = new URL(checkout.checkoutUrl);
+      if (checkoutUrl.protocol !== "https:") {
+        throw new PaymentServiceError("La URL de pago no es segura.");
+      }
+      await Linking.openURL(checkout.checkoutUrl);
+      setCanContinuePaymentInBackground(true);
+      const paymentStatus = await pollPaymentUntilTerminal(
+        accessToken,
+        checkout.paymentId,
+        checkout.expiresAt,
+      );
+      if (paymentStatus !== "APPROVED") {
+        if (waitingForPaymentInBackground.current) {
+          return;
+        }
+        throw new PaymentServiceError(
+          "El pago aún no fue aprobado. La reserva no quedó confirmada.",
+        );
+      }
       setAvailabilityRefreshKey((current) => current + 1);
       onReservationCreated?.();
-      setReservationStatus('success');
+      setReservationStatus("success");
     } catch (error) {
+      if (waitingForPaymentInBackground.current) {
+        return;
+      }
       setReservationErrorMessage(getFriendlyReservationError(error));
-      setReservationStatus('error');
+      setReservationStatus("error");
+    } finally {
+      waitingForPaymentInBackground.current = false;
+      setCanContinuePaymentInBackground(false);
     }
   };
 
   const activeStatus =
-    reservationStatus === 'idle'
+    reservationStatus === "idle"
       ? null
       : reservationStatusContent[reservationStatus];
   const selectedDateLabel = getSelectedDateLabel(selectedDate);
@@ -266,10 +515,20 @@ export function DesksScreen({
   };
 
   const handleClearFilters = () => {
-    setStartTime('09:00');
-    setEndTime('18:00');
-    setSelectedZone('all');
+    setStartTime("09:00");
+    setEndTime("18:00");
+    setSelectedZone("all");
+    setSelectedLocalityId(selectedWorkArea?.localityId ?? "all");
+    setSelectedAreaId(selectedWorkArea?.id ?? "all");
     setOpenDropdown(null);
+  };
+
+  const handleBackToWorkAreas = () => {
+    onBackToWorkAreas?.({
+      date: selectedDate,
+      startTime,
+      endTime,
+    });
   };
 
   return (
@@ -280,9 +539,96 @@ export function DesksScreen({
           style={styles.scroll}
           contentContainerStyle={styles.content}
         >
-          <AppText variant="title">Escritorios Disponibles</AppText>
+          {selectedWorkArea ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleBackToWorkAreas}
+              style={({ pressed }) => [
+                styles.backAction,
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText
+                variant="caption"
+                color={colors.primary}
+                style={styles.backActionText}
+              >
+                Volver a areas
+              </AppText>
+            </Pressable>
+          ) : null}
 
-          <DateSelector selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          <View style={styles.titleBlock}>
+            <AppText variant="title">Escritorios Disponibles</AppText>
+            {selectedWorkArea ? (
+              <AppText
+                variant="caption"
+                color={colors.primaryLight}
+                style={styles.areaContextText}
+              >
+                {selectedWorkArea.name}
+                {selectedWorkArea.locality
+                  ? ` - ${selectedWorkArea.locality.name}`
+                  : ""}
+              </AppText>
+            ) : null}
+          </View>
+
+          <DateSelector
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+          />
+
+          {isCalendarDate && calendarDateLabel ? (
+            <View style={styles.calendarDateBanner}>
+              <Icon name="calendar" size={16} color={colors.primary} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cambiar fecha del calendario"
+                onPress={() => setShowCalendar(true)}
+                style={styles.calendarDateBannerContent}
+              >
+                <AppText
+                  variant="caption"
+                  color={colors.primary}
+                  style={styles.calendarDateText}
+                >
+                  {calendarDateLabel.charAt(0).toUpperCase() +
+                    calendarDateLabel.slice(1)}
+                </AppText>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Limpiar fecha del calendario"
+                onPress={() => setSelectedDate(getDeskDateOptions()[0].id)}
+                style={({ pressed }) => [
+                  styles.calendarDateClear,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Icon name="x" size={14} color={colors.primaryLight} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Abrir selector de calendario"
+              onPress={() => setShowCalendar(true)}
+              style={({ pressed }) => [
+                styles.calendarButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Icon name="calendar" size={16} color={colors.primaryLight} />
+              <AppText
+                variant="caption"
+                color={colors.primaryLight}
+                style={styles.calendarButtonText}
+              >
+                Ver más fechas
+              </AppText>
+            </Pressable>
+          )}
 
           <View style={styles.filtersHeader}>
             <Pressable
@@ -291,9 +637,16 @@ export function DesksScreen({
                 setOpenDropdown(null);
                 setShowAdvancedFilters((current) => !current);
               }}
-              style={({ pressed }) => [styles.filters, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.filters,
+                pressed && styles.pressed,
+              ]}
             >
-              <AppText variant="body" color={colors.primary} style={styles.filtersText}>
+              <AppText
+                variant="body"
+                color={colors.primary}
+                style={styles.filtersText}
+              >
                 Filtros avanzados
               </AppText>
               <Icon name="search" size={18} color={colors.primary} />
@@ -304,7 +657,10 @@ export function DesksScreen({
                 accessibilityRole="button"
                 accessibilityLabel="Limpiar filtros"
                 onPress={handleClearFilters}
-                style={({ pressed }) => [styles.clearFilters, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.clearFilters,
+                  pressed && styles.pressed,
+                ]}
               >
                 <Icon name="x" size={18} color={colors.primary} />
               </Pressable>
@@ -317,7 +673,10 @@ export function DesksScreen({
                 id="startTime"
                 label="Desde"
                 valueLabel={startTime}
-                options={startTimeOptions.map((time) => ({ label: time, value: time }))}
+                options={startTimeOptions.map((time) => ({
+                  label: time,
+                  value: time,
+                }))}
                 openDropdown={openDropdown}
                 onToggle={handleToggleDropdown}
                 onSelect={(value) => {
@@ -326,7 +685,7 @@ export function DesksScreen({
                     const nextEndTime = timeOptions.find(
                       (time) => timeToMinutes(time) > timeToMinutes(value),
                     );
-                    setEndTime(nextEndTime ?? '20:00');
+                    setEndTime(nextEndTime ?? "20:00");
                   }
                   setOpenDropdown(null);
                 }}
@@ -336,7 +695,10 @@ export function DesksScreen({
                 id="endTime"
                 label="Hasta"
                 valueLabel={endTime}
-                options={endTimeOptions.map((time) => ({ label: time, value: time }))}
+                options={endTimeOptions.map((time) => ({
+                  label: time,
+                  value: time,
+                }))}
                 openDropdown={openDropdown}
                 onToggle={handleToggleDropdown}
                 onSelect={(value) => {
@@ -358,6 +720,32 @@ export function DesksScreen({
                 }}
               />
 
+              <FilterDropdown
+                id="locality"
+                label="Localidad"
+                valueLabel={getFilterLabel(selectedLocalityId, localities)}
+                options={localityOptions}
+                openDropdown={openDropdown}
+                onToggle={handleToggleDropdown}
+                onSelect={(value) => {
+                  setSelectedLocalityId(value);
+                  setSelectedAreaId("all");
+                  setOpenDropdown(null);
+                }}
+              />
+
+              <FilterDropdown
+                id="area"
+                label="Area"
+                valueLabel={getFilterLabel(selectedAreaId, workAreas)}
+                options={areaOptions}
+                openDropdown={openDropdown}
+                onToggle={handleToggleDropdown}
+                onSelect={(value) => {
+                  setSelectedAreaId(value);
+                  setOpenDropdown(null);
+                }}
+              />
             </View>
           ) : null}
 
@@ -379,9 +767,9 @@ export function DesksScreen({
               title="Lo sentimos, no pudimos recuperar su informacion"
               description={errorMessage}
             />
-          ) : desks.length > 0 ? (
+          ) : visibleDesks.length > 0 ? (
             <DeskList
-              desks={desks}
+              desks={visibleDesks}
               selectedEndTime={endTime}
               selectedStartTime={startTime}
               onReserve={handleOpenReservation}
@@ -398,8 +786,13 @@ export function DesksScreen({
         <BottomTabBar
           activeTab="desks"
           onPressReservations={onPressReservations}
-          onPressSettings={onPressSettings}
+          onPressPayments={onPressPayments}
+          onPressProfile={onPressProfile}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          onPressChangePassword={onPressChangePassword}
+          userRole={userRole}
         />
       </View>
 
@@ -419,21 +812,75 @@ export function DesksScreen({
         <StatusModal
           visible
           type={activeStatus.type}
-          title={activeStatus.title}
+          title={
+            canContinuePaymentInBackground
+              ? "Esperando confirmacion"
+              : activeStatus.title
+          }
           description={
-            reservationStatus === 'error'
+            reservationStatus === "error"
               ? reservationErrorMessage
-              : activeStatus.description
+              : canContinuePaymentInBackground
+                ? "Deskly seguira consultando el pago. Puede continuar usando la aplicacion."
+                : activeStatus.description
           }
           onClose={
-            reservationStatus === 'loading'
+            reservationStatus === "loading"
               ? undefined
-              : () => setReservationStatus('idle')
+              : () => setReservationStatus("idle")
+          }
+          actionLabel={
+            canContinuePaymentInBackground ? "Dejar de esperar" : undefined
+          }
+          onAction={
+            canContinuePaymentInBackground
+              ? () => {
+                  waitingForPaymentInBackground.current = true;
+                  setCanContinuePaymentInBackground(false);
+                  setReservationStatus("idle");
+                }
+              : undefined
           }
         />
       ) : null}
+
+      <CalendarPicker
+        visible={showCalendar}
+        onSelectDate={setSelectedDate}
+        onClose={() => setShowCalendar(false)}
+      />
     </ScreenContainer>
   );
+}
+
+async function pollPaymentUntilTerminal(
+  accessToken: string,
+  paymentId: string,
+  expiresAt: string,
+): Promise<PaymentStatus | null> {
+  const terminalStatuses: PaymentStatus[] = [
+    "APPROVED",
+    "REJECTED",
+    "CANCELLED",
+    "EXPIRED",
+    "REFUNDED",
+  ];
+  const providerDeadline = new Date(expiresAt).getTime();
+  const deadline = Math.min(
+    Number.isNaN(providerDeadline)
+      ? Date.now() + 15 * 60_000
+      : providerDeadline,
+    Date.now() + 15 * 60_000,
+  );
+  while (true) {
+    const payment = await getPaymentAttempt(accessToken, paymentId);
+    if (terminalStatuses.includes(payment.status)) return payment.status;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return null;
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(3000, remaining)),
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -443,28 +890,28 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: spacing.lg,
-    overflow: 'visible',
+    overflow: "visible",
     paddingBottom: spacing.md,
   },
   scroll: {
-    overflow: 'visible',
+    overflow: "visible",
   },
   filtersHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 40,
   },
   filters: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
     gap: spacing.xs,
     minHeight: 40,
     paddingRight: spacing.sm,
   },
   filtersText: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   pressed: {
     opacity: 0.75,
@@ -474,47 +921,47 @@ const styles = StyleSheet.create({
     height: 1,
   },
   filtersPanel: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     backgroundColor: colors.background,
     borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     elevation: 8,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
-    overflow: 'visible',
+    overflow: "visible",
     padding: spacing.md,
     zIndex: 20,
   },
   clearFilters: {
-    alignItems: 'center',
-    alignSelf: 'flex-end',
+    alignItems: "center",
+    alignSelf: "flex-end",
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
     height: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 34,
   },
   dropdownField: {
     flex: 1,
     gap: spacing.xs,
     minWidth: 0,
-    position: 'relative',
+    position: "relative",
     zIndex: 30,
   },
   dropdownLabel: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dropdownPill: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.gray,
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     minHeight: 34,
     paddingHorizontal: spacing.md,
   },
@@ -523,7 +970,7 @@ const styles = StyleSheet.create({
   },
   dropdownPillText: {
     flex: 1,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   dropdownMenu: {
     backgroundColor: colors.gray,
@@ -533,21 +980,77 @@ const styles = StyleSheet.create({
     elevation: 12,
     left: 0,
     maxHeight: 176,
-    overflow: 'hidden',
-    position: 'absolute',
+    overflow: "hidden",
+    position: "absolute",
     right: 0,
     top: 56,
     zIndex: 50,
   },
   dropdownOption: {
     minHeight: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
   },
   dropdownOptionPressed: {
     backgroundColor: colors.softMint,
   },
   dropdownOptionText: {
-    fontWeight: '700',
+    fontWeight: "700",
+  },
+  calendarButton: {
+    alignItems: "center",
+    alignSelf: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  calendarButtonText: {
+    fontWeight: "700",
+  },
+  calendarDateBanner: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    backgroundColor: colors.softMint,
+    borderColor: colors.primary,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  calendarDateBannerContent: {
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  calendarDateText: {
+    fontWeight: "700",
+  },
+  calendarDateClear: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 32,
+  },
+  backAction: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+  },
+  backActionText: {
+    fontWeight: "800",
+  },
+  titleBlock: {
+    gap: spacing.xs,
+  },
+  areaContextText: {
+    fontWeight: "700",
   },
 });

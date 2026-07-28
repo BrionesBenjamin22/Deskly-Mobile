@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
@@ -7,15 +8,30 @@ import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { Reservation } from '../types/reservation.types';
 import { ReservationStatusBadge } from './ReservationStatusBadge';
+import { ReservationLocationDetails } from './ReservationLocationDetails';
 
 type ReservationCardProps = {
   reservation: Reservation;
   onCancel?: (reservation: Reservation) => void;
+  onValidateArrival?: (reservation: Reservation) => void;
+  managerView?: boolean;
 };
 
-export function ReservationCard({ reservation, onCancel }: ReservationCardProps) {
-  const isActive = reservation.status === 'active';
-  const isMuted = reservation.status !== 'active';
+export function ReservationCard({
+  reservation,
+  onCancel,
+  onValidateArrival,
+  managerView = false,
+}: ReservationCardProps) {
+  const [locationExpanded, setLocationExpanded] = useState(false);
+  const isCurrent = ['reserved', 'active'].includes(
+    reservation.status,
+  );
+  const isMuted = !isCurrent;
+  const isCheckedIn = Boolean(reservation.checkedInAt);
+  const canCancel = managerView
+    ? reservation.status === 'reserved'
+    : reservation.status === 'reserved';
 
   return (
     <Card style={[styles.card, isMuted && styles.mutedCard]}>
@@ -54,19 +70,56 @@ export function ReservationCard({ reservation, onCancel }: ReservationCardProps)
         </View>
       </View>
 
-      {isActive ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onCancel?.(reservation)}
-          style={({ pressed }) => [
-            styles.cancelButton,
-            pressed && styles.cancelButtonPressed,
-          ]}
-        >
-          <AppText variant="caption" color={statusColors.error} style={styles.cancelText}>
-            Cancelar Reserva
+      {managerView && reservation.memberFullName ? (
+        <View style={styles.memberRow}>
+          <AppText variant="caption" color={colors.primaryLight}>Miembro</AppText>
+          <AppText variant="body" color={colors.primary} style={styles.memberName}>
+            {reservation.memberFullName}
           </AppText>
-        </Pressable>
+        </View>
+      ) : null}
+
+      {reservation.location ? (
+        <ReservationLocationDetails
+          location={reservation.location}
+          expanded={locationExpanded}
+          onToggle={() => setLocationExpanded((value) => !value)}
+        />
+      ) : null}
+
+      {managerView && reservation.status === 'active' && isCheckedIn ? (
+        <View style={styles.checkedInBanner}>
+          <Icon name="circleCheck" size={16} color={statusColors.success} />
+          <AppText variant="caption" color={statusColors.success} style={styles.checkedInText}>
+            Llegada validada
+          </AppText>
+        </View>
+      ) : canCancel ? (
+        <View style={styles.actions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => onCancel?.(reservation)}
+            style={({ pressed }) => [
+              styles.cancelButton,
+              pressed && styles.cancelButtonPressed,
+            ]}
+          >
+            <AppText variant="caption" color={statusColors.error} style={styles.cancelText}>
+              Cancelar Reserva
+            </AppText>
+          </Pressable>
+          {managerView ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onValidateArrival?.(reservation)}
+              style={({ pressed }) => [styles.arrivalButton, pressed && styles.cancelButtonPressed]}
+            >
+              <AppText variant="caption" color={colors.white} style={styles.cancelText}>
+                Validar Llegada
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </Card>
   );
@@ -130,4 +183,36 @@ const styles = StyleSheet.create({
   cancelText: {
     fontWeight: '800',
   },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+  },
+  arrivalButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 180,
+    paddingHorizontal: spacing.lg,
+  },
+  memberRow: {
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    gap: spacing.xs,
+    padding: spacing.md,
+  },
+  memberName: { fontWeight: '800' },
+  checkedInBanner: {
+    alignItems: 'center',
+    backgroundColor: statusColors.successSoft,
+    borderRadius: radii.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 40,
+  },
+  checkedInText: { fontWeight: '800' },
 });

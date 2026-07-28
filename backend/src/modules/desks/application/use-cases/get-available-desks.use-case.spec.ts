@@ -10,7 +10,7 @@ describe('GetAvailableDesksUseCase', () => {
   beforeEach(() => {
     repository = {
       findAvailableByTimeSlot: jest.fn(),
-    };
+    } as unknown as jest.Mocked<DeskRepositoryPort>;
     useCase = new GetAvailableDesksUseCase(repository);
   });
 
@@ -138,6 +138,60 @@ describe('GetAvailableDesksUseCase', () => {
       id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
       status: 'available',
       reservedSlots: [{ startTime: '09:00', endTime: '10:00' }],
+    });
+  });
+
+  it('passes work area and locality filters and returns area data', async () => {
+    repository.findAvailableByTimeSlot.mockResolvedValue([
+      {
+        desk: new Desk({
+          id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+          code: 'D-01',
+          name: 'Escritorio 1',
+          peopleCapacity: 2,
+          areaId: '11111111-1111-4111-8111-111111111111',
+          area: {
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Area silenciosa',
+            localityId: '00000000-0000-4000-8000-000000000001',
+            active: true,
+            locality: {
+              id: '00000000-0000-4000-8000-000000000001',
+              name: 'La Plata',
+              active: true,
+            },
+          },
+          enabled: true,
+        }),
+        reservedSlots: [],
+      },
+    ]);
+
+    const output = await useCase.execute({
+      localityId: '00000000-0000-4000-8000-000000000001',
+      areaId: '11111111-1111-4111-8111-111111111111',
+      date: '2026-06-01',
+      startTime: '09:00',
+      endTime: '13:00',
+    });
+
+    expect(output.desks[0]).toMatchObject({
+      areaId: '11111111-1111-4111-8111-111111111111',
+      area: {
+        id: '11111111-1111-4111-8111-111111111111',
+        name: 'Area silenciosa',
+        locality: {
+          id: '00000000-0000-4000-8000-000000000001',
+          name: 'La Plata',
+        },
+      },
+    });
+    expect(repository.findAvailableByTimeSlot).toHaveBeenCalledWith({
+      localityId: '00000000-0000-4000-8000-000000000001',
+      areaId: '11111111-1111-4111-8111-111111111111',
+      date: '2026-06-01',
+      startTime: '09:00',
+      endTime: '13:00',
     });
   });
 });

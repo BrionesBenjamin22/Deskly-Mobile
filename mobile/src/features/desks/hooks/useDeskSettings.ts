@@ -11,10 +11,16 @@ import {
   listAmenities,
   listDeskDescriptions,
   listDesks,
+  listWorkAreas,
   updateAmenity,
   updateDesk,
 } from '../services/desks.service';
-import { Desk, DeskAmenity, DeskDescription } from '../types/desk.types';
+import {
+  Desk,
+  DeskAmenity,
+  DeskDescription,
+  WorkArea,
+} from '../types/desk.types';
 
 function getFriendlyErrorMessage(error: unknown) {
   if (error instanceof DeskServiceError) {
@@ -24,10 +30,11 @@ function getFriendlyErrorMessage(error: unknown) {
   return 'Lo sentimos, no pudimos procesar la solicitud. Intente nuevamente.';
 }
 
-export function useDeskSettings() {
+export function useDeskSettings(accessToken?: string) {
   const [desks, setDesks] = useState<Desk[]>([]);
   const [descriptions, setDescriptions] = useState<DeskDescription[]>([]);
   const [amenities, setAmenities] = useState<DeskAmenity[]>([]);
+  const [workAreas, setWorkAreas] = useState<WorkArea[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,16 +58,23 @@ export function useDeskSettings() {
     setErrorMessage(null);
 
     try {
-      const [desksResponse, descriptionsResponse, amenitiesResponse] =
+      const [
+        desksResponse,
+        descriptionsResponse,
+        amenitiesResponse,
+        workAreasResponse,
+      ] =
         await Promise.all([
           listDesks(1, 9),
           listDeskDescriptions(),
           listAmenities(),
+          listWorkAreas(),
         ]);
 
       setDesks(desksResponse.desks);
       setDescriptions(descriptionsResponse);
       setAmenities(amenitiesResponse);
+      setWorkAreas(workAreasResponse);
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));
     } finally {
@@ -79,10 +93,10 @@ export function useDeskSettings() {
 
     try {
       if (deskId) {
-        await updateDesk(deskId, payload);
+        await updateDesk(deskId, payload, accessToken);
         setSuccessMessage('Los cambios del escritorio se guardaron correctamente.');
       } else {
-        await createDesk(payload);
+        await createDesk(payload, accessToken);
         setSuccessMessage('El escritorio se creo correctamente.');
       }
 
@@ -102,7 +116,7 @@ export function useDeskSettings() {
     setSuccessMessage(null);
 
     try {
-      await deleteDesk(deskId);
+      await deleteDesk(deskId, accessToken);
       setSuccessMessage('Escritorio dado de baja correctamente.');
       await loadSettings();
     } catch (error) {
@@ -119,10 +133,10 @@ export function useDeskSettings() {
 
     try {
       if (amenityId) {
-        await updateAmenity(amenityId, payload);
+        await updateAmenity(amenityId, payload, accessToken);
         setSuccessMessage('Los cambios del amenity se guardaron correctamente.');
       } else {
-        await createAmenity(payload);
+        await createAmenity(payload, accessToken);
         setSuccessMessage('El amenity se creo correctamente.');
       }
 
@@ -142,7 +156,7 @@ export function useDeskSettings() {
     setSuccessMessage(null);
 
     try {
-      await deleteAmenity(amenityId);
+      await deleteAmenity(amenityId, accessToken);
       setSuccessMessage('Amenities eliminado correctamente.');
       await loadSettings();
     } catch (error) {
@@ -169,5 +183,6 @@ export function useDeskSettings() {
     saveAmenity,
     saveDesk,
     successMessage,
+    workAreas,
   };
 }

@@ -10,19 +10,23 @@ import {
 import {
   Building2,
   Calendar,
+  Check,
   ChevronDown,
   ChevronRight,
   CircleAlert,
   CircleCheck,
   Clock,
+  CreditCard,
   LoaderCircle,
   Home,
   LogOut,
   MapPin,
+  Pencil,
   Search,
   SlidersHorizontal,
   User,
   Users,
+  Wallet,
   X,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -32,19 +36,23 @@ import { colors } from '../../theme/colors';
 export type IconName =
   | 'building'
   | 'calendar'
+  | 'check'
   | 'chevronDown'
   | 'chevronRight'
   | 'circleAlert'
   | 'circleCheck'
   | 'clock'
+  | 'creditCard'
   | 'filter'
   | 'home'
   | 'loader'
   | 'logout'
   | 'mapPin'
+  | 'pencil'
   | 'search'
   | 'user'
   | 'users'
+  | 'wallet'
   | 'x';
 
 type IconProps = {
@@ -58,19 +66,23 @@ type IconProps = {
 const icons: Record<IconName, LucideIcon> = {
   building: Building2,
   calendar: Calendar,
+  check: Check,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
   circleAlert: CircleAlert,
   circleCheck: CircleCheck,
   clock: Clock,
+  creditCard: CreditCard,
   filter: SlidersHorizontal,
   home: Home,
   loader: LoaderCircle,
   logout: LogOut,
   mapPin: MapPin,
+  pencil: Pencil,
   search: Search,
   user: User,
   users: Users,
+  wallet: Wallet,
   x: X,
 };
 
@@ -120,7 +132,9 @@ export function Icon({
       style={[styles.icon, { height: size, width: size }, style]}
     >
       {isLoading ? (
-        <Animated.View style={{ transform: [{ rotate }] }}>{content}</Animated.View>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          {content}
+        </Animated.View>
       ) : (
         content
       )}

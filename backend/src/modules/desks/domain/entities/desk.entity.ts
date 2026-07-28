@@ -12,6 +12,24 @@ export type AmenityProperties = {
   name: string;
 };
 
+export type LocalityProperties = {
+  id: string;
+  name: string;
+  active: boolean;
+};
+
+export type WorkAreaProperties = {
+  id: string;
+  name: string;
+  description?: string | null;
+  localityId: string;
+  locality?: LocalityProperties;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  active: boolean;
+};
+
 export type DeskProperties = {
   id: string;
   code: string;
@@ -19,6 +37,8 @@ export type DeskProperties = {
   peopleCapacity: number;
   descriptionId?: string | null;
   description?: DeskDescriptionProperties | null;
+  areaId?: string;
+  area?: WorkAreaProperties;
   zone?: DeskZoneValue | null;
   amenities?: AmenityProperties[];
   enabled: boolean;
@@ -52,6 +72,14 @@ export class Desk {
 
   get description(): DeskDescriptionProperties | null | undefined {
     return this.properties.description;
+  }
+
+  get areaId(): string | undefined {
+    return this.properties.areaId;
+  }
+
+  get area(): WorkAreaProperties | undefined {
+    return this.properties.area;
   }
 
   get zone(): DeskZoneValue | null | undefined {

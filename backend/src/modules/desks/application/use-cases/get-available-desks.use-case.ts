@@ -25,6 +25,8 @@ export class GetAvailableDesksUseCase {
       startTime: timeSlot.startTime,
       endTime: timeSlot.endTime,
       ...(input.zone ? { zone: input.zone } : {}),
+      ...(input.areaId ? { areaId: input.areaId } : {}),
+      ...(input.localityId ? { localityId: input.localityId } : {}),
     });
 
     return {
@@ -45,6 +47,8 @@ export class GetAvailableDesksUseCase {
           peopleCapacity: desk.peopleCapacity,
           ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
           ...(desk.description ? { description: desk.description } : {}),
+          ...(desk.areaId ? { areaId: desk.areaId } : {}),
+          ...(desk.area ? { area: desk.area } : {}),
           ...(desk.zone ? { zone: desk.zone } : {}),
           amenities: desk.amenities,
           status: hasOverlap ? 'unavailable' : 'available',

@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayUnique,
   IsArray,
@@ -42,6 +42,11 @@ export class CreateDeskBodyDto {
   @IsOptional()
   @IsUUID('4', { message: 'La descripcion debe ser un UUID valido.' })
   descriptionId?: string;
+
+  @ApiPropertyOptional({ example: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc' })
+  @IsOptional()
+  @IsUUID('4', { message: 'El area de trabajo debe ser un UUID valido.' })
+  areaId?: string;
 
   @ApiPropertyOptional({
     example: 'A',

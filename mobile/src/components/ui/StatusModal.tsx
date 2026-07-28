@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, statusColors } from '../../theme/colors';
 import { radii, spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
+import { Button } from './Button';
 import { Icon, IconName } from './Icon';
 
 export type StatusModalType = 'success' | 'loading' | 'error';
@@ -20,6 +15,8 @@ type StatusModalProps = {
   title: string;
   description?: string;
   onClose?: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 };
 
 const statusConfig: Record<
@@ -27,7 +24,7 @@ const statusConfig: Record<
   { icon: IconName; iconColor: string; circleColor: string }
 > = {
   success: {
-    icon: 'circleCheck',
+    icon: 'check',
     iconColor: statusColors.success,
     circleColor: statusColors.successSoft,
   },
@@ -37,7 +34,7 @@ const statusConfig: Record<
     circleColor: colors.gray,
   },
   error: {
-    icon: 'circleAlert',
+    icon: 'x',
     iconColor: statusColors.error,
     circleColor: statusColors.errorSoft,
   },
@@ -49,8 +46,9 @@ export function StatusModal({
   title,
   description,
   onClose,
+  actionLabel,
+  onAction,
 }: StatusModalProps) {
-  const spinValue = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [isMounted, setIsMounted] = useState(visible);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,26 +100,6 @@ export function StatusModal({
   }, [progress, visible]);
 
   useEffect(() => {
-    if (!visible || type !== 'loading') {
-      spinValue.stopAnimation();
-      spinValue.setValue(0);
-      return;
-    }
-
-    const animation = Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    );
-
-    animation.start();
-
-    return () => animation.stop();
-  }, [spinValue, type, visible]);
-
-  useEffect(() => {
     if (!visible || type === 'loading' || !onClose) {
       return undefined;
     }
@@ -138,11 +116,6 @@ export function StatusModal({
     };
   }, [onClose, requestClose, type, visible]);
 
-  const rotation = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   const panelTranslateY = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [28, 0],
@@ -153,14 +126,21 @@ export function StatusModal({
   }
 
   return (
-    <Modal transparent visible={isMounted} animationType="none" onRequestClose={requestClose}>
-      <Pressable
-        accessibilityRole="button"
-        disabled={!onClose || type === 'loading'}
-        onPress={requestClose}
-        style={styles.overlay}
-      >
-        <Animated.View style={[styles.backdrop, { opacity: progress }]} />
+    <Modal
+      transparent
+      visible={isMounted}
+      animationType="none"
+      onRequestClose={requestClose}
+    >
+      <View style={styles.overlay}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={!onClose || type === 'loading'}
+          onPress={requestClose}
+          style={StyleSheet.absoluteFill}
+        >
+          <Animated.View style={[styles.backdrop, { opacity: progress }]} />
+        </Pressable>
 
         <Animated.View
           style={[
@@ -171,25 +151,42 @@ export function StatusModal({
             },
           ]}
         >
-          <View style={[styles.iconCircle, { backgroundColor: config.circleColor }]}>
-            <Animated.View
-              style={type === 'loading' ? { transform: [{ rotate: rotation }] } : undefined}
-            >
-              <Icon name={config.icon} size={34} color={config.iconColor} />
-            </Animated.View>
+          <View
+            style={[styles.iconCircle, { backgroundColor: config.circleColor }]}
+          >
+            <Icon
+              key={type}
+              name={config.icon}
+              size={34}
+              color={config.iconColor}
+            />
           </View>
 
-          <AppText variant="subtitle" color={colors.primary} style={styles.title}>
+          <AppText
+            variant="subtitle"
+            color={colors.primary}
+            style={styles.title}
+          >
             {title}
           </AppText>
 
           {description ? (
-            <AppText variant="body" color={colors.primaryLight} style={styles.description}>
+            <AppText
+              variant="body"
+              color={colors.primaryLight}
+              style={styles.description}
+            >
               {description}
             </AppText>
           ) : null}
+
+          {actionLabel && onAction ? (
+            <View style={styles.action}>
+              <Button title={actionLabel} variant="ghost" onPress={onAction} />
+            </View>
+          ) : null}
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -227,5 +224,9 @@ const styles = StyleSheet.create({
   },
   description: {
     textAlign: 'center',
+  },
+  action: {
+    alignSelf: 'stretch',
+    marginTop: spacing.xs,
   },
 });

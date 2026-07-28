@@ -13,17 +13,27 @@ import { radii, spacing } from '../../../theme/spacing';
 import { useDeskSettings } from '../hooks/useDeskSettings';
 import { Desk, DeskAmenity, DeskZone } from '../types/desk.types';
 import { DeskPayload } from '../services/desks.service';
+import { UserRole } from '../../auth/types/auth.types';
 
 type DeskSettingsScreenProps = {
+  accessToken?: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
+  onPressProfile?: () => void;
+  onPressPayments?: () => void;
   onPressLogout?: () => void;
+  onDeskCreated?: () => void;
+  onPressSwitchAccount?: () => void;
+  onPressUserManagement?: () => void;
+  onPressChangePassword?: () => void;
+  userRole?: UserRole;
 };
 
 type DeskFormState = {
   name: string;
   peopleCapacity: string;
   descriptionId?: string;
+  areaId?: string;
   zone?: DeskZone;
   amenityIds: string[];
   enabled: boolean;
@@ -65,6 +75,7 @@ function toFormState(desk: Desk): DeskFormState {
     name: desk.name ?? '',
     peopleCapacity: String(desk.peopleCapacity),
     descriptionId: desk.descriptionId,
+    areaId: desk.areaId,
     zone: desk.zone,
     amenityIds: desk.amenities.map((amenity) => amenity.id),
     enabled: desk.enabled,
@@ -76,6 +87,7 @@ function buildPayload(form: DeskFormState): DeskPayload {
     name: form.name,
     peopleCapacity: Number(form.peopleCapacity),
     descriptionId: form.descriptionId,
+    areaId: form.areaId,
     zone: form.zone,
     amenityIds: form.amenityIds,
     enabled: form.enabled,
@@ -96,6 +108,10 @@ function buildChangedPayload(form: DeskFormState, desk: Desk): DeskPayload {
 
   if (form.descriptionId !== original.descriptionId) {
     payload.descriptionId = form.descriptionId;
+  }
+
+  if (form.areaId !== original.areaId) {
+    payload.areaId = form.areaId;
   }
 
   if (form.zone !== original.zone) {
@@ -180,7 +196,15 @@ function Chip({ label, selected, onPress }: ChipProps) {
 export function DeskSettingsScreen({
   onPressDesks,
   onPressReservations,
+  onPressProfile,
+  onPressPayments,
   onPressLogout,
+  onPressSwitchAccount,
+  onPressUserManagement,
+  onPressChangePassword,
+  userRole,
+  onDeskCreated,
+  accessToken,
 }: DeskSettingsScreenProps) {
   const {
     amenities,
@@ -195,7 +219,8 @@ export function DeskSettingsScreen({
     saveAmenity,
     saveDesk,
     successMessage,
-  } = useDeskSettings();
+    workAreas,
+  } = useDeskSettings(accessToken);
   const [editingDesk, setEditingDesk] = useState<Desk | null>(null);
   const [editingAmenity, setEditingAmenity] = useState<DeskAmenity | null>(
     null,
@@ -274,6 +299,9 @@ export function DeskSettingsScreen({
     const saved = await saveDesk(payload, editingDesk?.id);
 
     if (saved) {
+      if (!editingDesk) {
+        onDeskCreated?.();
+      }
       handleCancelEdit();
     }
   };
@@ -423,6 +451,27 @@ export function DeskSettingsScreen({
                           current.descriptionId === description.id
                             ? undefined
                             : description.id,
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+                Area de trabajo
+              </AppText>
+              <View style={styles.chips}>
+                {workAreas.map((area) => (
+                  <Chip
+                    key={area.id}
+                    label={`${area.name}${area.locality ? ` - ${area.locality.name}` : ''}`}
+                    selected={form.areaId === area.id}
+                    onPress={() =>
+                      setForm((current) => ({
+                        ...current,
+                        areaId: current.areaId === area.id ? undefined : area.id,
                       }))
                     }
                   />
@@ -621,6 +670,7 @@ export function DeskSettingsScreen({
                         <AppText variant="caption" color={colors.blackOverlay}>
                           Código {desk.code}
                           {desk.zone ? ` · Zona ${desk.zone}` : ''}
+                          {desk.area ? ` · ${desk.area.name}` : ''}
                         </AppText>
                       </View>
                       <View style={[styles.statusPill, !desk.enabled && styles.statusPillMuted]}>
@@ -683,7 +733,13 @@ export function DeskSettingsScreen({
           activeTab="settings"
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
+          onPressProfile={onPressProfile}
+          onPressPayments={onPressPayments}
           onPressLogout={onPressLogout}
+          onPressSwitchAccount={onPressSwitchAccount}
+          onPressUserManagement={onPressUserManagement}
+          onPressChangePassword={onPressChangePassword}
+          userRole={userRole}
         />
       </View>
     </ScreenContainer>

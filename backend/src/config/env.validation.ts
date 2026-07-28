@@ -5,6 +5,7 @@ type EnvironmentVariables = {
   DATABASE_URL: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
+  PAYMENT_GATEWAY: 'FAKE' | 'MERCADO_PAGO';
 };
 
 export function validateEnvironment(
@@ -18,6 +19,13 @@ export function validateEnvironment(
     }
   }
 
+  const jwtSecret = getStringValue(config.JWT_SECRET);
+  if (jwtSecret.length < 32 || /^change[_-]?me/i.test(jwtSecret)) {
+    throw new Error(
+      'JWT_SECRET must contain at least 32 characters and must not use a placeholder',
+    );
+  }
+
   const getString = (key: string, fallback?: string): string => {
     const value = config[key] ?? fallback;
 
@@ -28,12 +36,64 @@ export function validateEnvironment(
     return value;
   };
 
+  const paymentGateway = getString('PAYMENT_GATEWAY', 'FAKE');
+  if (!['FAKE', 'MERCADO_PAGO'].includes(paymentGateway)) {
+    throw new Error('PAYMENT_GATEWAY must be FAKE or MERCADO_PAGO');
+  }
+  if (paymentGateway === 'MERCADO_PAGO') {
+    validateMercadoPagoEnvironment(config);
+  }
+
   return {
     NODE_ENV: getString('NODE_ENV', 'development'),
     PORT: Number(config.PORT ?? 3000),
     FRONTEND_URL: getString('FRONTEND_URL', 'http://localhost:5173'),
     DATABASE_URL: getString('DATABASE_URL'),
-    JWT_SECRET: getString('JWT_SECRET'),
-    JWT_EXPIRES_IN: getString('JWT_EXPIRES_IN', '1d'),
+    JWT_SECRET: jwtSecret,
+    JWT_EXPIRES_IN: validateJwtExpiration(getString('JWT_EXPIRES_IN', '1h')),
+    PAYMENT_GATEWAY: paymentGateway as 'FAKE' | 'MERCADO_PAGO',
   };
+}
+
+function getStringValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function validateMercadoPagoEnvironment(config: Record<string, unknown>): void {
+  const required = [
+    'MERCADO_PAGO_ACCESS_TOKEN',
+    'MERCADO_PAGO_WEBHOOK_SECRET',
+    'MERCADO_PAGO_SUCCESS_URL',
+    'MERCADO_PAGO_FAILURE_URL',
+    'MERCADO_PAGO_PENDING_URL',
+    'MERCADO_PAGO_ALLOWED_RETURN_ORIGINS',
+  ];
+  for (const key of required) {
+    if (typeof config[key] !== 'string' || !config[key].trim())
+      throw new Error(`Missing required environment variable: ${key}`);
+  }
+}
+
+function validateJwtExpiration(value: string): string {
+  const match = /^(\d+)(s|m|h|d)$/.exec(value);
+
+  if (!match) {
+    throw new Error(
+      'JWT_EXPIRES_IN must use seconds, minutes, hours or days (for example: 1h, 1d)',
+    );
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+  const seconds =
+    amount *
+    (unit === 'd' ? 86400 : unit === 'h' ? 3600 : unit === 'm' ? 60 : 1);
+
+  if (seconds <= 0 || seconds > 7 * 86400) {
+    throw new Error(
+      'JWT_EXPIRES_IN must be greater than 0 and no longer than 7 days',
+    );
+  }
+
+  return value;
 }

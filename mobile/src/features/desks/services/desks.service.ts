@@ -1,5 +1,12 @@
 import { API_BASE_URL } from '../../../config/api';
-import { Desk, DeskAmenity, DeskDescription, DeskZone } from '../types/desk.types';
+import {
+  Desk,
+  DeskAmenity,
+  DeskDescription,
+  DeskZone,
+  Locality,
+  WorkArea,
+} from '../types/desk.types';
 
 type AvailableDeskResponse = {
   id: string;
@@ -8,6 +15,8 @@ type AvailableDeskResponse = {
   peopleCapacity: number;
   descriptionId?: string | null;
   description?: Desk['description'] | null;
+  areaId?: string | null;
+  area?: Desk['area'] | null;
   zone?: Desk['zone'] | null;
   amenities: Desk['amenities'];
   status?: 'available' | 'unavailable';
@@ -36,12 +45,15 @@ export type GetAvailableDesksParams = {
   startTime: string;
   endTime: string;
   zone?: DeskZone;
+  areaId?: string;
+  localityId?: string;
 };
 
 export type DeskPayload = {
   name?: string;
   peopleCapacity?: number;
   descriptionId?: string;
+  areaId?: string;
   zone?: DeskZone;
   amenityIds?: string[];
   enabled?: boolean;
@@ -49,6 +61,27 @@ export type DeskPayload = {
 
 export type AmenityPayload = {
   name?: string;
+};
+
+export type DeskDescriptionPayload = {
+  name?: string;
+  description?: string;
+  peopleCapacity?: number;
+};
+
+export type LocalityPayload = {
+  name?: string;
+  active?: boolean;
+};
+
+export type WorkAreaPayload = {
+  name?: string;
+  description?: string;
+  localityId?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  active?: boolean;
 };
 
 type ApiErrorBody = {
@@ -67,6 +100,7 @@ export class DeskServiceError extends Error {
   ) {
     super(message);
     this.name = 'DeskServiceError';
+    Object.setPrototypeOf(this, DeskServiceError.prototype);
   }
 }
 
@@ -95,12 +129,12 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
-      ...init,
     });
   } catch (error) {
     const isTimeout =
@@ -138,6 +172,8 @@ function mapAvailableDesk(desk: AvailableDeskResponse): Desk {
     ...(desk.name ? { name: desk.name } : {}),
     ...(desk.descriptionId ? { descriptionId: desk.descriptionId } : {}),
     ...(desk.description ? { description: desk.description } : {}),
+    ...(desk.areaId ? { areaId: desk.areaId } : {}),
+    ...(desk.area ? { area: desk.area } : {}),
     ...(desk.zone ? { zone: desk.zone } : {}),
     amenities: desk.amenities ?? [],
     enabled: true,
@@ -153,6 +189,7 @@ function sanitizePayload(payload: DeskPayload): DeskPayload {
       ? { peopleCapacity: payload.peopleCapacity }
       : {}),
     ...(payload.descriptionId ? { descriptionId: payload.descriptionId } : {}),
+    ...(payload.areaId ? { areaId: payload.areaId } : {}),
     ...(payload.zone ? { zone: payload.zone } : {}),
     ...(payload.amenityIds ? { amenityIds: payload.amenityIds } : {}),
     ...(typeof payload.enabled === 'boolean' ? { enabled: payload.enabled } : {}),
@@ -185,6 +222,10 @@ function validateDeskPayloadTypes(payload: DeskPayload) {
     typeof payload.descriptionId !== 'string'
   ) {
     throw new DeskServiceError('El tipo de escritorio seleccionado no es valido.', 'api');
+  }
+
+  if (payload.areaId !== undefined && typeof payload.areaId !== 'string') {
+    throw new DeskServiceError('El area de trabajo seleccionada no es valida.', 'api');
   }
 
   if (payload.zone !== undefined && !DESK_ZONES.includes(payload.zone)) {
@@ -232,6 +273,8 @@ export async function getAvailableDesks({
   startTime,
   endTime,
   zone,
+  areaId,
+  localityId,
 }: GetAvailableDesksParams): Promise<Desk[]> {
   const params = new URLSearchParams({
     date,
@@ -243,11 +286,113 @@ export async function getAvailableDesks({
     params.set('zone', zone);
   }
 
+  if (areaId) {
+    params.set('areaId', areaId);
+  }
+
+  if (localityId) {
+    params.set('localityId', localityId);
+  }
+
   const body = await requestJson<GetAvailableDesksResponse>(
     `/desks/availability?${params}`,
   );
 
   return body.desks.map(mapAvailableDesk);
+}
+
+export function listLocalities() {
+  return requestJson<Locality[]>('/localities');
+}
+
+export function createLocality(
+  payload: LocalityPayload,
+  accessToken?: string,
+) {
+  return requestJson<Locality>('/localities', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateLocality(
+  id: string,
+  payload: LocalityPayload,
+  accessToken?: string,
+) {
+  return requestJson<Locality>(`/localities/${id}`, {
+    method: 'PATCH',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLocality(id: string, accessToken?: string) {
+  return requestJson<void>(`/localities/${id}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  });
+}
+
+export function listWorkAreas(localityId?: string) {
+  const params = new URLSearchParams();
+
+  if (localityId) {
+    params.set('localityId', localityId);
+  }
+
+  const query = params.toString();
+
+  return requestJson<WorkArea[]>(`/work-areas${query ? `?${query}` : ''}`);
+}
+
+export function createWorkArea(
+  payload: WorkAreaPayload,
+  accessToken?: string,
+) {
+  return requestJson<WorkArea>('/work-areas', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateWorkArea(
+  id: string,
+  payload: WorkAreaPayload,
+  accessToken?: string,
+) {
+  return requestJson<WorkArea>(`/work-areas/${id}`, {
+    method: 'PATCH',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteWorkArea(id: string, accessToken?: string) {
+  return requestJson<void>(`/work-areas/${id}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  });
+}
+
+export async function listAvailableWorkAreas(params: GetAvailableDesksParams) {
+  const query = new URLSearchParams({
+    date: params.date,
+    startTime: params.startTime,
+    endTime: params.endTime,
+  });
+
+  if (params.zone) query.set('zone', params.zone);
+  if (params.areaId) query.set('areaId', params.areaId);
+  if (params.localityId) query.set('localityId', params.localityId);
+
+  const body = await requestJson<{ areas: WorkArea[] }>(
+    `/work-areas/availability?${query}`,
+  );
+
+  return body.areas;
 }
 
 export async function listDesks(page = 1, limit = 9) {
@@ -259,27 +404,38 @@ export async function listDesks(page = 1, limit = 9) {
   return requestJson<ListDesksResponse>(`/desks?${params}`);
 }
 
-export function createDesk(payload: DeskPayload) {
+function bearerHeaders(accessToken?: string) {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
+}
+
+export function createDesk(payload: DeskPayload, accessToken?: string) {
   validateDeskPayloadTypes(payload);
 
   return requestJson<Desk>('/desks', {
     method: 'POST',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizePayload(payload)),
   });
 }
 
-export function updateDesk(id: string, payload: DeskPayload) {
+export function updateDesk(
+  id: string,
+  payload: DeskPayload,
+  accessToken?: string,
+) {
   validateDeskPayloadTypes(payload);
 
   return requestJson<Desk>(`/desks/${id}`, {
     method: 'PATCH',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizePayload(payload)),
   });
 }
 
-export function deleteDesk(id: string) {
+export function deleteDesk(id: string, accessToken?: string) {
   return requestJson<void>(`/desks/${id}`, {
     method: 'DELETE',
+    headers: bearerHeaders(accessToken),
   });
 }
 
@@ -287,30 +443,67 @@ export function listDeskDescriptions() {
   return requestJson<DeskDescription[]>('/desk-descriptions');
 }
 
+export function createDeskDescription(
+  payload: DeskDescriptionPayload,
+  accessToken?: string,
+) {
+  return requestJson<DeskDescription>('/desk-descriptions', {
+    method: 'POST',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateDeskDescription(
+  id: string,
+  payload: DeskDescriptionPayload,
+  accessToken?: string,
+) {
+  return requestJson<DeskDescription>(`/desk-descriptions/${id}`, {
+    method: 'PATCH',
+    headers: bearerHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteDeskDescription(id: string, accessToken?: string) {
+  return requestJson<void>(`/desk-descriptions/${id}`, {
+    method: 'DELETE',
+    headers: bearerHeaders(accessToken),
+  });
+}
+
 export function listAmenities() {
   return requestJson<DeskAmenity[]>('/amenities');
 }
 
-export function createAmenity(payload: AmenityPayload) {
+export function createAmenity(payload: AmenityPayload, accessToken?: string) {
   validateAmenityPayloadTypes(payload);
 
   return requestJson<DeskAmenity>('/amenities', {
     method: 'POST',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizeAmenityPayload(payload)),
   });
 }
 
-export function updateAmenity(id: string, payload: AmenityPayload) {
+export function updateAmenity(
+  id: string,
+  payload: AmenityPayload,
+  accessToken?: string,
+) {
   validateAmenityPayloadTypes(payload);
 
   return requestJson<DeskAmenity>(`/amenities/${id}`, {
     method: 'PATCH',
+    headers: bearerHeaders(accessToken),
     body: JSON.stringify(sanitizeAmenityPayload(payload)),
   });
 }
 
-export function deleteAmenity(id: string) {
+export function deleteAmenity(id: string, accessToken?: string) {
   return requestJson<void>(`/amenities/${id}`, {
     method: 'DELETE',
+    headers: bearerHeaders(accessToken),
   });
 }

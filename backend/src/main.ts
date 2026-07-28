@@ -5,6 +5,12 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from './app.module';
 import { HttpExceptionLoggingFilter } from './common/filters/http-exception-logging.filter';
+import {
+  resolveCorrelationId,
+  sanitizeHttpPath,
+} from './common/http/request-observability';
+
+type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
 
 function getAllowedOrigins() {
   const configuredOrigins = process.env.FRONTEND_URL?.split(',')
@@ -25,9 +31,7 @@ function getAllowedOrigins() {
 }
 
 function isLocalDevelopmentOrigin(origin: string) {
-  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(
-    origin,
-  );
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
 }
 
 function isPrivateNetworkDevelopmentOrigin(origin: string) {
@@ -37,11 +41,11 @@ function isPrivateNetworkDevelopmentOrigin(origin: string) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const logger = new Logger('HTTP');
 
   app.enableCors({
-    origin(origin, callback) {
+    origin(origin: string | undefined, callback: CorsOriginCallback) {
       if (!origin) {
         callback(null, true);
         return;
@@ -65,8 +69,19 @@ async function bootstrap() {
   });
 
   app.use((request: Request, response: Response, next: NextFunction) => {
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    response.setHeader(
+      'Permissions-Policy',
+      'camera=(), microphone=(), geolocation=()',
+    );
     const startedAt = Date.now();
-    const requestLabel = `${request.method} ${request.originalUrl}`;
+    const correlationId = resolveCorrelationId(
+      request.header('x-correlation-id'),
+    );
+    response.setHeader('x-correlation-id', correlationId);
+    const requestLabel = `${request.method} ${sanitizeHttpPath(request.originalUrl)} correlation=${correlationId}`;
 
     logger.log(`--> ${requestLabel}`);
 
@@ -102,13 +117,16 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Deskly API')
-    .setDescription('API para la gestion de espacios de coworking.')
-    .setVersion('1.0')
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('docs', app, document);
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Deskly API')
+      .setDescription('API para la gestion de espacios de coworking.')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   const port = process.env.PORT ?? 3000;
 

@@ -4,13 +4,17 @@
 
 Gestion de reservas sobre escritorios disponibles.
 
-En esta entrega no se contemplan usuarios ni relacion con miembros. La reserva se asocia solamente al escritorio, fecha, horario y estado.
+Cada reserva pertenece obligatoriamente a un miembro activo. En el alta, `memberId` se obtiene del JWT y no se acepta desde el cliente. Un miembro puede tener cero o muchas reservas. La respuesta incluye el identificador del miembro y su nombre completo cuando esta disponible.
+
+La ubicacion se resuelve mediante `Reservation -> Desk -> WorkArea -> Locality`. `Locality` representa una localidad geografica generica, como Chascomus o La Plata. La direccion y las coordenadas pertenecen al area de trabajo concreta; no se duplican en la reserva ni se almacenan en la localidad.
+
+El repositorio carga escritorio, area y localidad en la misma consulta de cada operacion de reserva. No se realizan consultas adicionales por elemento. `location` es opcional para conservar compatibilidad con respuestas de transicion; dentro de una ubicacion cargada, `address`, `latitude` y `longitude` tambien son opcionales.
 
 ## Endpoints
 
 ```http
 POST /reservations
-GET /reservations?page=1&limit=9&status=ACTIVE
+GET /reservations?page=1&limit=9&status=RESERVED
 GET /reservations/:id
 PATCH /reservations/:id
 PATCH /reservations/:id/cancel
@@ -28,17 +32,32 @@ DELETE /reservations/:id
 }
 ```
 
+Todos los endpoints de reserva requieren JWT. Los miembros solo pueden crear,
+consultar, editar y cancelar reservas propias; gestores y administradores
+conservan la consulta y modificacion operativa global.
+
 ## Respuesta
 
 ```json
 {
   "reservationId": "2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4",
   "deskId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
+  "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
+  "memberFullName": "Nombre Apellido",
   "deskCode": "D-01",
+  "location": {
+    "areaId": "30000000-0000-4000-8000-000000000001",
+    "areaName": "Area abierta",
+    "localityId": "20000000-0000-4000-8000-000000000001",
+    "localityName": "Chascomus",
+    "address": "Av. Costanera Espana 120",
+    "latitude": -35.577,
+    "longitude": -57.997
+  },
   "date": "2026-06-01",
   "startTime": "09:00",
   "endTime": "13:00",
-  "status": "ACTIVE"
+  "status": "RESERVED"
 }
 ```
 
@@ -50,12 +69,23 @@ Listado:
     {
       "reservationId": "2d7e9fb5-f93d-4143-a820-a7ad5ac7fcb4",
       "deskId": "7a3deca2-0063-4e6c-b1ee-a95666b5efdc",
+      "memberId": "8ae2e38a-300c-4cc1-b6ba-cee270f163f7",
+      "memberFullName": "Nombre Apellido",
       "deskCode": "D-01",
       "deskName": "Escritorio 1",
+      "location": {
+        "areaId": "30000000-0000-4000-8000-000000000001",
+        "areaName": "Area abierta",
+        "localityId": "20000000-0000-4000-8000-000000000001",
+        "localityName": "Chascomus",
+        "address": "Av. Costanera Espana 120",
+        "latitude": -35.577,
+        "longitude": -57.997
+      },
       "date": "2026-06-01",
       "startTime": "09:00",
       "endTime": "13:00",
-      "status": "ACTIVE"
+      "status": "RESERVED"
     }
   ],
   "pagination": {
@@ -80,21 +110,33 @@ Cancelacion:
 ## Reglas de negocio
 
 - El escritorio debe existir, estar habilitado y no estar eliminado logicamente.
+- El miembro debe existir y tanto su cuenta como su perfil deben estar activos.
 - La fecha debe tener formato `YYYY-MM-DD`.
 - Los horarios deben tener formato `HH:mm`.
 - El horario de fin debe ser posterior al horario de inicio.
-- Las reservas `ACTIVE` superpuestas bloquean disponibilidad.
+- Las reservas `RESERVED` y `ACTIVE` superpuestas bloquean disponibilidad.
 - Las reservas `CANCELLED` no bloquean disponibilidad.
 - La base de datos impide superposiciones activas para el mismo escritorio mediante constraint GiST.
-- Solo se pueden editar o cancelar reservas activas.
+- Solo se pueden editar o cancelar reservas reservadas.
+- El detalle y la edicion validan en backend que un miembro sea propietario de
+  la reserva. La restriccion visual del cliente no reemplaza este control.
+- El ciclo es `RESERVED` -> `ACTIVE` -> `COMPLETED`.
+- La creación exige el pago inicial y registra la reserva como `RESERVED`; la llegada validada por el gestor la lleva a `ACTIVE`.
+- Las reservas `ACTIVE` pasan a `COMPLETED` al superar su horario de fin.
 - `DELETE /reservations/:id` no elimina fisicamente la reserva; ejecuta cancelacion logica.
 - Los listados usan paginacion con 9 items por defecto.
+- `location.areaId` y `location.areaName` identifican el area de trabajo concreta.
+- `location.localityId` y `location.localityName` identifican la localidad generica del area.
+- `location.address` se normaliza y se omite cuando esta vacia o no es valida.
+- `location.latitude` y `location.longitude` solo se exponen juntas cuando ambas son numeros finitos y estan dentro de los rangos geograficos validos.
+- No se expone una referencia de ubicacion adicional ni se ejecuta geocodificacion.
 
 ## Validaciones de entrada
 
 Alta de reserva:
 
 - `deskId`: obligatorio y debe ser UUID v4.
+- `memberId`: obligatorio, debe ser UUID v4 y corresponder a un miembro activo.
 - `date`: obligatoria con formato `YYYY-MM-DD` y fecha real.
 - `startTime`: obligatorio con formato `HH:mm`.
 - `endTime`: obligatorio con formato `HH:mm`.
@@ -107,7 +149,7 @@ Edicion de reserva:
 - si se informa `date`, debe cumplir formato `YYYY-MM-DD` y representar una fecha real
 - si se informan horarios, deben cumplir formato `HH:mm`
 - el rango final resultante debe ser valido
-- la reserva debe estar activa
+- la reserva debe estar reservada
 - el escritorio final debe existir y estar habilitado
 - no puede existir una reserva activa superpuesta para el mismo escritorio
 
@@ -115,12 +157,19 @@ Listado:
 
 - `page`: entero mayor o igual a 1.
 - `limit`: entero entre 1 y 50.
-- `status`: opcional, restringido a `ACTIVE` o `CANCELLED`.
+- `status`: opcional, restringido a `RESERVED`, `ACTIVE`, `COMPLETED` o `CANCELLED`.
+
+Salida de ubicacion:
+
+- `address`: texto opcional perteneciente al area de trabajo.
+- `latitude`: numero opcional entre -90 y 90.
+- `longitude`: numero opcional entre -180 y 180.
+- latitud y longitud se omiten si falta una de ellas o si algun valor es invalido.
 
 Los errores previsibles de formulario deben mostrarse en frontend junto al campo y no deben disparar una peticion. El backend conserva las validaciones como barrera de seguridad, con mensajes especificos por campo para integraciones externas.
 
 ## Errores
 
 - `400`: datos invalidos o rango horario invalido.
-- `404`: escritorio o reserva no encontrada.
+- `404`: miembro, escritorio o reserva no encontrada.
 - `409`: escritorio no disponible, reserva no editable o reserva no cancelable.

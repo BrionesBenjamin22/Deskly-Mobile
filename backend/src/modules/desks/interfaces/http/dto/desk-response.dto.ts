@@ -34,6 +34,36 @@ export class DeskResponseDto {
     peopleCapacity: number;
   };
 
+  @ApiPropertyOptional({ example: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc' })
+  areaId?: string;
+
+  @ApiPropertyOptional({
+    example: {
+      id: '7a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+      name: 'Area silenciosa',
+      description: 'Sector con baja interrupcion.',
+      localityId: '8a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+      active: true,
+      locality: {
+        id: '8a3deca2-0063-4e6c-b1ee-a95666b5efdc',
+        name: 'La Plata',
+        active: true,
+      },
+    },
+  })
+  area?: {
+    id: string;
+    name: string;
+    description?: string | null;
+    localityId: string;
+    active: boolean;
+    locality?: {
+      id: string;
+      name: string;
+      active: boolean;
+    };
+  };
+
   @ApiPropertyOptional({ example: 'A', enum: ['A', 'B', 'C'] })
   zone?: 'A' | 'B' | 'C';
 

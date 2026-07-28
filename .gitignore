@@ -2,6 +2,15 @@
 backend/node_modules
 backend/dist
 backend/.env
+backend/.env.local
+backend/.env.development
+backend/.env.development.local
+backend/.env.testing
+backend/.env.testing.local
+backend/.env.production
+backend/.env.production.local
+!backend/.env.example
+!backend/.env.*.example
 backend/generated
 .env
 

@@ -1,19 +1,35 @@
-import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
+import {
+  StyleProp,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  View,
+  ViewStyle,
+} from 'react-native';
 
-import { colors } from '../../theme/colors';
+import { colors, statusColors } from '../../theme/colors';
 import { radii, spacing } from '../../theme/spacing';
 import { AppText } from './AppText';
 
 type InputProps = TextInputProps & {
   label: string;
+  containerStyle?: StyleProp<ViewStyle>;
+  required?: boolean;
 };
 
-export function Input({ label, style, ...props }: InputProps) {
+export function Input({ label, containerStyle, style, required, ...props }: InputProps) {
   return (
-    <View style={styles.container}>
-      <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
-        {label}
-      </AppText>
+    <View style={[styles.container, containerStyle]}>
+      <View style={styles.labelContainer}>
+        <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+          {label}
+        </AppText>
+        {required && (
+          <AppText variant="caption" color={statusColors.error} style={styles.required}>
+            *
+          </AppText>
+        )}
+      </View>
       <TextInput
         placeholderTextColor={colors.primaryLight}
         style={[styles.input, style]}
@@ -25,10 +41,16 @@ export function Input({ label, style, ...props }: InputProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    gap: spacing.xs,
+  },
+  labelContainer: {
+    flexDirection: 'row',
     gap: spacing.xs,
   },
   label: {
+    fontWeight: '700',
+  },
+  required: {
     fontWeight: '700',
   },
   input: {

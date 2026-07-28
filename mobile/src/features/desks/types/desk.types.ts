@@ -14,6 +14,26 @@ export interface DeskAmenity {
   name: string;
 }
 
+export interface Locality {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+export interface WorkArea {
+  id: string;
+  name: string;
+  description?: string | null;
+  localityId: string;
+  locality?: Locality;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  active: boolean;
+  availableDeskCount?: number;
+  totalDeskCount?: number;
+}
+
 export interface Desk {
   id: string;
   code: string;
@@ -21,6 +41,8 @@ export interface Desk {
   peopleCapacity: number;
   descriptionId?: string;
   description?: DeskDescription;
+  areaId?: string;
+  area?: WorkArea;
   zone?: DeskZone;
   amenities: DeskAmenity[];
   enabled: boolean;

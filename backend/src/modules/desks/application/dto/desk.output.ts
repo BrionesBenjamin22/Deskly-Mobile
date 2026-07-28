@@ -2,6 +2,7 @@ import {
   AmenityProperties,
   DeskDescriptionProperties,
   DeskZoneValue,
+  WorkAreaProperties,
 } from '../../domain/entities/desk.entity';
 
 export type DeskOutput = {
@@ -11,6 +12,8 @@ export type DeskOutput = {
   peopleCapacity: number;
   descriptionId?: string;
   description?: DeskDescriptionProperties;
+  areaId?: string;
+  area?: WorkAreaProperties;
   zone?: DeskZoneValue;
   amenities: AmenityProperties[];
   enabled: boolean;

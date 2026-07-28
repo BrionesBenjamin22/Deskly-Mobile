@@ -8,7 +8,9 @@ El backend expone los contratos necesarios para consultar disponibilidad, gestio
 
 ## Variables de entorno
 
-Crear `.env` desde `.env.example`.
+Crear el archivo correspondiente al entorno a partir de
+`.env.development.example`, `.env.testing.example` o
+`.env.production.example`. Los archivos con valores reales no se versionan.
 
 ```env
 NODE_ENV=development
@@ -16,13 +18,14 @@ PORT=3000
 FRONTEND_URL=http://localhost:5173
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/deskly?schema=public"
 JWT_SECRET=change_me_for_local_development
-JWT_EXPIRES_IN=1d
+JWT_EXPIRES_IN=1h
 ```
 
 Variables requeridas:
 
 - `DATABASE_URL`: cadena de conexion PostgreSQL usada por Prisma.
-- `JWT_SECRET`: secreto base para futuros modulos de autenticacion.
+- `JWT_SECRET`: secreto de firma para access tokens JWT; debe ser largo, aleatorio y privado.
+- `JWT_EXPIRES_IN`: duracion del access token. El valor predeterminado y maximo es `1h`.
 
 `FRONTEND_URL` puede incluir uno o mas origenes separados por coma. En desarrollo, el backend tambien permite origenes locales comunes de Expo web y Vite, ademas de IPs privadas de red local.
 
@@ -40,10 +43,12 @@ Comandos:
 ```bash
 pnpm prisma:generate
 pnpm prisma:migrate
+pnpm prisma:seed
 pnpm prisma:studio
 ```
 
 El cliente Prisma se genera dentro de `@prisma/client` y no debe editarse manualmente.
+La seed es idempotente y carga localidades, areas de trabajo y escritorios de demostracion para validar el flujo de disponibilidad y reserva.
 
 ## Capas
 
@@ -64,6 +69,22 @@ El cliente Prisma se genera dentro de `@prisma/client` y no debe editarse manual
 - Usar soft delete cuando la entidad lo requiera.
 
 ## Modulos implementados
+
+### Authentication
+
+Registra el primer usuario como `ADMIN` sin miembro y todos los posteriores como `MIEMBRO` con una entidad `Member`. Expone login con email o username, consulta del usuario autenticado y cambio de roles restringido a administradores. Las sesiones son JWT stateless, expiran como maximo en una hora y requieren un nuevo login.
+
+Endpoints:
+
+```http
+POST /auth/register
+POST /auth/login
+GET /auth/registration-status
+GET /auth/me
+PATCH /users/:id/role
+```
+
+Documentacion tecnica: `src/modules/auth/README.md`.
 
 ### Desks
 
@@ -150,3 +171,26 @@ Comandos base:
 pnpm build
 pnpm test
 ```
+
+# Contenedor Docker
+
+El `Dockerfile` usa etapas separadas para instalar dependencias, compilar NestJS y
+crear una imagen de ejecucion sin dependencias de desarrollo. La etapa final corre
+como el usuario no privilegiado `deskly`, usa `dumb-init` y no incorpora archivos
+`.env` al contexto.
+
+La configuracion se inyecta en tiempo de ejecucion. Como minimo requiere
+`DATABASE_URL` y `JWT_SECRET`. Las migraciones deben ejecutarse de forma explicita
+como tarea de despliegue; el servicio `migration` de Docker Compose ejecuta
+`prisma migrate deploy` antes de habilitar la API. El arranque del proceso NestJS no
+modifica automaticamente el esquema de datos.
+
+Nest escucha en `0.0.0.0` para aceptar conexiones del contenedor y de Expo Go.
+En desarrollo, Compose publica TCP 3000 en la LAN; el firewall del host debe
+limitarlo a redes privadas. `GET /health` devuelve solamente `{"status":"ok"}` y
+permite comprobar conectividad sin autenticacion ni datos internos.
+
+Las etapas base y runtime usan `node:22-alpine` fijada por digest
+multi-arquitectura. La etiqueta conserva visible la linea de mantenimiento y el
+digest evita cambios de contenido no revisados. Una actualizacion requiere resolver
+el nuevo digest oficial y reconstruir las etapas `migration` y `runtime`.

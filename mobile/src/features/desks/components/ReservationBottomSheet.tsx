@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText } from '../../../components/ui/AppText';
-import { Button } from '../../../components/ui/Button';
-import { Icon } from '../../../components/ui/Icon';
-import { IconButton } from '../../../components/ui/IconButton';
-import { colors, statusColors } from '../../../theme/colors';
-import { radii, spacing } from '../../../theme/spacing';
-import { Desk } from '../types/desk.types';
-import { DeskSummaryCard } from './DeskSummaryCard';
+import { AppText } from "../../../components/ui/AppText";
+import { Button } from "../../../components/ui/Button";
+import { Icon } from "../../../components/ui/Icon";
+import { IconButton } from "../../../components/ui/IconButton";
+import { colors, statusColors } from "../../../theme/colors";
+import { radii, spacing } from "../../../theme/spacing";
+import { Desk } from "../types/desk.types";
+import type { PaymentOption } from "../../payments/types/payment.types";
+import { DeskSummaryCard } from "./DeskSummaryCard";
 
 type ReservationBottomSheetProps = {
   visible: boolean;
@@ -24,31 +25,31 @@ type ReservationBottomSheetProps = {
     date: string;
     startTime: string;
     endTime: string;
+    paymentOption: PaymentOption;
   }) => void;
 };
 
 function timeToMinutes(value: string) {
-  const [hours, minutes] = value.split(':').map(Number);
-
+  const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
 }
 
 function overlapsReservedSlot(
   startTime: string,
   endTime: string,
-  reservedSlots: NonNullable<Desk['reservedSlots']>,
+  reservedSlots: NonNullable<Desk["reservedSlots"]>,
 ) {
   return reservedSlots.some(
-    (reservedSlot) =>
-      timeToMinutes(startTime) < timeToMinutes(reservedSlot.endTime) &&
-      timeToMinutes(endTime) > timeToMinutes(reservedSlot.startTime),
+    (slot) =>
+      timeToMinutes(startTime) < timeToMinutes(slot.endTime) &&
+      timeToMinutes(endTime) > timeToMinutes(slot.startTime),
   );
 }
 
 function getEndOptions(
   startTime: string,
   timeOptions: string[],
-  reservedSlots: NonNullable<Desk['reservedSlots']>,
+  reservedSlots: NonNullable<Desk["reservedSlots"]>,
 ) {
   return timeOptions.filter(
     (endTime) =>
@@ -59,10 +60,11 @@ function getEndOptions(
 
 function getStartOptions(
   timeOptions: string[],
-  reservedSlots: NonNullable<Desk['reservedSlots']>,
+  reservedSlots: NonNullable<Desk["reservedSlots"]>,
 ) {
-  return timeOptions.filter((startTime) =>
-    getEndOptions(startTime, timeOptions, reservedSlots).length > 0,
+  return timeOptions.filter(
+    (startTime) =>
+      getEndOptions(startTime, timeOptions, reservedSlots).length > 0,
   );
 }
 
@@ -79,7 +81,8 @@ export function ReservationBottomSheet({
 }: ReservationBottomSheetProps) {
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
-  const reservedSlots = useMemo(() => desk?.reservedSlots ?? [], [desk?.reservedSlots]);
+  const [paymentOption, setPaymentOption] = useState<PaymentOption>("FULL");
+  const reservedSlots = useMemo(() => desk?.reservedSlots ?? [], [desk]);
   const startOptions = useMemo(
     () => getStartOptions(timeOptions, reservedSlots),
     [reservedSlots, timeOptions],
@@ -91,20 +94,19 @@ export function ReservationBottomSheet({
   );
 
   useEffect(() => {
-    if (visible) {
-      const nextStartTime = startOptions.includes(initialStartTime)
-        ? initialStartTime
-        : startOptions[0] ?? '';
-      const nextEndOptions = nextStartTime
-        ? getEndOptions(nextStartTime, timeOptions, reservedSlots)
-        : [];
-      const nextEndTime = nextEndOptions.includes(initialEndTime)
+    if (!visible) return;
+    const nextStart = startOptions.includes(initialStartTime)
+      ? initialStartTime
+      : (startOptions[0] ?? "");
+    const validEnds = nextStart
+      ? getEndOptions(nextStart, timeOptions, reservedSlots)
+      : [];
+    setStartTime(nextStart);
+    setEndTime(
+      validEnds.includes(initialEndTime)
         ? initialEndTime
-        : nextEndOptions[0] ?? '';
-
-      setStartTime(nextStartTime);
-      setEndTime(nextEndTime);
-    }
+        : (validEnds[0] ?? ""),
+    );
   }, [
     initialEndTime,
     initialStartTime,
@@ -114,25 +116,21 @@ export function ReservationBottomSheet({
     visible,
   ]);
 
-  const handleConfirm = () => {
-    if (!desk) {
-      return;
-    }
-
-    if (!startTime || !endTime) {
-      return;
-    }
-
-    onConfirm({
-      desk,
-      date: selectedDate,
-      startTime,
-      endTime,
-    });
+  const changeStart = (value: string) => {
+    const validEnds = getEndOptions(value, timeOptions, reservedSlots);
+    setStartTime(value);
+    setEndTime(validEnds[0] ?? "");
   };
+  const noAvailability = startOptions.length === 0;
+  const canConfirm = Boolean(desk && startTime && endTime && !noAvailability);
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <Pressable
           accessibilityRole="button"
@@ -140,107 +138,110 @@ export function ReservationBottomSheet({
           style={styles.backdrop}
           onPress={onClose}
         />
-
         <View style={styles.sheet}>
           <View style={styles.handle} />
-
-          <View style={styles.header}>
-            <AppText variant="subtitle" style={styles.title}>
-              Confirmar Reserva
-            </AppText>
-            <IconButton
-              accessibilityLabel="Cerrar confirmacion de reserva"
-              icon="x"
-              onPress={onClose}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <View style={styles.header}>
+              <AppText variant="subtitle" style={styles.title}>
+                Confirmar reserva
+              </AppText>
+              <IconButton
+                accessibilityLabel="Cerrar confirmacion de reserva"
+                icon="x"
+                onPress={onClose}
+              />
+            </View>
+            {desk ? <DeskSummaryCard desk={desk} /> : null}
+            <View style={styles.dateBlock}>
+              <Icon name="calendar" size={18} color={colors.primaryLight} />
+              <View>
+                <AppText variant="caption" color={colors.blackOverlay}>
+                  Fecha seleccionada
+                </AppText>
+                <AppText variant="body" style={styles.strong}>
+                  {selectedDateLabel}
+                </AppText>
+              </View>
+            </View>
+            <TimeOptions
+              label="Hora inicio"
+              options={startOptions}
+              selected={startTime}
+              onSelect={changeStart}
             />
-          </View>
-
-          {desk ? <DeskSummaryCard desk={desk} /> : null}
-
-          <View style={styles.dateBlock}>
-            <Icon name="calendar" size={18} color={colors.primaryLight} />
-            <View>
-              <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
-                Fecha seleccionada
+            <TimeOptions
+              label="Hora fin"
+              options={endOptions}
+              selected={endTime}
+              onSelect={setEndTime}
+            />
+            <View style={styles.optionGroup}>
+              <AppText
+                variant="caption"
+                color={colors.blackOverlay}
+                style={styles.strong}
+              >
+                Forma de pago
               </AppText>
-              <AppText variant="body" style={styles.dateText}>
-                {selectedDateLabel}
+              <View style={styles.optionList}>
+                {[
+                  { value: "DEPOSIT" as const, label: "Pagar seña" },
+                  { value: "FULL" as const, label: "Pagar total" },
+                ].map((option) => (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected: option.value === paymentOption,
+                    }}
+                    onPress={() => setPaymentOption(option.value)}
+                    style={[
+                      styles.timeOption,
+                      option.value === paymentOption &&
+                        styles.timeOptionSelected,
+                    ]}
+                  >
+                    <AppText
+                      variant="caption"
+                      color={
+                        option.value === paymentOption
+                          ? colors.white
+                          : colors.primary
+                      }
+                      style={styles.strong}
+                    >
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            {noAvailability ? (
+              <AppText variant="caption" color={statusColors.error}>
+                No hay horarios disponibles. Seleccione otra fecha.
               </AppText>
-            </View>
-          </View>
-
-          <View style={styles.optionGroup}>
-            <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
-              Hora inicio
+            ) : null}
+            <AppText variant="caption" color={colors.primaryLight}>
+              La reserva se confirmará únicamente cuando Deskly verifique el
+              pago.
             </AppText>
-            <View style={styles.optionList}>
-              {startOptions.map((option) => (
-                <Pressable
-                  key={option}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    const nextEndOptions = getEndOptions(
-                      option,
-                      timeOptions,
-                      reservedSlots,
-                    );
-                    setStartTime(option);
-                    setEndTime(nextEndOptions[0] ?? '');
-                  }}
-                  style={[
-                    styles.timeOption,
-                    startTime === option && styles.timeOptionSelected,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    color={startTime === option ? colors.white : colors.primary}
-                    style={styles.timeOptionText}
-                  >
-                    {option}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.optionGroup}>
-            <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
-              Hora fin
-            </AppText>
-            <View style={styles.optionList}>
-              {endOptions.map((option) => (
-                <Pressable
-                  key={option}
-                  accessibilityRole="button"
-                  onPress={() => setEndTime(option)}
-                  style={[
-                    styles.timeOption,
-                    endTime === option && styles.timeOptionSelected,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    color={endTime === option ? colors.white : colors.primary}
-                    style={styles.timeOptionText}
-                  >
-                    {option}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {startOptions.length === 0 ? (
-            <AppText variant="caption" color={statusColors.error} style={styles.errorText}>
-              No hay horarios disponibles para este escritorio en la fecha seleccionada.
-            </AppText>
-          ) : null}
-
+          </ScrollView>
           <Button
-            title="Confirmar Reserva"
-            disabled={!startTime || !endTime}
-            onPress={handleConfirm}
+            title="Reservar y continuar al pago"
+            disabled={!canConfirm}
+            onPress={() => {
+              if (!desk || !canConfirm) return;
+              onConfirm({
+                desk,
+                date: selectedDate,
+                startTime,
+                endTime,
+                paymentOption,
+              });
+            }}
           >
             <Icon name="chevronRight" size={18} color={colors.white} />
           </Button>
@@ -250,11 +251,54 @@ export function ReservationBottomSheet({
   );
 }
 
+function TimeOptions({
+  label,
+  options,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  options: string[];
+  selected: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <View style={styles.optionGroup}>
+      <AppText
+        variant="caption"
+        color={colors.blackOverlay}
+        style={styles.strong}
+      >
+        {label}
+      </AppText>
+      <View style={styles.optionList}>
+        {options.map((option) => (
+          <Pressable
+            key={option}
+            accessibilityRole="button"
+            accessibilityState={{ selected: option === selected }}
+            onPress={() => onSelect(option)}
+            style={[
+              styles.timeOption,
+              option === selected && styles.timeOptionSelected,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              color={option === selected ? colors.white : colors.primary}
+              style={styles.strong}
+            >
+              {option}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
+  overlay: { flex: 1, justifyContent: "flex-end" },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.blackOverlay,
@@ -263,67 +307,52 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    gap: spacing.lg,
+    maxHeight: "88%",
     paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.screenX,
     paddingTop: spacing.md,
   },
   handle: {
-    alignSelf: 'center',
+    alignSelf: "center",
     backgroundColor: colors.border,
     borderRadius: radii.pill,
     height: 4,
+    marginBottom: spacing.sm,
     width: 42,
   },
+  scrollContent: {
+    gap: spacing.lg,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.screenX,
+  },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  title: {
-    fontWeight: '800',
-  },
+  title: { fontWeight: "800" },
+  strong: { fontWeight: "700" },
   dateBlock: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.background,
     borderColor: colors.border,
     borderRadius: radii.lg,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
     padding: spacing.md,
   },
-  label: {
-    fontWeight: '700',
-  },
-  dateText: {
-    fontWeight: '700',
-    marginTop: spacing.xs,
-  },
-  optionGroup: {
-    gap: spacing.sm,
-  },
-  optionList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
+  optionGroup: { gap: spacing.sm },
+  optionList: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   timeOption: {
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
+    justifyContent: "center",
     minHeight: 34,
-    justifyContent: 'center',
     paddingHorizontal: spacing.md,
   },
   timeOptionSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-  },
-  timeOptionText: {
-    fontWeight: '800',
-  },
-  errorText: {
-    fontWeight: '700',
   },
 });

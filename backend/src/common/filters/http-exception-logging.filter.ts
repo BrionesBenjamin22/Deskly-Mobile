@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { sanitizeHttpPath } from '../http/request-observability';
 
 type ErrorResponseBody = {
   statusCode: number;
@@ -47,22 +48,20 @@ export class HttpExceptionLoggingFilter implements ExceptionFilter {
           error:
             'Lo sentimos, no pudimos procesar la solicitud. Intente nuevamente.',
         };
+    const safePath = sanitizeHttpPath(request.originalUrl);
     const responseBody: ErrorResponseBody = {
       statusCode: status,
       timestamp: new Date().toISOString(),
-      path: request.originalUrl,
+      path: safePath,
       message: exceptionBody.message ?? 'No pudimos procesar la solicitud.',
       ...(exceptionBody.error ? { error: exceptionBody.error } : {}),
     };
-    const logMessage = `${request.method} ${request.originalUrl} -> ${status} | ${JSON.stringify(
+    const logMessage = `${request.method} ${safePath} -> ${status} | ${JSON.stringify(
       responseBody,
     )}`;
 
     if (status >= 500) {
-      this.logger.error(
-        logMessage,
-        exception instanceof Error ? exception.stack : undefined,
-      );
+      this.logger.error(logMessage);
     } else {
       this.logger.warn(logMessage);
     }

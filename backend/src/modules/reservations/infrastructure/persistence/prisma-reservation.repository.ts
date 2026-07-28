@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ReservationStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
-import { Reservation } from '../../domain/entities/reservation.entity';
+import {
+  Reservation,
+  ReservationStatusValue,
+} from '../../domain/entities/reservation.entity';
 import { DeskUnavailableError } from '../../domain/errors/desk-unavailable.error';
 import {
   ListReservationsParams,
@@ -12,18 +15,81 @@ import {
   UpdateReservationParams,
 } from '../../domain/ports/reservation-repository.port';
 
+const reservationRelationsInclude = {
+  desk: {
+    select: {
+      code: true,
+      name: true,
+      area: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          locality: { select: { id: true, name: true } },
+        },
+      },
+    },
+  },
+  member: { select: { fullName: true } },
+} as const;
+
+type ReservationPersistenceRecord = {
+  id: string;
+  deskId: string;
+  memberId: string;
+  date: Date;
+  startTime: Date;
+  endTime: Date;
+  status: ReservationStatusValue;
+  createdAt: Date;
+  updatedAt: Date;
+  cancelledAt: Date | null;
+  checkedInAt: Date | null;
+  holdExpiresAt: Date | null;
+  desk: {
+    code: string;
+    name: string | null;
+    area: {
+      id: string;
+      name: string;
+      address: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      locality: { id: string; name: string };
+    };
+  };
+  member: { fullName: string };
+};
+
 @Injectable()
 export class PrismaReservationRepository implements ReservationRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
+  async memberExists(memberId: string): Promise<boolean> {
+    return (
+      (await this.prisma.member.count({
+        where: { id: memberId, active: true, user: { active: true } },
+      })) > 0
+    );
+  }
+
   async existsOverlappingReservation(
     params: OverlappingReservationParams,
   ): Promise<boolean> {
+    await this.cancelExpiredPaymentHolds();
     const count = await this.prisma.reservation.count({
       where: {
         deskId: params.deskId,
         date: this.toDate(params.date),
-        status: ReservationStatus.ACTIVE,
+        status: {
+          in: [
+            ReservationStatus.PENDING_PAYMENT,
+            ReservationStatus.RESERVED,
+            ReservationStatus.ACTIVE,
+          ],
+        },
         startTime: {
           lt: this.toTime(params.endTime),
         },
@@ -50,21 +116,17 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   }
 
   async list(params: ListReservationsParams): Promise<ListReservationsResult> {
+    await this.completeElapsedReservations();
     const where = {
       ...(params.status ? { status: params.status } : {}),
+      ...(params.date ? { date: this.toDate(params.date) } : {}),
+      ...(params.memberId ? { memberId: params.memberId } : {}),
     };
     const [reservations, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({
         where,
-        include: {
-          desk: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+        include: reservationRelationsInclude,
+        orderBy: [{ status: 'asc' }, { date: 'asc' }, { startTime: 'asc' }],
         skip: (params.page - 1) * params.limit,
         take: params.limit,
       }),
@@ -80,21 +142,42 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
   }
 
   async findById(id: string): Promise<Reservation | null> {
+    await this.completeElapsedReservations();
     const reservation = await this.prisma.reservation.findUnique({
       where: {
         id,
       },
-      include: {
-        desk: {
-          select: {
-            code: true,
-            name: true,
-          },
-        },
-      },
+      include: reservationRelationsInclude,
     });
 
     return reservation ? this.toDomain(reservation) : null;
+  }
+
+  async putOnPaymentHold(
+    id: string,
+    expiresAt: Date,
+  ): Promise<Reservation | null> {
+    const updated = await this.prisma.reservation.updateMany({
+      where: { id, status: ReservationStatus.RESERVED },
+      data: {
+        status: ReservationStatus.PENDING_PAYMENT,
+        holdExpiresAt: expiresAt,
+      },
+    });
+    if (updated.count !== 1) return this.findById(id);
+    return this.findById(id);
+  }
+
+  async releasePaymentHold(id: string): Promise<Reservation | null> {
+    await this.prisma.reservation.updateMany({
+      where: { id, status: ReservationStatus.PENDING_PAYMENT },
+      data: {
+        status: ReservationStatus.CANCELLED,
+        holdExpiresAt: null,
+        cancelledAt: new Date(),
+      },
+    });
+    return this.findById(id);
   }
 
   async update(params: UpdateReservationParams): Promise<Reservation> {
@@ -112,55 +195,43 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
         status: ReservationStatus.CANCELLED,
         cancelledAt,
       },
-      include: {
-        desk: {
-          select: {
-            code: true,
-            name: true,
-          },
-        },
-      },
+      include: reservationRelationsInclude,
     });
 
     return this.toDomain(reservation);
+  }
+
+  async validateArrival(
+    id: string,
+    checkedInAt: Date,
+  ): Promise<Reservation | null> {
+    const result = await this.prisma.reservation.updateMany({
+      where: { id, status: ReservationStatus.RESERVED, checkedInAt: null },
+      data: { checkedInAt, status: ReservationStatus.ACTIVE },
+    });
+    if (result.count !== 1) return this.findById(id);
+    return this.findById(id);
   }
 
   private toDate(value: string): Date {
     return new Date(`${value}T00:00:00.000Z`);
   }
 
-  private async createReservation(reservation: Reservation): Promise<{
-    id: string;
-    deskId: string;
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-    status: 'ACTIVE' | 'CANCELLED';
-    createdAt: Date;
-    updatedAt: Date;
-    cancelledAt: Date | null;
-    desk: {
-      code: string;
-      name: string | null;
-    };
-  }> {
+  private async createReservation(
+    reservation: Reservation,
+  ): Promise<ReservationPersistenceRecord> {
     try {
       return await this.prisma.reservation.create({
         data: {
           deskId: reservation.deskId,
+          memberId: reservation.memberId,
           date: this.toDate(reservation.date),
           startTime: this.toTime(reservation.startTime),
           endTime: this.toTime(reservation.endTime),
-          status: ReservationStatus.ACTIVE,
+          status: reservation.status,
+          holdExpiresAt: reservation.holdExpiresAt,
         },
-        include: {
-          desk: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-        },
+        include: reservationRelationsInclude,
       });
     } catch (error) {
       if (
@@ -174,21 +245,23 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     }
   }
 
-  private async updateReservation(params: UpdateReservationParams): Promise<{
-    id: string;
-    deskId: string;
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-    status: 'ACTIVE' | 'CANCELLED';
-    createdAt: Date;
-    updatedAt: Date;
-    cancelledAt: Date | null;
-    desk: {
-      code: string;
-      name: string | null;
-    };
-  }> {
+  private async cancelExpiredPaymentHolds(): Promise<void> {
+    await this.prisma.reservation.updateMany({
+      where: {
+        status: ReservationStatus.PENDING_PAYMENT,
+        holdExpiresAt: { lt: new Date() },
+      },
+      data: {
+        status: ReservationStatus.CANCELLED,
+        holdExpiresAt: null,
+        cancelledAt: new Date(),
+      },
+    });
+  }
+
+  private async updateReservation(
+    params: UpdateReservationParams,
+  ): Promise<ReservationPersistenceRecord> {
     try {
       return await this.prisma.reservation.update({
         where: {
@@ -200,14 +273,7 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
           startTime: this.toTime(params.startTime),
           endTime: this.toTime(params.endTime),
         },
-        include: {
-          desk: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-        },
+        include: reservationRelationsInclude,
       });
     } catch (error) {
       if (
@@ -233,26 +299,21 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
     return value.toISOString().slice(11, 16);
   }
 
-  private toDomain(reservation: {
-    id: string;
-    deskId: string;
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-    status: 'ACTIVE' | 'CANCELLED';
-    createdAt: Date;
-    updatedAt: Date;
-    cancelledAt: Date | null;
-    desk: {
-      code: string;
-      name: string | null;
-    };
-  }): Reservation {
+  private toDomain(reservation: ReservationPersistenceRecord): Reservation {
     return new Reservation({
       id: reservation.id,
       deskId: reservation.deskId,
+      memberId: reservation.memberId,
+      memberFullName: reservation.member.fullName,
       deskCode: reservation.desk.code,
       deskName: reservation.desk.name,
+      areaId: reservation.desk.area.id,
+      areaName: reservation.desk.area.name,
+      localityId: reservation.desk.area.locality.id,
+      localityName: reservation.desk.area.locality.name,
+      address: reservation.desk.area.address,
+      latitude: reservation.desk.area.latitude,
+      longitude: reservation.desk.area.longitude,
       date: this.fromDate(reservation.date),
       startTime: this.fromTime(reservation.startTime),
       endTime: this.fromTime(reservation.endTime),
@@ -260,6 +321,18 @@ export class PrismaReservationRepository implements ReservationRepositoryPort {
       createdAt: reservation.createdAt,
       updatedAt: reservation.updatedAt,
       cancelledAt: reservation.cancelledAt,
+      checkedInAt: reservation.checkedInAt,
+      holdExpiresAt: reservation.holdExpiresAt,
     });
+  }
+
+  private async completeElapsedReservations(): Promise<void> {
+    await this.prisma.$executeRaw`
+      UPDATE "reservations"
+      SET "status" = 'COMPLETED'::"ReservationStatus",
+          "updated_at" = NOW()
+      WHERE "status" IN ('ACTIVE'::"ReservationStatus", 'RESERVED'::"ReservationStatus")
+        AND ("date" + "end_time") <= timezone('America/Argentina/Buenos_Aires', CURRENT_TIMESTAMP)
+    `;
   }
 }
