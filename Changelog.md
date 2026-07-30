@@ -177,3 +177,369 @@ incorporación posterior de nuevas suites.
 - Panel administrativo de catálogos.
 
 ---
+
+## Entrega 3 — Áreas, pagos, seguridad e infraestructura
+
+### Identificación formal
+
+- Periodo de desarrollo: 24 de junio al 27 de julio de 2026.
+- PR de entrega: #8.
+- Título: `feat: Consolidar aplicación con mejoras acordes a la entrega 3`.
+- Rama origen: `dev`.
+- Rama destino: `main`.
+- PR creado: 27 de julio de 2026.
+- PR aprobado y fusionado: 28 de julio de 2026.
+- Magnitud informada por GitHub: 92 commits, 364 archivos modificados,
+  33.297 adiciones y 2.004 eliminaciones.
+- Revisores que aprobaron: `WilliamsIgnacio` y `avilugo110`.
+
+### 1. Localidades, áreas de trabajo y disponibilidad
+
+- Se incorporaron entidades de localidad y área de trabajo.
+- Cada área puede incluir nombre, localidad, dirección, latitud y longitud.
+- Los escritorios se asociaron a áreas de trabajo.
+- Se validó en backend que localidad y área estén activas al consultar o
+  reservar.
+- Se agregaron filtros de disponibilidad por localidad y área.
+- Mobile incorporó:
+  - selector de localidad;
+  - secciones y tarjetas de áreas;
+  - pantalla dedicada de áreas de trabajo;
+  - selección de área antes de elegir escritorio;
+  - filtros de fecha y horario;
+  - estados de carga, error y vacío.
+- Se evitó el patrón N+1: los datos relacionados se obtienen en la respuesta
+  principal y no mediante una consulta por tarjeta.
+
+### 2. Ubicación en reservas y mapas
+
+- El contrato de reservas expone la relación
+  `Reservation -> Desk -> WorkArea -> Locality`.
+- La ubicación se mantiene opcional para tolerar datos históricos o respuestas
+  parciales.
+- Se incorporó un detalle expandible e independiente en cada tarjeta de
+  reserva.
+- Se muestran área, localidad, dirección y coordenadas cuando son válidas.
+- Se implementaron variantes de mapa para web y native.
+- Se validaron los rangos geográficos antes de presentar coordenadas.
+- Se mantuvieron intactos los flujos de cancelación, check-in, filtros y
+  navegación.
+- La tarea `MOBILE-RESERVATIONS-LOCATION` quedó `COMPLETADA`.
+
+Evidencia registrada para el cierre del bloque:
+
+- 9 suites y 33 pruebas mobile.
+- 41 suites y 243 pruebas backend.
+- 2 suites y 8 pruebas E2E con PostgreSQL.
+- 17 migraciones aplicadas desde una base limpia.
+- Build backend, TypeScript mobile, export Expo web y `git diff --check`
+  aprobados.
+- Validación manual informada: área y mapa visibles en la tarjeta de reserva.
+
+### 3. Dominio y persistencia de pagos
+
+- Se reemplazó el CRUD de pagos inicial por un dominio explícito de intentos de
+  pago.
+- Se agregaron estados y transiciones conservadoras.
+- Se implementó `Money` y una política de precios autoritativa en backend.
+- La moneda autoritativa es ARS.
+- Se permiten opciones de seña o pago total calculadas por backend.
+- El cliente no puede enviar como autoridad monto, moneda, miembro ni estado.
+- Se implementó persistencia de intentos, snapshots monetarios y restricciones
+  de idempotencia.
+- Se mantuvo un gateway fake obligatorio para pruebas deterministas.
+
+### 4. Creación idempotente y hold de reserva
+
+- La creación genera una reserva técnica `PENDING_PAYMENT`.
+- El checkout no expone la reserva como confirmada.
+- La clave de idempotencia se reutiliza en reintentos de la misma acción.
+- Doble toque, reintento o concurrencia no deben producir múltiples cargos ni
+  múltiples reservas.
+- La disponibilidad contempla los holds pendientes.
+- La restricción PostgreSQL protege solapamientos para `PENDING_PAYMENT`,
+  `RESERVED` y `ACTIVE`.
+- La reserva cambia a `RESERVED` solo después de un pago aprobado y verificado
+  por backend.
+- La tarea `PAYMENTS-03` quedó `COMPLETADA`.
+
+### 5. Mercado Pago Checkout Pro
+
+- Se evaluó el contrato oficial y se adoptó el SDK oficial
+  `mercadopago@3.2.0`.
+- Se integraron `Preference`, `Payment` y `PaymentRefund`.
+- Los secretos permanecen exclusivamente en backend.
+- Se validan configuración, HTTPS, allowlist de URLs y timeout.
+- Se sanitizan errores del proveedor.
+- Se agregó idempotencia externa.
+- Se distinguen ID de preferencia e ID de pago real.
+- Se implementó búsqueda por referencia externa mediante `Payment.search`.
+- Se valida referencia, importe y moneda antes de enlazar un pago externo.
+- Estados desconocidos nunca se convierten en aprobados.
+- La tarea `PAYMENTS-04` quedó `COMPLETADA`.
+
+### 6. Webhooks seguros e idempotentes
+
+- Endpoint dedicado sin JWT, protegido por firma del proveedor.
+- Verificación HMAC y comparación en tiempo constante.
+- Separación entre verificación de firma, anti-replay y procesamiento
+  transaccional.
+- El cuerpo del webhook no es fuente autoritativa para importe ni estado.
+- El backend consulta el pago real al proveedor.
+- Se deduplican eventos y se toleran reentregas.
+- Eventos tardíos o fuera de orden no degradan un estado terminal aprobado.
+- Pago, evento y reserva se actualizan de manera transaccional.
+- Un pago aprobado confirma una sola vez la reserva.
+- Rechazo, cancelación o vencimiento conservan reglas explícitas sobre el hold.
+- La tarea `PAYMENTS-05` quedó `COMPLETADA`.
+
+### 7. Conciliación y recuperación
+
+- Se agregó conciliación de pagos `PENDING` o `PROCESSING` envejecidos.
+- Las consultas autenticadas sincronizan intentos no terminales.
+- La confirmación puede recuperarse incluso si el webhook no llega.
+- La URL de retorno nunca aprueba el pago.
+- Se agregaron páginas estáticas de retorno `success`, `pending` y `failure`.
+- Estas páginas no procesan IDs, montos ni estados recibidos del navegador.
+- Se registraron reglas de recuperación ante timeout, proveedor caído y
+  respuestas tardías.
+- Se preservaron logs seguros sin firmas, tokens ni cuerpos completos.
+
+### 8. Frontend de pagos
+
+- Service, tipos y hook dedicados.
+- Cotización obtenida del backend.
+- Inicio de checkout hospedado mediante una URL HTTPS validada.
+- Bloqueo de acciones duplicadas durante la creación.
+- Polling acotado y refresco manual.
+- Pantalla de pagos con estados vacío, carga, error, pendiente, rechazado,
+  vencido y aprobado.
+- Paginación local de 9 elementos.
+- La seña aprobada permite completar el saldo restante desde Pagos.
+- Solo pagos aprobados se computan como abonados.
+- El flujo mobile permanece utilizable mientras espera la confirmación.
+- `PaymentServiceError` respeta las reglas de errores custom de React Native.
+
+Estado de cierre:
+
+- `PAYMENTS-07` permanece `EN_PROGRESO`.
+- La automatización y una compra sandbox real verificaron preferencia, webhook,
+  aprobación y cambio de reserva a `RESERVED`.
+- Sigue diferida la repetición manual integral del retorno, visualización en
+  Pagos y pago de saldo porque el sandbox presentó exceso de redirecciones.
+
+### 9. Administración
+
+- Panel administrativo integrado con la UI existente.
+- Gestión de escritorios, tipos, amenities, localidades y áreas de trabajo.
+- Altas, ediciones y bajas con confirmación visual.
+- Confirmación obligatoria antes de eliminar.
+- Asociación y desvinculación de amenities en el mismo formulario.
+- Headers JSON y Bearer preservados simultáneamente en mutaciones.
+- Navegación inferior adaptada al rol administrador.
+- La tarea `ADMIN-01` quedó `COMPLETADA`.
+
+Evidencia registrada:
+
+- 15 suites y 49 pruebas mobile.
+- 45 suites y 273 pruebas backend.
+- 15 casos de seguridad de endpoints administrativos.
+- Build, TypeScript, Expo web, ESLint y Prettier aprobados.
+- Alta manual de localidad con sesión ADMIN aprobada.
+
+### 10. Seguridad de autenticación y sesión
+
+- Limitación de intentos en endpoints públicos de autenticación.
+- Invalidación de sesiones al cambiar contraseña mediante versionado de token.
+- Bootstrap de administrador inicial mediante un comando idempotente y seguro.
+- El registro público no permite apropiarse del rol `ADMIN`.
+- Persistencia de sesión mobile mediante almacenamiento seguro.
+- Restauración de sesión validada contra backend.
+- Limpieza local ante token inválido o usuario desactivado.
+- Producción mobile exige HTTPS.
+- Detalle y edición de reservas protegidos por rol y propiedad.
+
+### 11. Dependencias y cadena de suministro
+
+- Auditoría inicial backend: 33 vulnerabilidades productivas.
+- Dependencias backend actualizadas dentro de ramas compatibles.
+- Auditoría final backend: 0 vulnerabilidades sobre 303 dependencias
+  productivas.
+- Auditoría mobile: 0 vulnerabilidades productivas conocidas.
+- Acciones de GitHub fijadas por SHA de 40 caracteres.
+- `persist-credentials: false` en los checkouts del workflow.
+- Credenciales de PostgreSQL y JWT limitadas a jobs que las necesitan.
+- Imágenes Node y PostgreSQL fijadas por digest SHA-256.
+- Contenedores ejecutados con usuarios no privilegiados.
+- Filesystem de solo lectura y capacidades reducidas donde aplica.
+
+### 12. Rate limiting
+
+- Límites diferenciados para creación de checkout, consultas y webhooks.
+- Sexto checkout dentro de la ventana configurada rechazado con HTTP `429`.
+- Se documentó que el almacenamiento en memoria es válido para una instancia.
+- Antes de escalar horizontalmente deberá utilizarse un store distribuido.
+- La tarea `SECURITY-08` quedó `COMPLETADA`.
+
+### 13. Entornos, conectividad y Docker
+
+- Archivos de ejemplo separados para desarrollo, testing y producción.
+- Una única URL efectiva de API por ejecución mobile.
+- Web local usa loopback; Expo Go usa una URL LAN explícita.
+- Producción rechaza URLs que no sean HTTPS.
+- Backend publicado en `0.0.0.0:3000`.
+- Endpoint `/health` mínimo para healthchecks.
+- Docker Compose incluye PostgreSQL, migraciones y servicios con healthchecks.
+- Se validó conectividad real por loopback y LAN.
+- Se corrigió un HTTP `500` detectado en el primer login de Expo Go aplicando
+  la migración de `tokenVersion`.
+- La tarea `INFRA-01` quedó `COMPLETADA`.
+- Un API gateway se descartó por ahora porque existe un único backend modular.
+
+### 14. CI/CD
+
+- Workflow para formato, lint, build, unitarios, E2E PostgreSQL, TypeScript,
+  Expo web y Docker.
+- PostgreSQL efímero y secretos temporales por job.
+- Correcciones específicas para TypeScript y Jest en runners Linux.
+- Evidencia local final:
+  - 47 suites y 287 pruebas backend;
+  - 3 suites y 9 pruebas E2E;
+  - 19 suites y 69 pruebas mobile;
+  - build backend, TypeScript, export Expo, ESLint y Prettier aprobados.
+- `INFRA-02` permanece `EN_PROGRESO` porque su documento conserva pendiente la
+  comprobación remota posterior al push, aunque se realizaron tres commits de
+  estabilización de CI.
+
+### Bugs y problemas corregidos durante la Entrega 3
+
+1. Contratos de localidad y área inconsistentes entre disponibilidad y reserva.
+2. Ubicación incompleta o coordenadas fuera de rango en tarjetas de reserva.
+3. Tipos de teclado incompatibles y declaraciones de mapa para TypeScript.
+4. Reserva mostrada como confirmada antes de contar con pago verificado.
+5. Preferencia de Mercado Pago confundida con el ID de pago real.
+6. Pago que permanecía `PENDING` cuando el webhook no llegaba.
+7. Polling que bloqueaba la continuidad del flujo mobile.
+8. Retorno del navegador usado como señal visual sin reconciliación backend.
+9. Orden y paginación que ocultaban reservas vigentes.
+10. Acceso a detalle o edición de reservas ajenas.
+11. Credenciales estáticas presentes en una versión del workflow de CI.
+12. Configuración backend permisiva y URLs HTTP aceptadas en producción mobile.
+13. Sesiones antiguas válidas después del cambio de contraseña.
+14. Registro inicial capaz de interferir con el bootstrap administrativo.
+15. Dependencias productivas vulnerables.
+16. Imágenes y acciones CI referenciadas por tags mutables.
+17. Expo Go sin una ruta uniforme hacia el backend.
+18. Iconos de alertas y estados renderizados de forma inestable.
+19. Calendario con selección y desplazamiento poco claros.
+20. Rate limiting ausente en operaciones costosas del proveedor.
+21. Jest y validaciones automatizadas incompatibles con Linux.
+
+### Revisión de código y remediaciones
+
+#### Revisión humana
+
+- `WilliamsIgnacio`: PR aprobado el 27 de julio de 2026.
+- `avilugo110`: PR aprobado el 28 de julio de 2026.
+- Las aprobaciones no incluyeron comentarios inline públicos.
+
+#### Revisión automática de secretos
+
+GitGuardian detectó un valor clasificado como contraseña genérica en
+`.github/workflows/ci.yml`, introducido en el commit `8cae3c7`. La remediación
+incluyó:
+
+- reemplazar credenciales hardcodeadas por secretos o valores temporales
+  acotados al job;
+- limitar el alcance de `DATABASE_URL` y `JWT_SECRET`;
+- evitar persistir credenciales del checkout de Git;
+- revisar que no hubiera secretos reales en archivos de entorno versionados;
+- conservar solamente ejemplos sin valores sensibles.
+
+El commit de corrección fue:
+`chore(ci): reemplazar credenciales por secretos de GitHub`.
+
+#### Revisiones técnicas internas reflejadas en tareas
+
+- Auditoría de autorización y propiedad de reservas.
+- Auditoría de DTOs y rechazo de campos desconocidos.
+- Auditoría de firma, replay, idempotencia y concurrencia de pagos.
+- Auditoría de fallos parciales, conciliación y estados fuera de orden.
+- Auditoría de logs, respuestas y exposición de secretos.
+- Auditoría de dependencias backend y mobile.
+- Auditoría de acciones de GitHub, imágenes Docker y usuarios de contenedor.
+- Auditoría de configuración por ambiente, HTTPS y conectividad Expo.
+- Revisión de accesibilidad, feedback visible, doble toque y estados vacíos.
+
+### Validación global declarada en el PR #8
+
+- Backend unitario: 47 suites y 287 pruebas aprobadas.
+- Backend E2E con PostgreSQL: 3 suites y 9 pruebas aprobadas.
+- Mobile: 19 suites y 69 pruebas aprobadas.
+- TypeScript mobile aprobado.
+- Build backend aprobado.
+- Export web de Expo aprobado.
+- ESLint y Prettier aprobados.
+- Auditorías productivas sin vulnerabilidades conocidas.
+- `git diff --check` aprobado.
+
+### Pendientes conocidos de la Entrega 3
+
+- Completar la validación manual integral de Mercado Pago sandbox.
+- Finalizar el estado documental de `PAYMENTS-07`.
+- Confirmar remotamente la estabilización de CI y cerrar `INFRA-02`.
+- Automatizar geocodificación después de seleccionar proveedor; `ADMIN-02`
+  continúa `PENDIENTE`.
+- Extender auditoría e historial visible a entidades restantes.
+- Migrar rate limiting a almacenamiento distribuido antes de usar múltiples
+  instancias.
+- Completar proxy reverso, TLS, monitoreo y despliegue productivo cloud.
+
+---
+
+## Skills utilizadas
+
+### Skills formales de agente verificables
+
+- `github:github`: utilizada para consultar los metadatos, la discusión y las
+  aprobaciones del PR #8 y contrastar la revisión de la Entrega 3.
+
+No existe evidencia persistida que permita afirmar que otras skills empaquetadas
+de Codex se utilizaron en conversaciones históricas. Por trazabilidad, no se
+atribuyen skills formales no verificables.
+
+### Capacidades técnicas aplicadas durante el proyecto
+
+Estas capacidades se desprenden de los cambios, tareas y validaciones:
+
+- análisis de requisitos y TDD;
+- arquitectura modular y hexagonal;
+- NestJS, TypeScript, Prisma y PostgreSQL;
+- React Native, Expo y testing de componentes;
+- modelado de dominio y contratos HTTP;
+- autenticación JWT y autorización por roles;
+- seguridad de aplicaciones y revisión de dependencias;
+- idempotencia, concurrencia y consistencia transaccional;
+- integración con Mercado Pago y gateways fake;
+- webhooks, HMAC, anti-replay y conciliación;
+- Docker, Docker Compose y hardening de contenedores;
+- GitHub Actions y estabilización de CI;
+- UX accesible, responsive y orientada a prevención de errores;
+- documentación técnica, bitácoras y gestión canónica de tareas.
+
+---
+
+## Convención para próximas entregas
+
+Cada entrega nueva debe agregar una sección independiente con:
+
+1. periodo, rama, PR y objetivo;
+2. features por módulo;
+3. contratos y decisiones de arquitectura;
+4. bugs y correcciones;
+5. observaciones recibidas en revisiones;
+6. validación automática con cantidades reales;
+7. validación manual ejecutada o diferida;
+8. seguridad, infraestructura y documentación;
+9. pendientes transferidos;
+10. skills formales realmente utilizadas.
