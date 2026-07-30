@@ -495,6 +495,30 @@ El commit de corrección fue:
   instancias.
 - Completar proxy reverso, TLS, monitoreo y despliegue productivo cloud.
 
+### Auditoría de performance posterior a seguridad
+
+- Se ejecutó una auditoría sobre el commit `9568dbe` después de completar los
+  bloques de seguridad.
+- Se utilizó PostgreSQL 17 temporal con 1.000 escritorios, 1.000 miembros y
+  4.000 reservas sintéticas.
+- No se utilizaron datos productivos ni Mercado Pago real.
+- Se midieron percentiles, throughput, errores, payload, consultas, build,
+  bundle e inicio; memoria se registró como una muestra puntual.
+- Se confirmó trabajo redundante en la disponibilidad de áreas: el endpoint
+  materializa escritorios y reservas completas para producir una respuesta
+  agregada.
+- Se confirmó por inspección la cantidad de requests de Pagos; su impacto de
+  performance queda como hipótesis hasta medir la pantalla.
+- No se modificó código productivo.
+- El primer bloque de optimización quedó pendiente de aprobación explícita.
+- La línea base y el plan se documentaron en `docs/performance`.
+- Tras la aprobación, la disponibilidad de áreas pasó a resolverse mediante una
+  consulta agregada parametrizada en PostgreSQL.
+- En comparación estricta sobre el mismo fixture, el p95 se redujo entre
+  86,88 % y 94,93 %, con 0 errores en 1.560 requests.
+- Los payloads anteriores y posteriores fueron idénticos byte por byte.
+- Se aprobaron 291 pruebas backend, 9 E2E, el build y la revisión independiente.
+
 ---
 
 ## Skills utilizadas

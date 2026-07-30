@@ -202,6 +202,10 @@ Escritorio ocupado:
 - Las areas y localidades poseen estado `active`.
 - La disponibilidad de un area se calcula a partir de sus escritorios disponibles.
 - Las areas sin escritorios disponibles no se devuelven en `/work-areas/availability`.
+- La disponibilidad agregada por area se resuelve en PostgreSQL con una unica
+  consulta. Solo se cuentan como ocupadas las reservas `PENDING_PAYMENT`,
+  `RESERVED` y `ACTIVE` que se superponen con la franja solicitada; los limites
+  exactos se consideran adyacentes y no superpuestos.
 - La reserva se sigue realizando sobre un escritorio concreto.
 - No se puede reservar un escritorio si su area o localidad asociada esta inactiva.
 - La zona del escritorio debe ser `A`, `B` o `C`.

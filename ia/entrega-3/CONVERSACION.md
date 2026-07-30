@@ -963,3 +963,183 @@ Al terminar una conversación relevante:
 6. conservar pendientes y bloqueos externos;
 7. listar solamente skills cuyo uso pueda verificarse;
 8. no almacenar secretos, tokens, contraseñas ni datos personales.
+
+---
+
+## 12. Auditoría de performance posterior a seguridad
+
+tipo: `auditoría + línea base + propuesta`
+fecha: `2026-07-29`
+estado: `DIAGNOSTICO_COMPLETADO_PENDIENTE_DE_APROBACION`
+
+### Solicitud
+
+El usuario solicitó actuar como ingeniero senior de performance y coordinador,
+separar responsabilidades, comprender flujos críticos, medir antes de cambiar,
+preservar seguridad y detenerse en un punto de aprobación obligatorio.
+
+También indicó que, una vez autorizado un bloque, debe:
+
+- resolverse un hallazgo por vez;
+- repetirse exactamente la medición;
+- ejecutarse regresión funcional y de seguridad;
+- crearse un commit independiente antes de continuar.
+
+### Coordinación
+
+Se separaron los informes de:
+
+- `repository-analyst`;
+- `performance-profiler`;
+- `backend-database-specialist`;
+- `frontend-mobile-specialist`.
+
+El implementador, validador y revisor final quedan reservados para después de
+aprobar un bloque.
+
+### Entorno
+
+- commit `9568dbe`;
+- Windows 11;
+- Intel i5-1235U;
+- 16 GB RAM;
+- Node 22.17.0;
+- pnpm 10.33.2;
+- Docker 29.4.0;
+- PostgreSQL 17 temporal;
+- gateway de pagos fake.
+
+### Dataset
+
+- 18 migraciones desde cero;
+- 1.000 escritorios;
+- 1.000 miembros;
+- 4.000 reservas;
+- datos completamente sintéticos;
+- sin acceso a producción.
+
+### Bugs e incidencias durante la medición
+
+1. El primer contenedor excedió el timeout del shell, aunque terminó iniciando.
+2. Dos cargas SQL fallaron por el nombre de enums; las transacciones se
+   revirtieron y la carga válida se verificó por conteos.
+3. Una medición autenticada se ejecutó sin token por permisos Docker y produjo
+   100 % de errores. Fue descartada y repetida correctamente con 0 %.
+4. El primer build no recibió `DATABASE_URL`; se descartó y repitió contra la
+   base temporal.
+5. No existe herramienta de benchmark, APM, perfilador mobile ni métricas de
+   consultas configuradas; se usaron herramientas ya disponibles.
+
+### Hallazgo confirmado: disponibilidad de áreas
+
+Con 1.000 escritorios y 4.000 reservas:
+
+- p95 ocupado c1: 60,90-69,75 ms;
+- p95 ocupado c10: 474,12-752,42 ms;
+- p95 disponible c1: 53,60-84,67 ms;
+- p95 disponible c10: 471,02-778,87 ms;
+- respuesta: 12 bytes;
+- consulta representativa: 4.000 filas y 9,001 ms;
+- consulta agregada experimental: 100 grupos y 1,998 ms.
+
+Causa:
+
+- el flujo reutiliza la disponibilidad completa de escritorios;
+- carga relaciones y reservas;
+- crea entidades;
+- calcula solapamientos y agrupa en JavaScript.
+
+Propuesta:
+
+- repositorio dedicado con agregación PostgreSQL;
+- mismo endpoint, filtros, seguridad y contrato;
+- sin caché ni índice nuevo.
+
+### Hipótesis cuantificada: amplificación en Pagos
+
+La pantalla ejecuta:
+
+`3 + páginas adicionales + (2 * reservas únicas)`
+
+Con 50 reservas y una página por estado son 103 requests según el flujo
+estático. No se afirmó impacto de performance: requiere una medición de pantalla
+y autorización de contrato antes de implementar un endpoint batch.
+
+### Hipótesis no promovidas a optimización
+
+- actualización global de reservas vencidas;
+- fan-out de sincronización de pagos;
+- búsqueda de usuarios con `%texto%`;
+- filtros de conciliación e índices;
+- tabs ocultas montadas;
+- listas con `ScrollView`;
+- requests no cancelados;
+- bundle web monolítico.
+
+No se modificaron porque falta evidencia suficiente o porque el cambio podría
+alterar consistencia, UX o seguridad.
+
+### Validación del diagnóstico
+
+- disponibilidad y listados: p50, p95, p99, throughput, payload y errores;
+- PostgreSQL: `EXPLAIN ANALYZE`, buffers, cardinalidad y tamaño;
+- mobile: 19 suites y 69 pruebas aprobadas;
+- TypeScript mobile aprobado;
+- export web medido tres veces;
+- backend build medido tres veces;
+- inicio backend medido tres veces;
+- no se modificó código productivo.
+
+La medición crítica de áreas se repitió tres veces con c1 y c10. También se
+agregó un escenario disponible que devuelve 100 áreas y 35.113 bytes. La
+dispersión observada quedó registrada como barrera para la comparación posterior.
+
+### Próximo paso
+
+Esperar aprobación explícita del bloque P1. Si se aprueba:
+
+1. aplicar solo la consulta agregada;
+2. ejecutar tests;
+3. repetir el benchmark idéntico;
+4. solicitar validación independiente;
+5. revertir si la mejora queda dentro del ruido;
+6. documentar resultados;
+7. crear un commit aislado.
+
+### Implementación y validación del bloque P1
+
+El usuario aprobó explícitamente P1. Se reemplazó la materialización completa de
+escritorios y reservas por una consulta agregada parametrizada en PostgreSQL.
+
+Se preservaron:
+
+- filtros por zona, área y localidad;
+- escritorios habilitados y no eliminados;
+- áreas y localidades activas;
+- estados bloqueantes;
+- límites horarios half-open;
+- orden, DTO y contrato HTTP;
+- autenticación, autorización, rate limiting y auditoría.
+
+La comparación estricta utilizó el mismo fixture y proceso para el código
+anterior y posterior. Resultado:
+
+- 1.560 requests, 0 errores;
+- reducción de p95 entre 86,88 % y 94,93 %;
+- throughput entre 609,56 % y 1.865,46 % superior;
+- payloads idénticos por bytes y SHA-256;
+- 48 suites y 291 pruebas backend aprobadas;
+- 3 suites y 9 E2E aprobadas en base limpia;
+- build aprobado;
+- revisión independiente aprobada.
+
+Incidencia:
+
+- una corrida E2E sobre el fixture poblado falló porque `auth-bootstrap` exige
+  una base sin usuarios;
+- se clasificó como precondición del test y se repitió en otra base temporal
+  migrada desde cero, donde aprobaron las 9 pruebas.
+
+El dato exploratorio de 35.113 bytes no correspondía exactamente al fixture
+versionado. Se corrigió mediante una comparación estricta: 38.605 bytes tanto
+antes como después, sin regresión contractual.
