@@ -542,6 +542,22 @@ El commit de corrección fue:
 - No se afirma mejora de latencia o bytes sin una comparación HTTP integrada en
   condiciones equivalentes.
 
+### Bloque P3 de performance
+
+- El runtime backend usa un artefacto portable con cierre productivo reducido;
+  Prisma conserva algunos peers auxiliares.
+- La imagen pasó de 817 MB a 724 MB: -93 MB y -11,38 %.
+- El tamaño inspeccionado pasó de 174.383.125 a 152.567.797 bytes:
+  -21.815.328 bytes y -12,51 %.
+- Se preservaron Node fijado por digest, Prisma, bcrypt, OpenSSL, `dumb-init`,
+  usuario no root, healthcheck, filesystem read-only y capabilities.
+- Se corrigió la imagen de migración para incluir el helper requerido por
+  `prisma.config.ts`.
+- E2E posteriores: 3 suites y 9 pruebas aprobadas sobre PostgreSQL temporal.
+- El build frío aumentó de 51,64 a aproximadamente 95 segundos; el tradeoff
+  queda documentado y no se oculta.
+- P4-P6 no introdujeron cambios sin evidencia suficiente.
+
 ### Skills formales de agente verificables
 
 - `github:github`: utilizada para consultar los metadatos, la discusión y las

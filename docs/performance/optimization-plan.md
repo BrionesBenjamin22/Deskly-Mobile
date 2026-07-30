@@ -3,7 +3,7 @@
 ## Estado
 
 Diagnostico completado. P1 y P2 fueron autorizados, implementados y validados.
-P3 queda en ejecucion. P4-P6 permanecen como observabilidad o hipotesis sin
+P3 fue completado. P4-P6 permanecen como observabilidad o hipotesis sin
 evidencia suficiente para modificar codigo.
 
 ## Matriz de oportunidades
@@ -12,7 +12,7 @@ evidencia suficiente para modificar codigo.
 | ----------- | --------- | ---- | -------------- | ---------------- | --------- | ----- | ------ | -------- | ---------- |
 | P1 Consulta agregada de disponibilidad de areas | Se materializan 1.000 desks y 4.000 reservas; areas ocupadas y disponibles tienen latencia similar pese a payloads de 12 B y 35.113 B | Backend/DB | p95 c1 53,60-84,67 ms; c10 471,02-778,87 ms | A determinar; debe superar el ruido medido | Media-alta | Medio | Bajo-medio | repositorio/puerto/caso de uso Desks y tests | Igualdad semantica, benchmark 3x, tests y recursos |
 | P2 Endpoint paginado/agregado para Pagos | Formula y harness: `3 + paginas + 2R`; 103 con R=50 | Mobile/backend | 103 requests y pico 50 con R=50 | 1 request; -102 y -99,03 % | Alta para requests | Alto | Medio; contrato aditivo | Payments mobile/backend | conteo, equivalencia, auth, rate limiting, tests y build |
-| P3 Empaquetado productivo backend | Imagen 817 MB; `node_modules` 466 MB | Docker | 817 MB | Menor transferencia y almacenamiento; magnitud a medir | Alta sobre tamaño | Medio | Medio; Prisma/OpenSSL | Dockerfile y lock/config | build limpio, imagen, inicio, health, E2E |
+| P3 Empaquetado productivo backend | Imagen actual reproducida: 817 MB; `node_modules` 466 MB | Docker | 817 MB / 174.383.125 B | 724 MB / 152.567.797 B; -11,38 % / -12,51 % | Alta | Medio | Medio; build frio mayor | Dockerfile | build, dependencias, inicio, health, Compose y hardening |
 | P4 Instrumentar consultas/pool | No hay query count/duracion ni pool saturation | Observabilidad | Sin metrica | Habilitar diagnosticos futuros, no mejora directa | Alta | Medio | Bajo-medio; costo de telemetria | Prisma/infra | overhead, redaccion, seguridad |
 | P5 Cancelar requests mobile obsoletos | Hooks ignoran respuesta pero no cancelan fetch | Mobile | No medido | Menor red ante filtros rapidos | Baja hasta medir | Medio | Medio | hooks y services | 20 cambios de filtro, requests/bytes, estados |
 | P6 Virtualizar listas largas | ScrollView en reservas/desks | Mobile | No hay frames/render profiling | Desconocida | Baja | Medio | Medio; UX | listas/pantallas | dispositivo fijo, 9/50/200 items |
@@ -51,9 +51,14 @@ comparable.
 
 ### P3: empaquetado Docker backend
 
-La mejora afecta despliegue, no latencia funcional. Debe conservar imagen
-fijada, usuario no root, Prisma, OpenSSL, `dumb-init`, filesystem read-only y
-healthcheck.
+Estado: `COMPLETADO`. El runtime usa un artefacto portable con el cierre
+productivo reducido y conserva imagen fijada, usuario no root, Prisma, OpenSSL,
+`dumb-init`, filesystem read-only y healthcheck.
+
+El build frio observado aumento de 51,64 a aproximadamente 95 segundos por el
+deploy portable y sus postinstalls. Los builds calientes permanecieron entre
+1,19 y 2,69 segundos. Se acepta el tradeoff para reducir transferencia y
+almacenamiento del artefacto; queda explicitamente documentado.
 
 ## 3. Impacto medio
 

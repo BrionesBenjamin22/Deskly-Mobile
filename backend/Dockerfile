@@ -23,7 +23,12 @@ COPY src ./src
 
 RUN pnpm prisma:generate \
     && pnpm build \
-    && pnpm prune --prod
+    && pnpm --filter devmatch deploy --prod --legacy /prod \
+    && SOURCE_CLIENT="$(readlink -f /app/node_modules/@prisma/client)" \
+    && TARGET_CLIENT="$(readlink -f /prod/node_modules/@prisma/client)" \
+    && SOURCE_MODULES="$(dirname "$(dirname "$SOURCE_CLIENT")")" \
+    && TARGET_MODULES="$(dirname "$(dirname "$TARGET_CLIENT")")" \
+    && cp -R "$SOURCE_MODULES/.prisma" "$TARGET_MODULES/.prisma"
 
 FROM dependencies AS migration
 
@@ -35,6 +40,7 @@ RUN apk add --no-cache dumb-init \
 
 COPY --chown=migration:nodejs prisma.config.ts ./
 COPY --chown=migration:nodejs prisma ./prisma
+COPY --chown=migration:nodejs src/config/env-files.ts ./src/config/env-files.ts
 
 USER migration
 
@@ -52,8 +58,8 @@ RUN apk add --no-cache dumb-init libc6-compat openssl \
 
 WORKDIR /app
 
-COPY --from=build --chown=deskly:nodejs /app/package.json ./package.json
-COPY --from=build --chown=deskly:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=deskly:nodejs /prod/package.json ./package.json
+COPY --from=build --chown=deskly:nodejs /prod/node_modules ./node_modules
 COPY --from=build --chown=deskly:nodejs /app/dist ./dist
 COPY --from=build --chown=deskly:nodejs /app/prisma ./prisma
 

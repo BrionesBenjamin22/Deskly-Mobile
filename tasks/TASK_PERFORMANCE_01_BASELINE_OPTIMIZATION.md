@@ -4,7 +4,7 @@
 | -------------- | ----- |
 | ID             | `PERFORMANCE-01` |
 | Modulo         | Backend, PostgreSQL, mobile e infraestructura |
-| Estado         | `EN_PROGRESO` |
+| Estado         | `COMPLETADA` |
 | Dependencia    | Auditorias `SECURITY-01` a `SECURITY-08` completadas; aprobacion explicita por bloque |
 | Implementacion | Primer candidato: `backend/src/modules/desks`; candidatos posteriores en Payments mobile/backend y Docker |
 | Validacion     | Benchmark antes/despues bajo el mismo dataset, tests focalizados, suite relevante, build, TypeScript, E2E, controles de seguridad y `git diff --check` |
@@ -165,11 +165,29 @@ amplificacion de red y el rate limiting percibido por mobile.
 
 ### Bloque P3: evaluar imagen backend
 
-Estado: `APROBADO; LINEA BASE ACTUAL PENDIENTE`.
+Estado: `COMPLETADO Y VALIDADO`.
 
-La imagen medida ocupa 817 MB y la capa de `node_modules` 466 MB. Debe
-compararse un empaquetado productivo alternativo sin cambiar runtime ni cadena
-de suministro. No es parte de P1.
+El runtime paso de copiar el arbol podado in-place a copiar un artefacto
+portable generado con `pnpm deploy --prod`. El cliente Prisma generado se copia
+explicitamente al arbol portable.
+
+Resultados:
+
+- imagen virtual: 817 MB a 724 MB; -93 MB y -11,38 %;
+- `docker inspect .Size`: 174.383.125 a 152.567.797 bytes;
+  -21.815.328 bytes y -12,51 %;
+- mediana de inicio TCP: 513,98 a 452,97 ms; el resultado es orientativo;
+- memoria: muestras solapadas, sin mejora atribuida;
+- build frio: 51,64 a aproximadamente 95 segundos; regresion documentada;
+- build caliente: rango posterior 1,19-2,69 segundos.
+
+Se verificaron Prisma, bcrypt y Nest dentro del runtime, migracion, healthcheck,
+UID 10001, filesystem read-only, `cap-drop ALL` y `no-new-privileges`. Los E2E
+sobre PostgreSQL temporal migrado aprobaron 3 suites y 9 pruebas.
+
+Durante la validacion se detecto que la imagen de migracion no copiaba
+`src/config/env-files.ts`, importado por `prisma.config.ts`. Se agrego solo ese
+archivo y `prisma migrate deploy` completo correctamente en Compose.
 
 ## Fuera de alcance antes de aprobacion
 
@@ -205,3 +223,5 @@ entre 86,88 % y 94,93 %. La evidencia posterior esta en
 `perf(escritorios): optimizar disponibilidad agregada de areas`
 
 `perf(pagos): reducir amplificacion de consultas mobile`
+
+`perf(contenedores): reducir artefacto productivo backend`

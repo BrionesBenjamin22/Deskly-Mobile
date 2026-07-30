@@ -1185,3 +1185,38 @@ Validación:
 Resultado medido para 50 reservas: 103 requests antes y 1 después, diferencia
 de -102 y -99,03 %. No se afirmó una mejora de latencia HTTP, bytes, CPU o
 memoria porque no existió una comparación integrada equivalente.
+
+### Implementación y validación del bloque P3
+
+Se reconstruyó la imagen del commit actual para no comparar contra una imagen
+histórica. La línea base fue 817 MB virtuales y 174.383.125 bytes según
+`docker inspect`; la capa `node_modules` representaba 466 MB.
+
+El runtime pasó a copiar un artefacto portable generado con
+`pnpm deploy --prod`. El candidato final midió 724 MB y 152.567.797 bytes:
+-93 MB virtuales (-11,38 %) y -21.815.328 bytes inspeccionados (-12,51 %).
+
+Bugs e ideas descartadas durante P3:
+
+1. El primer artefacto reducido omitía `.prisma/client/default`; falló la carga
+   real dentro del contenedor y fue rechazado. Se copió el cliente generado al
+   árbol productivo y se repitió la prueba.
+2. La imagen `migration` no incluía `src/config/env-files.ts`, requerido por
+   `prisma.config.ts`. Compose falló antes de iniciar backend; se agregó solo ese
+   helper y la migración completó.
+3. Se evaluó `pnpm --offline deploy`, pero falló porque el store BuildKit no
+   contenía el tarball de bcrypt. La variante se descartó.
+4. El build frío aumentó de 51,64 a aproximadamente 95 segundos. La regresión
+   se conserva documentada; los builds calientes quedaron en rangos similares.
+
+Se comprobaron Prisma, bcrypt, Nest, migración, healthcheck, UID 10001,
+filesystem read-only, `cap-drop ALL` y `no-new-privileges`. Las muestras de
+memoria se solaparon y no se afirmó una mejora. Los E2E posteriores aprobaron
+3 suites y 9 pruebas sobre PostgreSQL temporal migrado. Se documentó que
+`pnpm deploy --prod` reduce el cierre, pero Prisma conserva peers auxiliares.
+
+P4 no se implementó porque agregaría observabilidad sin una mejora directa ni
+backend de métricas. P5 continúa como hipótesis de cancelación de red que
+requiere medición. P6 se descartó para listados de 9 y se conserva como
+hipótesis para hasta 100 reservas de gestor. Tampoco se agregaron caché,
+índices, memoización o virtualización por intuición.

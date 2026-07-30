@@ -161,3 +161,51 @@ sincronizacion autoritativa, errores seguros y separacion de estados de pago y
 reserva permanecen activos. No se usaron datos reales ni Mercado Pago real.
 No se afirma mejora de latencia, bytes, CPU o memoria porque no hubo benchmark
 HTTP integrado anterior/posterior bajo condiciones equivalentes.
+
+## P3: artefacto productivo backend
+
+### Problema original
+
+El runtime copiaba el `node_modules` podado dentro del workspace. Esa capa
+ocupaba 466 MB y la imagen virtual reproducida sobre el commit actual medía
+817 MB.
+
+### Comparación
+
+| Métrica | Antes | Después | Diferencia | Variación |
+| ------- | ----: | ------: | ---------: | --------: |
+| Imagen virtual | 817 MB | 724 MB | -93 MB | -11,38 % |
+| `docker inspect .Size` | 174.383.125 B | 152.567.797 B | -21.815.328 B | -12,51 % |
+| Capa `node_modules` | 466 MB | aproximadamente 395 MB con Prisma generado | aproximadamente -71 MB | orientativo |
+| Inicio TCP mediano, 3 corridas | 513,98 ms | 452,97 ms | -61,01 ms | -11,87 % |
+
+La mejora de inicio se considera orientativa por el tamaño de la muestra. Las
+muestras de memoria se solaparon: antes 62,39-75,25 MiB y después
+69,27-76,20 MiB; no se atribuye mejora ni regresión.
+
+El primer build reproducido tardó 51,64 segundos. El build frío del candidato
+final tardó aproximadamente 95 segundos debido al deploy portable y sus
+postinstalls. Es una regresión conocida. Con caché, antes se observaron
+1,24-1,37 segundos y después 1,19-2,69 segundos.
+
+### Cambio y validación
+
+- `pnpm deploy --prod --legacy` genera el árbol portable;
+- se copia el cliente Prisma generado al árbol productivo;
+- runtime conserva Node 22 Alpine fijado por digest, OpenSSL, `libc6-compat`,
+  `dumb-init` y usuario `deskly`;
+- migración incorpora el único helper importado por `prisma.config.ts`;
+- Prisma, bcrypt y Nest cargaron dentro del runtime;
+- Compose ejecutó la migración y backend llegó a `healthy`;
+- E2E sobre PostgreSQL temporal migrado: 3 suites y 9 pruebas aprobadas;
+- UID 10001, root filesystem read-only, `cap-drop ALL` y
+  `no-new-privileges` verificados;
+- no se modificaron dependencias, lockfile, contratos, seguridad ni runtime.
+
+El primer candidato reducido falló al cargar `.prisma/client/default`. Fue
+rechazado y corregido antes de aceptarlo. La variante `--offline` también fue
+descartada porque el store de BuildKit no contenía el tarball de bcrypt.
+
+`pnpm deploy --prod` reduce el cierre instalado, pero Prisma conserva
+TypeScript y paquetes auxiliares por resolución de peers. No se afirma que el
+runtime esté libre de toda dependencia clasificada originalmente como desarrollo.

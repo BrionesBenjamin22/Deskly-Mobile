@@ -175,9 +175,16 @@ pnpm test
 # Contenedor Docker
 
 El `Dockerfile` usa etapas separadas para instalar dependencias, compilar NestJS y
-crear una imagen de ejecucion sin dependencias de desarrollo. La etapa final corre
+crear una imagen con el cierre productivo reducido. Algunos peers auxiliares de
+Prisma pueden permanecer en ese cierre. La etapa final corre
 como el usuario no privilegiado `deskly`, usa `dumb-init` y no incorpora archivos
 `.env` al contexto.
+
+La etapa de build genera un artefacto portable mediante `pnpm deploy --prod`.
+Solo ese arbol reducido, `dist`, el esquema Prisma y el cliente
+Prisma generado se copian al runtime. La etapa `migration` incluye
+`src/config/env-files.ts` porque `prisma.config.ts` lo necesita para resolver la
+configuracion sin incorporar el resto del codigo fuente.
 
 La configuracion se inyecta en tiempo de ejecucion. Como minimo requiere
 `DATABASE_URL` y `JWT_SECRET`. Las migraciones deben ejecutarse de forma explicita
