@@ -123,11 +123,7 @@ export function AdminCatalogScreen(props: Props) {
   const startEdit = (item: CatalogItem) => {
     setEditing(item);
     setName(itemName(item));
-    setDescription(
-      !('code' in item) && 'peopleCapacity' in item
-        ? item.description ?? ''
-        : '',
-    );
+    setDescription('localityId' in item ? item.description ?? '' : '');
     setCapacity(
       'peopleCapacity' in item ? String(item.peopleCapacity) : '1',
     );
@@ -225,6 +221,7 @@ export function AdminCatalogScreen(props: Props) {
       const peopleCapacity = Number(capacity);
       if (!Number.isInteger(peopleCapacity) || peopleCapacity < 1) return;
       const current = editing as Desk | null;
+      const normalizedZone = zone || undefined;
       const payload = current
         ? {
             ...(itemName(current) !== normalizedName
@@ -238,9 +235,15 @@ export function AdminCatalogScreen(props: Props) {
               ? { amenityIds }
               : {}),
             ...(current.areaId !== areaId ? { areaId } : {}),
-            ...(current.zone !== zone ? { zone } : {}),
+            ...(current.zone !== normalizedZone ? { zone: normalizedZone } : {}),
           }
-        : { name: normalizedName, peopleCapacity, amenityIds, areaId, zone };
+        : {
+            name: normalizedName,
+            peopleCapacity,
+            amenityIds,
+            areaId,
+            zone: normalizedZone,
+          };
       if (current && Object.keys(payload).length === 0) {
         resetForm();
         return;

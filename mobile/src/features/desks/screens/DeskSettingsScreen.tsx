@@ -832,6 +832,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  amenityOption: {
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    minHeight: 34,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+  },
+  amenityOptionSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
   chipText: {
     fontWeight: '800',
   },
