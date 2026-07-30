@@ -1,5 +1,9 @@
 # Registro de conversaciones y cambios solicitados
 
+> Organización vigente: las conversaciones están separadas por entrega y
+> funcionalidad en [`ia/README.md`](ia/README.md). Este archivo se conserva
+> como registro histórico de los primeros cambios.
+
 ## Metadatos
 
 - Proyecto: Deskly Mobile

@@ -27,6 +27,14 @@ jest.mock('../hooks/useAdminCatalog', () => ({
         code: 'A1',
         name: 'Escritorio A1',
         peopleCapacity: 1,
+        areaId: 'area-1',
+        area: {
+          id: 'area-1',
+          name: 'Sede central',
+          localityId: 'locality-1',
+          active: true,
+        },
+        zone: 'A',
         amenities: [{ id: 'amenity-1', name: 'Monitor' }],
         enabled: true,
         status: 'available',
@@ -80,7 +88,7 @@ describe('AdminCatalogScreen', () => {
     render(<AdminCatalogScreen {...props} />);
 
     expect(screen.getByText('Escritorios')).toBeOnTheScreen();
-    expect(screen.getByText('Tipos de escritorio')).toBeOnTheScreen();
+    expect(screen.queryByText('Tipos de escritorio')).not.toBeOnTheScreen();
     expect(screen.getByText('Localidades')).toBeOnTheScreen();
     expect(screen.getByText('Áreas de trabajo')).toBeOnTheScreen();
     fireEvent.press(screen.getByText('Amenities'));

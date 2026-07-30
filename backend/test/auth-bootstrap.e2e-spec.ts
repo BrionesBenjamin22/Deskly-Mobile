@@ -85,6 +85,33 @@ describe('Bootstrap administrativo (e2e PostgreSQL)', () => {
     expect(persistedAdmin.passwordHash).toBe('bcrypt-bootstrap-hash');
   });
 
+  it('emite y renueva una sesion con secretos independientes', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        identifier: memberEmail,
+        password: 'MemberPassword123',
+      })
+      .expect(200);
+
+    expect(login.body.access_token).toEqual(expect.any(String));
+    expect(login.body.refresh_token).toEqual(expect.any(String));
+
+    const refreshed = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: login.body.refresh_token })
+      .expect(200);
+
+    expect(refreshed.body.access_token).toEqual(expect.any(String));
+    expect(refreshed.body.refresh_token).toEqual(expect.any(String));
+    expect(refreshed.body.user.email).toBe(memberEmail);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: login.body.access_token })
+      .expect(401);
+  });
+
   function memberPayload() {
     return {
       email: memberEmail,

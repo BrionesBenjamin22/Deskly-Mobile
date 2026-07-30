@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/services/authenticated-fetch';
 import { UserRole } from '../../auth/types/auth.types';
 import { ManagedUser, ManagedUsersResponse } from '../types/managed-user.types';
 
@@ -23,10 +24,9 @@ async function request<T>(accessToken: string, path: string, init?: RequestInit)
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}${path}`, accessToken, {
       ...init,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },

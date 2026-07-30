@@ -10,23 +10,26 @@
 
 - `auth.service.ts`: contratos HTTP de autenticacion y perfil, timeout y
   clasificacion uniforme de errores.
-- `session.service.ts`: persistencia, restauracion y eliminacion segura de la
-  credencial.
+- `session.service.ts`: persistencia, restauracion y eliminacion segura de las
+  credenciales.
+- `authenticated-fetch.ts`: renovacion unica en vuelo y reintento de la
+  solicitud que recibio `401`.
+- `session-runtime.ts`: sesion vigente en memoria y notificacion a `App.tsx`.
 
 ## Persistencia de sesion
 
-Android e iOS almacenan exclusivamente el access token bajo una clave
-versionada en `expo-secure-store`, con accesibilidad
-`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`. El perfil, rol y datos del miembro no se
-serializan: se reconstruyen mediante `GET /auth/me` antes de habilitar cualquier
-vista autenticada.
+Android e iOS almacenan access y refresh token bajo claves versionadas en
+`expo-secure-store`, con accesibilidad `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`.
+El perfil y los datos del miembro no se guardan por separado. Al iniciar, el
+refresh token se intercambia por un nuevo par y la identidad pública devuelta
+por backend.
 
 Comportamientos:
 
-- token aceptado: restaura la sesion con la identidad devuelta por backend;
-- token rechazado: elimina la credencial y presenta el login;
-- fallo transitorio de red: conserva la credencial y solicita reintentar;
-- logout o cambio de cuenta: elimina primero la credencial y luego limpia UI;
+- refresh aceptado: reemplaza localmente las credenciales y restaura la identidad;
+- refresh rechazado: elimina ambas credenciales y presenta el login;
+- fallo transitorio de red: conserva las credenciales y solicita reintentar;
+- logout o cambio de cuenta: elimina primero ambas credenciales y luego limpia UI;
 - cambio de contrasena: elimina la sesion anterior y exige autenticarse;
 - web: mantiene sesion solo en memoria y no utiliza `localStorage`.
 
@@ -38,12 +41,13 @@ sesion valida. Los errores no incluyen tokens ni respuestas completas.
 
 ## Validaciones
 
-`session.service.test.ts` cubre almacenamiento exclusivo del token,
-restauracion autoritativa, rechazo, fallos de red, cierre y ausencia de
-SecureStore. La barrera del modulo incluye TypeScript, suite Jest completa,
-matriz Expo, audit productivo y exportacion web.
+`session.service.test.ts` cubre almacenamiento de ambos tokens, restauracion
+autoritativa, rechazo, fallos de red, cierre y ausencia de SecureStore.
+`authenticated-fetch.test.ts` cubre renovacion y reintento unico.
 
 ## Limites
 
-El backend no emite refresh tokens, por lo que no existe rotacion automatica.
-Biometria y autenticacion local adicional quedan fuera de esta etapa.
+No se administran sesiones por dispositivo ni biometria. El prop drilling de
+sesion permanece reservado para una migracion posterior a `AuthContext`.
+Tampoco existe deteccion persistente de replay por refresh token; la revocacion
+global se mantiene mediante `tokenVersion`.

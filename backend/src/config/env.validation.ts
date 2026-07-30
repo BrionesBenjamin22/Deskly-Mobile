@@ -5,13 +5,19 @@ type EnvironmentVariables = {
   DATABASE_URL: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
+  JWT_REFRESH_SECRET: string;
+  JWT_REFRESH_EXPIRES_IN: string;
   PAYMENT_GATEWAY: 'FAKE' | 'MERCADO_PAGO';
 };
 
 export function validateEnvironment(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
-  const requiredVariables = ['DATABASE_URL', 'JWT_SECRET'] as const;
+  const requiredVariables = [
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'JWT_REFRESH_SECRET',
+  ] as const;
 
   for (const variable of requiredVariables) {
     if (!config[variable]) {
@@ -23,6 +29,16 @@ export function validateEnvironment(
   if (jwtSecret.length < 32 || /^change[_-]?me/i.test(jwtSecret)) {
     throw new Error(
       'JWT_SECRET must contain at least 32 characters and must not use a placeholder',
+    );
+  }
+  const jwtRefreshSecret = getStringValue(config.JWT_REFRESH_SECRET);
+  if (
+    jwtRefreshSecret.length < 32 ||
+    /^change[_-]?me/i.test(jwtRefreshSecret) ||
+    jwtRefreshSecret === jwtSecret
+  ) {
+    throw new Error(
+      'JWT_REFRESH_SECRET must contain at least 32 characters, differ from JWT_SECRET and must not use a placeholder',
     );
   }
 
@@ -51,6 +67,11 @@ export function validateEnvironment(
     DATABASE_URL: getString('DATABASE_URL'),
     JWT_SECRET: jwtSecret,
     JWT_EXPIRES_IN: validateJwtExpiration(getString('JWT_EXPIRES_IN', '1h')),
+    JWT_REFRESH_SECRET: jwtRefreshSecret,
+    JWT_REFRESH_EXPIRES_IN: validateJwtExpiration(
+      getString('JWT_REFRESH_EXPIRES_IN', '30d'),
+      30,
+    ),
     PAYMENT_GATEWAY: paymentGateway as 'FAKE' | 'MERCADO_PAGO',
   };
 }
@@ -74,7 +95,7 @@ function validateMercadoPagoEnvironment(config: Record<string, unknown>): void {
   }
 }
 
-function validateJwtExpiration(value: string): string {
+function validateJwtExpiration(value: string, maximumDays = 7): string {
   const match = /^(\d+)(s|m|h|d)$/.exec(value);
 
   if (!match) {
@@ -89,9 +110,9 @@ function validateJwtExpiration(value: string): string {
     amount *
     (unit === 'd' ? 86400 : unit === 'h' ? 3600 : unit === 'm' ? 60 : 1);
 
-  if (seconds <= 0 || seconds > 7 * 86400) {
+  if (seconds <= 0 || seconds > maximumDays * 86400) {
     throw new Error(
-      'JWT_EXPIRES_IN must be greater than 0 and no longer than 7 days',
+      `JWT expiration must be greater than 0 and no longer than ${maximumDays} days`,
     );
   }
 

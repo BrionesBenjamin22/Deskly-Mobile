@@ -1,9 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import type { JwtSignOptions } from '@nestjs/jwt';
-
-import { toPublicUser } from '../dto/auth.output';
+import { SessionTokenService } from '../services/session-token.service';
 import {
   BlockedUserError,
   InactiveUserError,
@@ -20,8 +16,7 @@ export class LoginUseCase {
     @Inject(AUTH_REPOSITORY) private readonly repository: AuthRepositoryPort,
     @Inject(PASSWORD_HASHER)
     private readonly passwordHasher: PasswordHasherPort,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly sessionTokenService: SessionTokenService,
   ) {}
 
   async execute(input: { identifier: string; password: string }) {
@@ -38,22 +33,6 @@ export class LoginUseCase {
     if (user.blockedUntil && user.blockedUntil.getTime() > Date.now())
       throw new BlockedUserError(user.blockedUntil);
 
-    const accessToken = await this.jwtService.signAsync(
-      {
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        active: user.active,
-        tokenVersion: user.tokenVersion,
-      },
-      {
-        subject: user.id,
-        expiresIn: this.configService.getOrThrow<string>(
-          'JWT_EXPIRES_IN',
-        ) as JwtSignOptions['expiresIn'],
-      },
-    );
-
-    return { access_token: accessToken, user: toPublicUser(user) };
+    return this.sessionTokenService.issue(user);
   }
 }

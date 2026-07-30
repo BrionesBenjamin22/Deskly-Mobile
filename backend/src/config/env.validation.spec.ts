@@ -3,6 +3,8 @@ import { validateEnvironment } from './env.validation';
 const base = {
   DATABASE_URL: 'postgresql://test',
   JWT_SECRET: 'deterministic-test-secret-with-32-characters',
+  JWT_REFRESH_SECRET:
+    'different-deterministic-refresh-secret-with-32-characters',
 };
 
 describe('validateEnvironment payment provider', () => {
@@ -30,5 +32,14 @@ describe('validateEnvironment payment provider', () => {
         JWT_SECRET: 'change_me_with_at_least_32_characters',
       }),
     ).toThrow('JWT_SECRET');
+  });
+
+  it('exige un secreto de refresh diferente al secreto de acceso', () => {
+    expect(() =>
+      validateEnvironment({
+        ...base,
+        JWT_REFRESH_SECRET: base.JWT_SECRET,
+      }),
+    ).toThrow('JWT_REFRESH_SECRET');
   });
 });

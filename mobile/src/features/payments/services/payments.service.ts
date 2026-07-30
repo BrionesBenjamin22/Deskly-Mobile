@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/services/authenticated-fetch';
 import type {
   PaymentAttempt,
   PaymentCheckout,
@@ -43,10 +44,9 @@ async function requestJson<T>(
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await authenticatedFetch(`${API_BASE_URL}${path}`, accessToken, {
       ...init,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },

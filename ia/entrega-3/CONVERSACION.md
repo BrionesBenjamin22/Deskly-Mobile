@@ -1266,3 +1266,83 @@ El siguiente intento del job de calidad informó un único error ESLint:
 `prisma-desk.repository.ts`. Se eliminó exclusivamente ese type import. ESLint
 con cero warnings, Prettier, 4 pruebas focalizadas y `git diff --check`
 aprobaron antes de publicar la rama.
+
+---
+
+## 13. Cierre posterior al PR #9: CI mobile y refresh token
+
+### E3-22 — Debug del pipeline mobile
+
+solicitud:
+
+> El pipeline de CI tuvo fallos al integrar el PR a main. Los problemas son en
+> mobile, en la validación de TypeScript y en los tests mobile. Corroborarlo.
+
+resultado:
+
+- el run `30568825131` confirmó fallos únicamente en `Mobile calidad` y
+  `Mobile tests`;
+- backend unitario, backend build, calidad backend, E2E PostgreSQL, Docker y
+  Expo export aprobaron;
+- TypeScript reprodujo cuatro errores de tipos y estilos;
+- Jest reprodujo 18 de 19 suites y 69 de 71 pruebas aprobadas;
+- se corrigieron narrowing, normalización de zona, estilos y fixtures;
+- TypeScript y las 19 suites con 71 pruebas aprobaron.
+
+commit_ejecutado:
+
+`e6be044 fix(mobile): corregir validaciones del pipeline`
+
+Detalle temático:
+
+`ia/entrega-3/debug-pipeline-mobile.md`
+
+### E3-23 — Refresh token y renovación transparente
+
+solicitud:
+
+> Revisar la deuda técnica de refresh token, implementarla después de corregir
+> CI y evaluar luego la complejidad del prop drilling.
+
+resultado_backend:
+
+- `POST /auth/refresh`;
+- secretos y expiraciones independientes;
+- validación de firma, tipo, versión, usuario, miembro y bloqueo;
+- reemisión de access y refresh token;
+- rate limiting y mensajes seguros.
+
+resultado_mobile:
+
+- access y refresh token en SecureStore para native;
+- sesión web únicamente en memoria;
+- renovación al restaurar;
+- un refresh concurrente;
+- reintento único tras `401`;
+- cierre local ante renovación rechazada;
+- wrapper compartido adoptado por services autenticados.
+
+validacion:
+
+- backend: 52 suites y 307 pruebas;
+- mobile: 20 suites y 73 pruebas;
+- E2E: 3 suites y 10 pruebas sobre PostgreSQL limpio con 18 migraciones;
+- build backend, TypeScript, Expo web, Prettier, ESLint y
+  `git diff --check`: aprobados.
+
+deuda_tecnica:
+
+- `AuthContext`: pendiente, complejidad media;
+- refresh token: completado;
+- pull-to-refresh nativo: pendiente;
+- cobertura de guards: mayormente completada, con lecturas públicas sujetas a
+  decisión contractual;
+- replay persistente y sesiones por dispositivo: fuera del alcance actual.
+
+commit_ejecutado:
+
+`fbc7e5c feat(auth): incorporar renovacion segura de sesion`
+
+Detalle temático:
+
+`ia/entrega-3/refresh-token-deuda-tecnica.md`

@@ -76,6 +76,7 @@ const restoreSessionMock = jest.mocked(restorePersistedSession);
 const clearSessionMock = jest.mocked(clearPersistedSession);
 const adminSession = {
   access_token: 'access-token',
+  refresh_token: 'refresh-token',
   user: {
     id: 'admin-1',
     email: 'admin@example.com',

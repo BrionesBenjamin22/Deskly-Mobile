@@ -1,4 +1,11 @@
 export class InvalidCredentialsError extends Error {}
+export class InvalidRefreshTokenError extends Error {
+  constructor() {
+    super('Refresh token is invalid or expired.');
+    this.name = 'InvalidRefreshTokenError';
+    Object.setPrototypeOf(this, InvalidRefreshTokenError.prototype);
+  }
+}
 export class InactiveUserError extends Error {}
 export class BlockedUserError extends Error {
   constructor(readonly blockedUntil: Date) {

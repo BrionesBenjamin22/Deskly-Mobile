@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { BcryptPasswordHasherService } from './application/services/bcrypt-password-hasher.service';
+import { SessionTokenService } from './application/services/session-token.service';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { GetRegistrationStatusUseCase } from './application/use-cases/get-registration-status.use-case';
@@ -35,6 +36,7 @@ import { UsersController } from './interfaces/http/users.controller';
   providers: [
     RegisterUseCase,
     LoginUseCase,
+    SessionTokenService,
     ChangePasswordUseCase,
     GetCurrentUserUseCase,
     GetRegistrationStatusUseCase,

@@ -124,7 +124,16 @@ Responde `201`. Devuelve exclusivamente datos publicos. Conflictos de email, use
 }
 ```
 
-`identifier` acepta email o username. Responde `200` con `access_token` y `user`. Las credenciales invalidas y cuentas inactivas usan una respuesta generica `401` para evitar enumeracion de usuarios.
+`identifier` acepta email o username. Responde `200` con `access_token`,
+`refresh_token` y `user`.
+
+### POST /auth/refresh
+
+Recibe `{ "refreshToken": "..." }` y responde un nuevo par de access y refresh
+tokens junto con el usuario publico. El token se verifica con un secreto
+independiente, exige el claim `tokenType=refresh` y revalida `tokenVersion`,
+estado del usuario, estado del miembro y bloqueos vigentes. Un rechazo responde
+`401` sin exponer detalles de firma.
 
 ### GET /auth/me
 
@@ -160,14 +169,16 @@ Requiere JWT y rol `ADMIN`. Restaura una cuenta desactivada o bloqueada por pena
 
 ## Sesion y JWT
 
-El token incluye `sub`, `email`, `username`, `role`, `active`, `tokenVersion`,
-`iat` y `exp`.
+El access token incluye `sub`, `email`, `username`, `role`, `active`,
+`tokenVersion`, `iat` y `exp`. El refresh token incluye solamente `sub`,
+`tokenType`, `tokenVersion`, `iat` y `exp`.
 `JWT_EXPIRES_IN` acepta segundos, minutos, horas o dias y no puede superar siete
 dias. El valor recomendado y predeterminado es `1h`.
 
-No se implementan refresh tokens ni almacenamiento de sesiones. Al expirar el access token, la revalidacion consiste en iniciar sesion nuevamente. El backend nunca prolonga silenciosamente el token.
-Cada cambio de contrasena incrementa `tokenVersion`; todos los access tokens
-emitidos anteriormente dejan de ser validos inmediatamente.
+El refresh token usa secreto y expiracion independientes y se reemplaza en la
+respuesta de cada renovacion. No se almacena en base de datos. Cada cambio de
+contrasena incrementa `tokenVersion`; todos los access y refresh tokens emitidos
+anteriormente dejan de ser validos inmediatamente.
 
 ## Seguridad y errores
 
@@ -189,6 +200,9 @@ emitidos anteriormente dejan de ser validos inmediatamente.
 ```env
 JWT_SECRET=un_secreto_largo_y_aleatorio
 JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=otro_secreto_largo_y_aleatorio
+JWT_REFRESH_EXPIRES_IN=30d
 ```
 
-`JWT_SECRET` es obligatorio. Nunca debe versionarse un valor productivo.
+Ambos secretos son obligatorios, deben ser diferentes y nunca deben
+versionarse con valores productivos.

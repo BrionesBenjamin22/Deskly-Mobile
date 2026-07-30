@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../../config/api";
+import { authenticatedFetch } from "../../auth/services/authenticated-fetch";
 import {
   Reservation,
   ReservationLocation,
@@ -81,14 +82,23 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    const authorization = new Headers(init?.headers).get("Authorization");
+    const accessToken = authorization?.replace(/^Bearer\s+/i, "");
+    const requestInit = {
       ...init,
       headers: {
         "Content-Type": "application/json",
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
-    });
+    };
+    response = accessToken
+      ? await authenticatedFetch(
+          `${API_BASE_URL}${path}`,
+          accessToken,
+          requestInit,
+        )
+      : await fetch(`${API_BASE_URL}${path}`, requestInit);
   } catch (error) {
     const isTimeout =
       error instanceof Error &&
