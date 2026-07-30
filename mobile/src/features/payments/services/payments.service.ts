@@ -4,6 +4,7 @@ import type {
   PaymentCheckout,
   PaymentOption,
   PaymentQuote,
+  PaymentSummaryResponse,
 } from '../types/payment.types';
 
 type ApiErrorBody = {
@@ -109,6 +110,21 @@ export function listReservationPayments(
 ) {
   return requestJson<PaymentAttempt[]>(
     `/reservations/${encodeURIComponent(reservationId)}/payments`,
+    accessToken,
+  );
+}
+
+export function listPaymentSummaries(
+  accessToken: string,
+  page = 1,
+  limit = 9,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  return requestJson<PaymentSummaryResponse>(
+    `/payments/summary?${params}`,
     accessToken,
   );
 }

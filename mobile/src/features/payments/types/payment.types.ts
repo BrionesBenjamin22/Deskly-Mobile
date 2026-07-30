@@ -48,3 +48,22 @@ export type PaymentReservationItem = {
   pendingMinorUnits: number;
   attempts: PaymentAttempt[];
 };
+
+export type PaymentSummaryItemResponse = Omit<
+  PaymentReservationItem,
+  "dateLabel"
+> & {
+  date: string;
+  currency: "ARS";
+  pricingVersion: string;
+};
+
+export type PaymentSummaryResponse = {
+  items: PaymentSummaryItemResponse[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};

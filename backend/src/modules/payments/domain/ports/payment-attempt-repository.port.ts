@@ -17,6 +17,15 @@ export type PaymentEventRecord = {
   processedAt: Date;
 };
 
+export type PayableReservationSummary = {
+  id: string;
+  deskName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  attempts: PaymentAttempt[];
+};
+
 export interface PaymentAttemptRepositoryPort {
   create(payment: PaymentAttempt): Promise<PaymentAttempt>;
   createWithReservationHold(payment: PaymentAttempt): Promise<PaymentAttempt>;
@@ -40,6 +49,9 @@ export interface PaymentAttemptRepositoryPort {
     externalPaymentId: string,
   ): Promise<PaymentAttempt>;
   listByReservationId(reservationId: string): Promise<PaymentAttempt[]>;
+  listPaymentSummaryCandidates(
+    memberId: string,
+  ): Promise<PayableReservationSummary[]>;
   listStale(
     provider: PaymentProvider,
     statuses: PaymentStatus[],

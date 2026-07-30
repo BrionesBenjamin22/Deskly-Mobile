@@ -178,6 +178,34 @@ export class PrismaPaymentAttemptRepository implements PaymentAttemptRepositoryP
     return payments.map((payment) => this.toDomain(payment));
   }
 
+  async listPaymentSummaryCandidates(memberId: string) {
+    const where: Prisma.ReservationWhereInput = {
+      memberId,
+      status: { in: ['PENDING_PAYMENT', 'RESERVED', 'ACTIVE'] },
+    };
+    const reservations = await this.prisma.reservation.findMany({
+      where,
+      orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        date: true,
+        startTime: true,
+        endTime: true,
+        desk: { select: { code: true, name: true } },
+        payments: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    return reservations.map((reservation) => ({
+      id: reservation.id,
+      deskName: reservation.desk.name ?? reservation.desk.code,
+      date: reservation.date.toISOString().slice(0, 10),
+      startTime: reservation.startTime.toISOString().slice(11, 16),
+      endTime: reservation.endTime.toISOString().slice(11, 16),
+      attempts: reservation.payments.map((payment) => this.toDomain(payment)),
+    }));
+  }
+
   async listStale(
     provider: PaymentProvider,
     statuses: PaymentStatus[],
