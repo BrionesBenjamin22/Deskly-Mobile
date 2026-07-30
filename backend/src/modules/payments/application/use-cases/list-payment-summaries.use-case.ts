@@ -34,16 +34,11 @@ export class ListPaymentSummariesUseCase {
         const durationMinutes =
           this.toMinutes(reservation.endTime) -
           this.toMinutes(reservation.startTime);
-        const totalMinorUnits = this.pricing.quote(
-          durationMinutes,
-          'FULL',
-        ).total.minorUnits;
+        const totalMinorUnits = this.pricing.quote(durationMinutes, 'FULL')
+          .total.minorUnits;
         const approvedMinorUnits = attempts
           .filter((payment) => payment.status === 'APPROVED')
-          .reduce(
-            (total, payment) => total + payment.amount.minorUnits,
-            0,
-          );
+          .reduce((total, payment) => total + payment.amount.minorUnits, 0);
 
         return {
           reservationId: reservation.id,
@@ -51,10 +46,7 @@ export class ListPaymentSummariesUseCase {
           date: reservation.date,
           totalMinorUnits,
           approvedMinorUnits,
-          pendingMinorUnits: Math.max(
-            0,
-            totalMinorUnits - approvedMinorUnits,
-          ),
+          pendingMinorUnits: Math.max(0, totalMinorUnits - approvedMinorUnits),
           currency: 'ARS' as const,
           pricingVersion: PAYMENT_PRICING_VERSION,
           attempts: attempts.map(toPaymentAttemptOutput),

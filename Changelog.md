@@ -569,6 +569,8 @@ El commit de corrección fue:
   contenedores y advertencias sobre datos persistentes.
 - Se actualizaron las cantidades de pruebas de la última barrera validada.
 - Se agregó la sección de créditos del equipo.
+- Se corrigió el formato Prettier de tres archivos detectados por el job de
+  calidad backend, sin cambios funcionales.
 
 ### Skills formales de agente verificables
 

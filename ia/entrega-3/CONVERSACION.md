@@ -1246,3 +1246,17 @@ Bash, PostgreSQL, migraciones, seed, bootstrap, backend, mobile, Docker Compose,
 healthcheck, logs, detención, eliminación opcional de volúmenes y validaciones.
 También se actualizaron las cantidades de pruebas y se agregó el crédito exacto
 solicitado por el usuario.
+
+### Corrección del job de calidad backend
+
+GitHub Actions informó tres archivos fuera del formato Prettier. El resto de los
+jobs había finalizado correctamente. Se ejecutó `prettier --write` únicamente
+sobre esos archivos y luego el mismo `prettier --check` del pipeline sobre
+`src/**/*.ts` y `test/**/*.ts`.
+
+Resultado:
+
+- todos los archivos backend cumplen Prettier;
+- 3 suites y 10 pruebas focalizadas aprobadas;
+- `git diff --check` aprobado;
+- los cambios son exclusivamente mecánicos y no alteran comportamiento.

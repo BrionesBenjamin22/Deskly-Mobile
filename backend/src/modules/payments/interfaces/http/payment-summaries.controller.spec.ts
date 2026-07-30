@@ -24,10 +24,9 @@ describe('PaymentSummariesController', () => {
     const controller = new PaymentSummariesController({ execute } as never);
 
     await expect(
-      controller.list(
-        { page: 1, limit: 9 },
-        { user: { id: 'admin-1' } } as never,
-      ),
+      controller.list({ page: 1, limit: 9 }, {
+        user: { id: 'admin-1' },
+      } as never),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(execute).not.toHaveBeenCalled();
   });

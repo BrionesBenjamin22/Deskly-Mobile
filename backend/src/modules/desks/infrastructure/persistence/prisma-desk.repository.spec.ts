@@ -7,7 +7,11 @@ type PrismaMock = {
 };
 
 function queryText(query: Prisma.Sql): string {
-  return query.strings.join('?').replaceAll('"', '').replace(/\s+/g, ' ').trim();
+  return query.strings
+    .join('?')
+    .replaceAll('"', '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 describe('PrismaDeskRepository work-area availability', () => {
@@ -162,9 +166,7 @@ describe('PrismaDeskRepository work-area availability', () => {
       endTime: '10:00',
     });
 
-    const sql = queryText(
-      prisma.$queryRaw.mock.calls[0][0] as Prisma.Sql,
-    );
+    const sql = queryText(prisma.$queryRaw.mock.calls[0][0] as Prisma.Sql);
     expect(sql).toContain("'PENDING_PAYMENT'");
     expect(sql).toContain("'RESERVED'");
     expect(sql).toContain("'ACTIVE'");
