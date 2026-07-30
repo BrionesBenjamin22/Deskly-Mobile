@@ -9,6 +9,7 @@ import {
   RegistrationStatusResponse,
   UpdateProfilePayload,
 } from '../types/auth.types';
+import { authenticatedFetch } from './authenticated-fetch';
 
 type ApiErrorBody = {
   error?: string;
@@ -118,6 +119,48 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+async function authenticatedRequest<T>(
+  path: string,
+  accessToken: string,
+  init?: RequestInit,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await authenticatedFetch(
+      `${API_BASE_URL}${path}`,
+      accessToken,
+      {
+        signal: controller.signal,
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...init?.headers,
+        },
+      },
+    );
+    const body = (await response.json().catch(() => null)) as
+      | T
+      | ApiErrorBody
+      | null;
+    if (!response.ok) {
+      throw new AuthServiceError(
+        getErrorMessage(body as ApiErrorBody | null),
+        'api',
+      );
+    }
+    return body as T;
+  } catch (error) {
+    if (error instanceof AuthServiceError) throw error;
+    throw new AuthServiceError(
+      'Lo sentimos, no pudimos renovar o completar su sesion. Ingrese nuevamente.',
+      'network',
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export function login(payload: LoginPayload) {
   return request<LoginResponse>('/auth/login', {
     method: 'POST',
@@ -153,15 +196,12 @@ export function getRegistrationStatus() {
 }
 
 export function getCurrentUser(accessToken: string) {
-  return request<CurrentUserResponse>('/auth/me', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  return authenticatedRequest<CurrentUserResponse>('/auth/me', accessToken);
 }
 
 export function changePassword(accessToken: string, payload: ChangePasswordPayload) {
-  return request<{ message: string }>('/auth/me/password', {
+  return authenticatedRequest<{ message: string }>('/auth/me/password', accessToken, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({
       currentPassword: payload.currentPassword,
       newPassword: payload.newPassword,
@@ -170,9 +210,8 @@ export function changePassword(accessToken: string, payload: ChangePasswordPaylo
 }
 
 export function updateProfile(accessToken: string, payload: UpdateProfilePayload) {
-  return request<CurrentUserResponse>('/auth/me', {
+  return authenticatedRequest<CurrentUserResponse>('/auth/me', accessToken, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({
       email: payload.email?.trim().toLowerCase(),
       username: payload.username?.trim().toLowerCase(),

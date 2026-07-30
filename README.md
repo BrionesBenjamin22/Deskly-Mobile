@@ -155,6 +155,8 @@ Variables backend:
 | `DATABASE_URL` | Sí | Conexión PostgreSQL utilizada por Prisma. |
 | `JWT_SECRET` | Sí | Secreto aleatorio de al menos 32 caracteres. |
 | `JWT_EXPIRES_IN` | No | Duración `Ns`, `Nm`, `Nh` o `Nd`, máximo 7 días. |
+| `JWT_REFRESH_SECRET` | Sí | Secreto aleatorio distinto de `JWT_SECRET`, mínimo 32 caracteres. |
+| `JWT_REFRESH_EXPIRES_IN` | No | Duración del refresh token, máximo 30 días. |
 | `PAYMENT_GATEWAY` | No | `FAKE` o `MERCADO_PAGO`; por defecto `FAKE`. |
 | `BOOTSTRAP_ADMIN_*` | Solo bootstrap | Credenciales temporales del primer administrador. |
 | `MERCADO_PAGO_*` | Según proveedor | Obligatorias únicamente con Mercado Pago activo. |

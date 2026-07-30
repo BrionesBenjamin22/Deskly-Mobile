@@ -19,6 +19,8 @@ FRONTEND_URL=http://localhost:5173
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/deskly?schema=public"
 JWT_SECRET=change_me_for_local_development
 JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=change_me_with_a_different_secret
+JWT_REFRESH_EXPIRES_IN=30d
 ```
 
 Variables requeridas:
@@ -26,6 +28,8 @@ Variables requeridas:
 - `DATABASE_URL`: cadena de conexion PostgreSQL usada por Prisma.
 - `JWT_SECRET`: secreto de firma para access tokens JWT; debe ser largo, aleatorio y privado.
 - `JWT_EXPIRES_IN`: duracion del access token. El valor predeterminado y maximo es `1h`.
+- `JWT_REFRESH_SECRET`: secreto independiente para tokens de renovacion.
+- `JWT_REFRESH_EXPIRES_IN`: duracion del refresh token, hasta 30 dias.
 
 `FRONTEND_URL` puede incluir uno o mas origenes separados por coma. En desarrollo, el backend tambien permite origenes locales comunes de Expo web y Vite, ademas de IPs privadas de red local.
 

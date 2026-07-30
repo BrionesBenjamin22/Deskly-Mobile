@@ -1,6 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
 
-import { AuthServiceError, getCurrentUser } from './auth.service';
 import {
   clearPersistedSession,
   persistSession,
@@ -15,19 +14,12 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(),
 }));
 
-jest.mock('./auth.service', () => {
-  const actual = jest.requireActual('./auth.service');
-  return {
-    ...actual,
-    getCurrentUser: jest.fn(),
-  };
-});
-
 const secureStore = jest.mocked(SecureStore);
-const getCurrentUserMock = jest.mocked(getCurrentUser);
+const fetchMock = jest.fn();
 
 const session = {
   access_token: 'access-token',
+  refresh_token: 'refresh-token',
   user: {
     id: 'user-1',
     email: 'member@example.com',
@@ -45,67 +37,74 @@ const session = {
 describe('session.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    globalThis.fetch = fetchMock;
     secureStore.isAvailableAsync.mockResolvedValue(true);
   });
 
-  it('persiste unicamente el access token en el almacenamiento seguro', async () => {
+  it('persiste access y refresh token en el almacenamiento seguro', async () => {
     await persistSession(session);
 
-    expect(secureStore.setItemAsync).toHaveBeenCalledWith(
-      'deskly.session.access-token.v1',
-      'access-token',
-      { keychainAccessible: 'device-only' },
-    );
+    expect(secureStore.setItemAsync.mock.calls).toEqual([
+      [
+        'deskly.session.access-token.v1',
+        'access-token',
+        { keychainAccessible: 'device-only' },
+      ],
+      [
+        'deskly.session.refresh-token.v1',
+        'refresh-token',
+        { keychainAccessible: 'device-only' },
+      ],
+    ]);
   });
 
-  it('restaura la identidad desde el backend sin persistir datos personales', async () => {
-    secureStore.getItemAsync.mockResolvedValue('access-token');
-    getCurrentUserMock.mockResolvedValue({
-      user: {
-        ...session.user,
-        blockedUntil: null,
-        member: {
-          ...session.user.member!,
-          dni: 12345678,
-          phone: 1112345678,
-        },
-      },
+  it('restaura y rota la sesion mediante el refresh token', async () => {
+    secureStore.getItemAsync
+      .mockResolvedValueOnce('access-token')
+      .mockResolvedValueOnce('refresh-token');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(session),
     });
 
     await expect(restorePersistedSession()).resolves.toMatchObject(session);
-    expect(getCurrentUserMock).toHaveBeenCalledWith('access-token');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/refresh'),
+      expect.objectContaining({
+        body: JSON.stringify({ refreshToken: 'refresh-token' }),
+      }),
+    );
   });
 
-  it('elimina un token rechazado por el backend', async () => {
-    secureStore.getItemAsync.mockResolvedValue('expired-token');
-    getCurrentUserMock.mockRejectedValue(
-      new AuthServiceError('Sesion vencida.', 'api'),
-    );
+  it('elimina ambos tokens cuando el backend rechaza la renovacion', async () => {
+    secureStore.getItemAsync
+      .mockResolvedValueOnce('expired-access')
+      .mockResolvedValueOnce('expired-refresh');
+    fetchMock.mockResolvedValue({
+      ok: false,
+      json: jest.fn().mockResolvedValue({ error: 'Sesion vencida.' }),
+    });
 
     await expect(restorePersistedSession()).resolves.toBeNull();
-    expect(secureStore.deleteItemAsync).toHaveBeenCalledWith(
-      'deskly.session.access-token.v1',
-    );
+    expect(secureStore.deleteItemAsync).toHaveBeenCalledTimes(2);
   });
 
-  it('conserva el token ante un fallo transitorio de red', async () => {
-    secureStore.getItemAsync.mockResolvedValue('access-token');
-    getCurrentUserMock.mockRejectedValue(
-      new AuthServiceError('Sin conexion.', 'network'),
-    );
+  it('conserva los tokens ante un fallo transitorio de red', async () => {
+    secureStore.getItemAsync
+      .mockResolvedValueOnce('access-token')
+      .mockResolvedValueOnce('refresh-token');
+    fetchMock.mockRejectedValue(new Error('Sin conexion.'));
 
     await expect(restorePersistedSession()).rejects.toMatchObject({
-      causeType: 'network',
+      name: 'SessionPersistenceError',
     });
     expect(secureStore.deleteItemAsync).not.toHaveBeenCalled();
   });
 
-  it('elimina el token al cerrar o cambiar de cuenta', async () => {
+  it('elimina ambos tokens al cerrar o cambiar de cuenta', async () => {
     await clearPersistedSession();
 
-    expect(secureStore.deleteItemAsync).toHaveBeenCalledWith(
-      'deskly.session.access-token.v1',
-    );
+    expect(secureStore.deleteItemAsync).toHaveBeenCalledTimes(2);
   });
 
   it('no informa persistencia exitosa si SecureStore no esta disponible', async () => {

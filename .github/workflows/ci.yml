@@ -214,7 +214,9 @@ jobs:
         run: mkdir -p reports
 
       - name: Generar secreto JWT efimero
-        run: echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+        run: |
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Ejecutar tests E2E
         run: pnpm test:e2e --runInBand --json --outputFile=reports/jest-e2e-results.json

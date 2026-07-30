@@ -26,6 +26,7 @@ import {
   persistSession,
   restorePersistedSession,
 } from './src/features/auth/services/session.service';
+import { subscribeToSession } from './src/features/auth/services/session-runtime';
 import { UserManagementScreen } from './src/features/users/screens/UserManagementScreen';
 import { AdminCatalogScreen } from './src/features/admin/screens/AdminCatalogScreen';
 import { colors } from './src/theme/colors';
@@ -159,6 +160,14 @@ export default function App() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(
+    () =>
+      subscribeToSession((nextSession) => {
+        setSession(nextSession);
+      }),
+    [],
+  );
 
   const handleTabChange = (tab: AppTab) => {
     if (tab === 'profile') {

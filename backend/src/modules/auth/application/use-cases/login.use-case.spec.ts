@@ -1,6 +1,4 @@
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-
+import { SessionTokenService } from '../services/session-token.service';
 import { User } from '../../domain/entities/user.entity';
 import {
   BlockedUserError,
@@ -44,22 +42,35 @@ function createRepository(): jest.Mocked<AuthRepositoryPort> {
 describe('LoginUseCase', () => {
   let repository: jest.Mocked<AuthRepositoryPort>;
   let passwordHasher: jest.Mocked<PasswordHasherPort>;
-  let jwtService: { signAsync: jest.Mock };
+  let sessionTokenService: { issue: jest.Mock };
   let useCase: LoginUseCase;
 
   beforeEach(() => {
     repository = createRepository();
     passwordHasher = { hash: jest.fn(), compare: jest.fn() };
-    jwtService = { signAsync: jest.fn().mockResolvedValue('signed-token') };
-    const configService = {
-      getOrThrow: jest.fn().mockReturnValue('1h'),
+    sessionTokenService = {
+      issue: jest.fn().mockResolvedValue({
+        access_token: 'signed-access-token',
+        refresh_token: 'signed-refresh-token',
+        user: {
+          id: activeUser.id,
+          email: activeUser.email,
+          username: activeUser.username,
+          role: activeUser.role,
+          active: activeUser.active,
+          member: {
+            id: activeUser.member?.id,
+            fullName: activeUser.member?.fullName,
+            active: activeUser.member?.active,
+          },
+        },
+      }),
     };
 
     useCase = new LoginUseCase(
       repository,
       passwordHasher,
-      jwtService as unknown as JwtService,
-      configService as unknown as ConfigService,
+      sessionTokenService as unknown as SessionTokenService,
     );
   });
 
@@ -75,18 +86,10 @@ describe('LoginUseCase', () => {
     expect(repository.findByIdentifier.mock.calls).toEqual([
       ['member@deskly.test'],
     ]);
-    expect(jwtService.signAsync.mock.calls[0]).toEqual([
-      {
-        email: activeUser.email,
-        username: activeUser.username,
-        role: 'MIEMBRO',
-        active: true,
-        tokenVersion: 0,
-      },
-      { subject: activeUser.id, expiresIn: '1h' },
-    ]);
+    expect(sessionTokenService.issue).toHaveBeenCalledWith(activeUser);
     expect(result).toEqual({
-      access_token: 'signed-token',
+      access_token: 'signed-access-token',
+      refresh_token: 'signed-refresh-token',
       user: {
         id: activeUser.id,
         email: activeUser.email,
@@ -110,7 +113,7 @@ describe('LoginUseCase', () => {
     await expect(
       useCase.execute({ identifier: 'member', password: 'bad-password' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
-    expect(jwtService.signAsync).not.toHaveBeenCalled();
+    expect(sessionTokenService.issue).not.toHaveBeenCalled();
   });
 
   it('rejects inactive users', async () => {
@@ -125,7 +128,7 @@ describe('LoginUseCase', () => {
     await expect(
       useCase.execute({ identifier: 'member', password: 'Password123' }),
     ).rejects.toBeInstanceOf(InactiveUserError);
-    expect(jwtService.signAsync).not.toHaveBeenCalled();
+    expect(sessionTokenService.issue).not.toHaveBeenCalled();
   });
 
   describe('penalty blocking', () => {
@@ -148,7 +151,7 @@ describe('LoginUseCase', () => {
       await expect(
         useCase.execute({ identifier: 'member', password: 'Password123' }),
       ).rejects.toBeInstanceOf(BlockedUserError);
-      expect(jwtService.signAsync).not.toHaveBeenCalled();
+      expect(sessionTokenService.issue).not.toHaveBeenCalled();
     });
 
     it('BlockedUserError carries the exact blockedUntil date', async () => {
@@ -196,8 +199,8 @@ describe('LoginUseCase', () => {
         password: 'Password123',
       });
 
-      expect(result.access_token).toBe('signed-token');
-      expect(jwtService.signAsync).toHaveBeenCalledTimes(1);
+      expect(result.access_token).toBe('signed-access-token');
+      expect(sessionTokenService.issue).toHaveBeenCalledTimes(1);
     });
 
     it('allows login when blockedUntil is null', async () => {
@@ -220,7 +223,7 @@ describe('LoginUseCase', () => {
         password: 'Password123',
       });
 
-      expect(result.access_token).toBe('signed-token');
+      expect(result.access_token).toBe('signed-access-token');
     });
 
     it('does not confuse an inactive account with a penalty block', async () => {

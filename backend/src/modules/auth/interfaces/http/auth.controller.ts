@@ -24,6 +24,7 @@ import {
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case';
+import { SessionTokenService } from '../../application/services/session-token.service';
 import { GetCurrentUserUseCase } from '../../application/use-cases/get-current-user.use-case';
 import { GetRegistrationStatusUseCase } from '../../application/use-cases/get-registration-status.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -33,6 +34,7 @@ import {
   BlockedUserError,
   InactiveUserError,
   InvalidCredentialsError,
+  InvalidRefreshTokenError,
   InvalidCurrentPasswordError,
   MemberDataRequiredError,
   SystemNotInitializedError,
@@ -42,6 +44,7 @@ import {
 import type { AuthenticatedRequest } from './auth-request';
 import { ChangePasswordBodyDto } from './dto/change-password-body.dto';
 import { LoginBodyDto } from './dto/login-body.dto';
+import { RefreshTokenBodyDto } from './dto/refresh-token-body.dto';
 import { RegisterBodyDto } from './dto/register-body.dto';
 import { UpdateProfileBodyDto } from './dto/update-profile-body.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -56,6 +59,7 @@ export class AuthController {
     private readonly getRegistrationStatusUseCase: GetRegistrationStatusUseCase,
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly changePasswordUseCase: ChangePasswordUseCase,
+    private readonly sessionTokenService: SessionTokenService,
   ) {}
 
   @Get('registration-status')
@@ -146,6 +150,33 @@ export class AuthController {
           message: 'Su cuenta se encuentra bloqueada.',
           error: `Su acceso fue restringido hasta el ${date}. Puede contactar a un administrador para solicitar el desbloqueo anticipado.`,
           blockedUntil: error.blockedUntil.toISOString(),
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Post('refresh')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @HttpCode(200)
+  @ApiOkResponse({ description: 'Sesion renovada correctamente.' })
+  @ApiUnauthorizedResponse({
+    description: 'Token de renovacion invalido, vencido o revocado.',
+  })
+  async refresh(@Body() body: RefreshTokenBodyDto) {
+    try {
+      return await this.sessionTokenService.refresh(body.refreshToken);
+    } catch (error) {
+      if (
+        error instanceof InvalidRefreshTokenError ||
+        error instanceof InactiveUserError ||
+        error instanceof BlockedUserError
+      ) {
+        throw new UnauthorizedException({
+          message: 'La sesion no se puede renovar.',
+          error:
+            'Lo sentimos, su sesion finalizo. Inicie sesion nuevamente para continuar.',
         });
       }
       throw error;

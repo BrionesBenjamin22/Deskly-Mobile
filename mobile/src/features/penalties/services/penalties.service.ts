@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/services/authenticated-fetch';
 import {
   Penalty,
   PenaltyListResponse,
@@ -27,14 +28,17 @@ export async function registerAbsence(
 ): Promise<Penalty> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/penalties/absence`, {
+    response = await authenticatedFetch(
+      `${API_BASE_URL}/penalties/absence`,
+      accessToken,
+      {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ ...payload, reason: payload.reason.trim() }),
-    });
+      },
+    );
   } catch {
     throw new PenaltyServiceError(
       'Lo sentimos, no pudimos conectar con Deskly. Verifique su conexion e intente nuevamente.',
@@ -57,9 +61,10 @@ export async function listCurrentUserPenalties(
       page: String(page),
       limit: String(limit),
     });
-    response = await fetch(`${API_BASE_URL}/penalties/me?${params}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    response = await authenticatedFetch(
+      `${API_BASE_URL}/penalties/me?${params}`,
+      accessToken,
+    );
   } catch {
     throw new PenaltyServiceError(
       'Lo sentimos, no pudimos conectar con Deskly. Verifique su conexion e intente nuevamente.',
