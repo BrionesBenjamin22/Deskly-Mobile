@@ -383,6 +383,7 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressAdminCatalog={() => handleTabChange('catalog')}
               onPressChangePassword={() => setShowChangePassword(true)}
             />
           </AnimatedTabScreen>

@@ -39,6 +39,10 @@ La autorizacion permanece en backend. La restauracion no confia en datos
 persistidos del usuario y nunca interpreta el retorno visual como prueba de una
 sesion valida. Los errores no incluyen tokens ni respuestas completas.
 
+`ProfileScreen` propaga a la barra inferior los callbacks habilitados por rol.
+Para ADMIN incluye Panel, Gestion de usuarios y Cuenta; el cambio de pantalla
+continua centralizado en `App.tsx`.
+
 ## Validaciones
 
 `session.service.test.ts` cubre almacenamiento de ambos tokens, restauracion

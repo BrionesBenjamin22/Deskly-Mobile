@@ -31,6 +31,7 @@ type ProfileScreenProps = {
   onPressLogout: () => void;
   onPressSwitchAccount: () => void;
   onPressUserManagement: () => void;
+  onPressAdminCatalog: () => void;
   onPressChangePassword?: () => void;
   penaltiesRefreshKey?: number;
 };
@@ -60,6 +61,7 @@ export function ProfileScreen({
   onPressLogout,
   onPressSwitchAccount,
   onPressUserManagement,
+  onPressAdminCatalog,
   onPressChangePassword,
   penaltiesRefreshKey = 0,
 }: ProfileScreenProps) {
@@ -257,6 +259,7 @@ export function ProfileScreen({
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
+          onPressAdminCatalog={onPressAdminCatalog}
           onPressChangePassword={onPressChangePassword}
         />
       </View>
