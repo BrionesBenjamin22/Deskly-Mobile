@@ -1220,3 +1220,29 @@ backend de métricas. P5 continúa como hipótesis de cancelación de red que
 requiere medición. P6 se descartó para listados de 9 y se conserva como
 hipótesis para hasta 100 reservas de gestor. Tampoco se agregaron caché,
 índices, memoización o virtualización por intuición.
+
+### Revisión final de configuración y onboarding
+
+Se solicitó revisar los archivos de entorno versionables y convertir el README
+raíz en una guía declarativa para quien evalúe el proyecto.
+
+Se contrastaron las plantillas con:
+
+- validación central de entorno backend;
+- resolución de archivos según `NODE_ENV`;
+- configuración Prisma;
+- bootstrap administrativo;
+- configuración y límites de Mercado Pago;
+- resolución y validación de la URL pública Expo;
+- variables exigidas por Docker Compose.
+
+Se ampliaron las siete plantillas versionables con propósito, obligatoriedad,
+formatos, límites, ejemplos seguros y advertencias. No se versionaron secretos.
+El placeholder JWT de desarrollo comienza con `change_me` para que la validación
+lo rechace hasta que el revisor lo reemplace.
+
+El README documenta requisitos, Corepack/pnpm, copia inicial en PowerShell y
+Bash, PostgreSQL, migraciones, seed, bootstrap, backend, mobile, Docker Compose,
+healthcheck, logs, detención, eliminación opcional de volúmenes y validaciones.
+También se actualizaron las cantidades de pruebas y se agregó el crédito exacto
+solicitado por el usuario.

@@ -558,6 +558,18 @@ El commit de corrección fue:
   queda documentado y no se oculta.
 - P4-P6 no introdujeron cambios sin evidencia suficiente.
 
+### Preparación final para revisión
+
+- Se auditaron todas las plantillas versionables de entorno contra las variables
+  consumidas por backend, mobile y Docker Compose.
+- Se documentaron obligatoriedad, formato, límites y seguridad de PostgreSQL,
+  JWT, CORS, bootstrap administrativo, Mercado Pago y variables públicas Expo.
+- El README raíz incorporó requisitos, copia de templates, inicialización
+  manual, Docker Compose, migraciones, seed, bootstrap, validación, limpieza de
+  contenedores y advertencias sobre datos persistentes.
+- Se actualizaron las cantidades de pruebas de la última barrera validada.
+- Se agregó la sección de créditos del equipo.
+
 ### Skills formales de agente verificables
 
 - `github:github`: utilizada para consultar los metadatos, la discusión y las
