@@ -10,6 +10,7 @@ import {
   DeskServiceError,
   listAmenities,
   listDeskDescriptions,
+  listLocalities,
   listDesks,
   listWorkAreas,
   updateAmenity,
@@ -20,6 +21,7 @@ import {
   DeskAmenity,
   DeskDescription,
   WorkArea,
+  Locality,
 } from '../types/desk.types';
 
 function getFriendlyErrorMessage(error: unknown) {
@@ -33,6 +35,7 @@ function getFriendlyErrorMessage(error: unknown) {
 export function useDeskSettings(accessToken?: string) {
   const [desks, setDesks] = useState<Desk[]>([]);
   const [descriptions, setDescriptions] = useState<DeskDescription[]>([]);
+  const [localities, setLocalities] = useState<Locality[]>([]);
   const [amenities, setAmenities] = useState<DeskAmenity[]>([]);
   const [workAreas, setWorkAreas] = useState<WorkArea[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,23 +61,20 @@ export function useDeskSettings(accessToken?: string) {
     setErrorMessage(null);
 
     try {
-      const [
-        desksResponse,
-        descriptionsResponse,
-        amenitiesResponse,
-        workAreasResponse,
-      ] =
+      const [desksResponse, descriptionsResponse, amenitiesResponse, workAreasResponse, localitiesResponse] =
         await Promise.all([
           listDesks(1, 9),
           listDeskDescriptions(),
           listAmenities(),
           listWorkAreas(),
+          listLocalities(),
         ]);
 
       setDesks(desksResponse.desks);
       setDescriptions(descriptionsResponse);
       setAmenities(amenitiesResponse);
       setWorkAreas(workAreasResponse);
+      setLocalities(localitiesResponse);
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));
     } finally {
@@ -174,6 +174,7 @@ export function useDeskSettings(accessToken?: string) {
     },
     descriptions,
     desks,
+    localities,
     errorMessage,
     isLoading,
     isSaving,

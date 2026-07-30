@@ -11,7 +11,7 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { useDeskSettings } from '../hooks/useDeskSettings';
-import { Desk, DeskAmenity, DeskZone } from '../types/desk.types';
+import { Desk, DeskAmenity, DeskZone, Locality } from '../types/desk.types';
 import { DeskPayload } from '../services/desks.service';
 import { UserRole } from '../../auth/types/auth.types';
 
@@ -220,7 +220,9 @@ export function DeskSettingsScreen({
     saveDesk,
     successMessage,
     workAreas,
+    localities,
   } = useDeskSettings(accessToken);
+  const [deskLocalityId, setDeskLocalityId] = useState('');
   const [editingDesk, setEditingDesk] = useState<Desk | null>(null);
   const [editingAmenity, setEditingAmenity] = useState<DeskAmenity | null>(
     null,
@@ -254,6 +256,7 @@ export function DeskSettingsScreen({
   const handleEdit = (desk: Desk) => {
     setEditingDesk(desk);
     setForm(toFormState(desk));
+    setDeskLocalityId(desk.area?.localityId ?? '');
     setDeskTouched(emptyDeskTouched);
     setSubmitAttempted(false);
   };
@@ -262,6 +265,7 @@ export function DeskSettingsScreen({
     setEditingDesk(null);
     setForm(emptyForm);
     setDeskTouched(emptyDeskTouched);
+    setDeskLocalityId('');
     setSubmitAttempted(false);
   };
 
@@ -436,6 +440,37 @@ export function DeskSettingsScreen({
 
             <View style={styles.fieldGroup}>
               <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+                Localidad
+              </AppText>
+              <View style={styles.chips}>
+                {localities.map((locality) => {
+                  const selected = deskLocalityId === locality.id;
+                  return (
+                    <Pressable
+                      key={locality.id}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      onPress={() => {
+                        setDeskLocalityId(selected ? '' : locality.id);
+                        if (selected) setForm((current) => ({ ...current, areaId: undefined }));
+                      }}
+                      style={({ pressed }) => [
+                        styles.amenityOption,
+                        selected && styles.amenityOptionSelected,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <AppText variant="caption" color={selected ? colors.white : colors.primary}>
+                        {locality.name}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
                 Tipo de escritorio
               </AppText>
               <View style={styles.chips}>
@@ -463,7 +498,9 @@ export function DeskSettingsScreen({
                 Area de trabajo
               </AppText>
               <View style={styles.chips}>
-                {workAreas.map((area) => (
+                {workAreas
+                  .filter((area) => (deskLocalityId ? area.localityId === deskLocalityId : true))
+                  .map((area) => (
                   <Chip
                     key={area.id}
                     label={`${area.name}${area.locality ? ` - ${area.locality.name}` : ''}`}
@@ -475,7 +512,7 @@ export function DeskSettingsScreen({
                       }))
                     }
                   />
-                ))}
+                  ))}
               </View>
             </View>
 

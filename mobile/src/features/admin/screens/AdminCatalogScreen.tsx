@@ -14,24 +14,14 @@ import { radii, spacing } from '../../../theme/spacing';
 import {
   Desk,
   DeskAmenity,
-  DeskDescription,
+  DeskZone,
   Locality,
   WorkArea,
 } from '../../desks/types/desk.types';
 import { useAdminCatalog } from '../hooks/useAdminCatalog';
 
-type Category =
-  | 'desks'
-  | 'descriptions'
-  | 'amenities'
-  | 'localities'
-  | 'workAreas';
-type CatalogItem =
-  | Desk
-  | DeskDescription
-  | DeskAmenity
-  | Locality
-  | WorkArea;
+type Category = 'desks' | 'amenities' | 'localities' | 'workAreas';
+type CatalogItem = Desk | DeskAmenity | Locality | WorkArea;
 
 type Props = {
   accessToken: string;
@@ -52,11 +42,6 @@ const categories: {
     key: 'desks',
     title: 'Escritorios',
     description: 'Administre los puestos disponibles en el sistema.',
-  },
-  {
-    key: 'descriptions',
-    title: 'Tipos de escritorio',
-    description: 'Defina capacidades y características generales.',
   },
   {
     key: 'amenities',
@@ -92,6 +77,9 @@ export function AdminCatalogScreen(props: Props) {
   const [capacity, setCapacity] = useState('1');
   const [amenityIds, setAmenityIds] = useState<string[]>([]);
   const [localityId, setLocalityId] = useState('');
+  const [deskLocalityId, setDeskLocalityId] = useState('');
+  const [areaId, setAreaId] = useState('');
+  const [zone, setZone] = useState<DeskZone | ''>('');
   const [address, setAddress] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
@@ -99,14 +87,12 @@ export function AdminCatalogScreen(props: Props) {
 
   const items = useMemo(() => {
     if (category === 'desks') return catalog.desks;
-    if (category === 'descriptions') return catalog.descriptions;
     if (category === 'amenities') return catalog.amenities;
     if (category === 'localities') return catalog.localities;
     if (category === 'workAreas') return catalog.workAreas;
     return [];
   }, [
     catalog.amenities,
-    catalog.descriptions,
     catalog.desks,
     catalog.localities,
     catalog.workAreas,
@@ -124,6 +110,9 @@ export function AdminCatalogScreen(props: Props) {
     setCapacity('1');
     setAmenityIds([]);
     setLocalityId('');
+    setDeskLocalityId('');
+    setAreaId('');
+    setZone('');
     setAddress('');
     setLatitude('');
     setLongitude('');
@@ -143,6 +132,13 @@ export function AdminCatalogScreen(props: Props) {
       'peopleCapacity' in item ? String(item.peopleCapacity) : '1',
     );
     setAmenityIds('code' in item ? item.amenities.map(({ id }) => id) : []);
+    if ('code' in item) {
+      // editing a Desk
+      const desk = item as Desk;
+      setDeskLocalityId(desk.area?.localityId ?? '');
+      setAreaId(desk.areaId ?? desk.area?.id ?? '');
+      setZone(desk.zone ?? '');
+    }
     if ('localityId' in item) {
       setDescription(item.description ?? '');
       setLocalityId(item.localityId);
@@ -225,32 +221,6 @@ export function AdminCatalogScreen(props: Props) {
         return;
       }
       saved = await catalog.saveWorkArea(payload, editing?.id);
-    } else if (category === 'descriptions') {
-      const peopleCapacity = Number(capacity);
-      if (!Number.isInteger(peopleCapacity) || peopleCapacity < 1) return;
-      const current = editing as DeskDescription | null;
-      const payload = current
-        ? {
-            ...(current.name !== normalizedName
-              ? { name: normalizedName }
-              : {}),
-            ...((current.description ?? '') !== description.trim()
-              ? { description: description.trim() }
-              : {}),
-            ...(current.peopleCapacity !== peopleCapacity
-              ? { peopleCapacity }
-              : {}),
-          }
-        : {
-            name: normalizedName,
-            description: description.trim(),
-            peopleCapacity,
-          };
-      if (current && Object.keys(payload).length === 0) {
-        resetForm();
-        return;
-      }
-      saved = await catalog.saveDescription(payload, editing?.id);
     } else {
       const peopleCapacity = Number(capacity);
       if (!Number.isInteger(peopleCapacity) || peopleCapacity < 1) return;
@@ -267,8 +237,10 @@ export function AdminCatalogScreen(props: Props) {
             amenityIds.join('|')
               ? { amenityIds }
               : {}),
+            ...(current.areaId !== areaId ? { areaId } : {}),
+            ...(current.zone !== zone ? { zone } : {}),
           }
-        : { name: normalizedName, peopleCapacity, amenityIds };
+        : { name: normalizedName, peopleCapacity, amenityIds, areaId, zone };
       if (current && Object.keys(payload).length === 0) {
         resetForm();
         return;
@@ -284,7 +256,6 @@ export function AdminCatalogScreen(props: Props) {
     const id = deleting.id;
     setDeleting(null);
     if (category === 'desks') await catalog.removeDesk(id);
-    if (category === 'descriptions') await catalog.removeDescription(id);
     if (category === 'amenities') await catalog.removeAmenity(id);
     if (category === 'localities') await catalog.removeLocality(id);
     if (category === 'workAreas') await catalog.removeWorkArea(id);
@@ -293,9 +264,7 @@ export function AdminCatalogScreen(props: Props) {
   const deleteTitle =
     category === 'desks'
       ? 'Eliminar escritorio'
-      : category === 'descriptions'
-        ? 'Eliminar tipo de escritorio'
-        : category === 'amenities'
+      : category === 'amenities'
           ? 'Eliminar amenity'
           : category === 'localities'
             ? 'Eliminar localidad'
@@ -372,7 +341,7 @@ export function AdminCatalogScreen(props: Props) {
                   placeholder="Ingrese un nombre"
                   maxLength={120}
                 />
-                {category === 'descriptions' || category === 'workAreas' ? (
+                {category === 'workAreas' ? (
                   <Input
                     label="Descripción"
                     value={description}
@@ -381,7 +350,7 @@ export function AdminCatalogScreen(props: Props) {
                     maxLength={255}
                   />
                 ) : null}
-                {category === 'desks' || category === 'descriptions' ? (
+                {category === 'desks' ? (
                   <Input
                     label="Capacidad"
                     value={capacity}
@@ -391,6 +360,88 @@ export function AdminCatalogScreen(props: Props) {
                     keyboardType="number-pad"
                     placeholder="1"
                   />
+                ) : null}
+                {category === 'desks' ? (
+                  <>
+                    <View style={styles.fieldGroup}>
+                      <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+                        Zona
+                      </AppText>
+                      <View style={styles.chips}>
+                        {(['A','B','C'] as DeskZone[]).map((z) => (
+                          <Pressable
+                            key={z}
+                            accessibilityRole="button"
+                            onPress={() => setZone(zone === z ? '' : z)}
+                            style={({ pressed }) => [
+                              styles.chip,
+                              zone === z && styles.chipSelected,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <AppText variant="caption" color={zone === z ? colors.white : colors.primary}>
+                              Zona {z}
+                            </AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.fieldGroup}>
+                      <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+                        Localidad
+                      </AppText>
+                      <View style={styles.amenityOptions}>
+                        {catalog.localities.map((locality) => (
+                          <Pressable
+                            key={locality.id}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: deskLocalityId === locality.id }}
+                            onPress={() => {
+                              setDeskLocalityId(deskLocalityId === locality.id ? '' : locality.id);
+                              if (deskLocalityId === locality.id) setAreaId('');
+                            }}
+                            style={({ pressed }) => [
+                              styles.amenityOption,
+                              deskLocalityId === locality.id && styles.amenityOptionSelected,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <AppText variant="caption" color={deskLocalityId === locality.id ? colors.white : colors.primary}>
+                              {locality.name}
+                            </AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.fieldGroup}>
+                      <AppText variant="caption" color={colors.blackOverlay} style={styles.label}>
+                        Área de trabajo
+                      </AppText>
+                      <View style={styles.amenityOptions}>
+                        {catalog.workAreas
+                          .filter((area) => (deskLocalityId ? area.localityId === deskLocalityId : true))
+                          .map((area) => (
+                          <Pressable
+                            key={area.id}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: areaId === area.id }}
+                            onPress={() => setAreaId(areaId === area.id ? '' : area.id)}
+                            style={({ pressed }) => [
+                              styles.amenityOption,
+                              areaId === area.id && styles.amenityOptionSelected,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <AppText variant="caption" color={areaId === area.id ? colors.white : colors.primary}>
+                              {area.name}{area.locality ? ` - ${area.locality.name}` : ''}
+                            </AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  </>
                 ) : null}
                 {category === 'workAreas' ? (
                   <>
@@ -511,7 +562,8 @@ export function AdminCatalogScreen(props: Props) {
                         category !== 'workAreas' &&
                         (!Number.isInteger(Number(capacity)) ||
                           Number(capacity) < 1)) ||
-                      (category === 'workAreas' && !localityId)
+                      (category === 'workAreas' && !localityId) ||
+                      (category === 'desks' && !areaId)
                     }
                     onPress={() => void handleSave()}
                   />
@@ -657,6 +709,26 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   amenityField: { gap: spacing.sm },
+  fieldGroup: { gap: spacing.sm },
+  label: { fontWeight: '700' },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    minHeight: 34,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+  },
+  chipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: { fontWeight: '800' },
   amenityOptions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
