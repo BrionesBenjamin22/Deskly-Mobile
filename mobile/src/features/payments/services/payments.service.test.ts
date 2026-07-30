@@ -1,6 +1,7 @@
 import {
   createPaymentCheckout,
   getPaymentQuote,
+  listPaymentSummaries,
   PaymentServiceError,
 } from './payments.service';
 
@@ -60,6 +61,30 @@ describe('payments service seguro', () => {
     });
     expect(init.headers).toEqual(
       expect.objectContaining({ 'Idempotency-Key': 'checkout-operation-1' }),
+    );
+  });
+
+  it('lista un resumen paginado con una sola solicitud autenticada', async () => {
+    const summary = {
+      items: [],
+      pagination: { page: 2, limit: 9, total: 12, totalPages: 2 },
+    };
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => summary,
+    } as Response);
+
+    await expect(listPaymentSummaries('access-token', 2, 9)).resolves.toEqual(
+      summary,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/payments/summary?page=2&limit=9'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-token',
+        }),
+      }),
     );
   });
 

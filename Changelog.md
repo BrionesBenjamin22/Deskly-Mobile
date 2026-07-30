@@ -523,6 +523,25 @@ El commit de corrección fue:
 
 ## Skills utilizadas
 
+### Skills aplicadas en la auditoría de performance
+
+- `commit-work`: revisión de alcance, staged diff y commits aislados de cada
+  bloque validado.
+
+### Bloque P2 de performance
+
+- Se agregó un resumen autenticado y paginado de pagos con límite de 9.
+- Mobile reemplazó el fan-out de reservas, intentos y cotizaciones por una
+  solicitud por página.
+- Para 50 reservas, el conteo reproducible pasó de 103 solicitudes a 1:
+  diferencia de -102 y variación de -99,03 %.
+- Se preservaron JWT, propiedad por miembro, rate limiting, sincronización,
+  pricing autoritativo y contratos anteriores.
+- Validación: 51 suites y 299 pruebas backend; 19 suites y 71 pruebas mobile;
+  build backend y type-check mobile aprobados.
+- No se afirma mejora de latencia o bytes sin una comparación HTTP integrada en
+  condiciones equivalentes.
+
 ### Skills formales de agente verificables
 
 - `github:github`: utilizada para consultar los metadatos, la discusión y las

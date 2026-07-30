@@ -4,7 +4,7 @@
 | -------------- | ----- |
 | ID             | `PERFORMANCE-01` |
 | Modulo         | Backend, PostgreSQL, mobile e infraestructura |
-| Estado         | `COMPLETADA` |
+| Estado         | `EN_PROGRESO` |
 | Dependencia    | Auditorias `SECURITY-01` a `SECURITY-08` completadas; aprobacion explicita por bloque |
 | Implementacion | Primer candidato: `backend/src/modules/desks`; candidatos posteriores en Payments mobile/backend y Docker |
 | Validacion     | Benchmark antes/despues bajo el mismo dataset, tests focalizados, suite relevante, build, TypeScript, E2E, controles de seguridad y `git diff --check` |
@@ -141,14 +141,31 @@ Reversion:
 
 ### Bloque P2: reducir amplificacion de requests de Pagos
 
-Estado: `NO APROBADO`.
+Estado: `COMPLETADO Y VALIDADO`.
 
-Requiere definir y autorizar un contrato batch o agregado. No se implementara
-como parte de P1.
+Se agrego `GET /payments/summary?page=1&limit=9`, autenticado y limitado por
+usuario. El backend conserva sincronizacion, pricing ARS autoritativo y filtro
+posterior por intentos aprobados antes de paginar. Mobile reemplazo el fan-out
+por una unica consulta.
+
+Evidencia:
+
+- 50 reservas: 103 requests anteriores frente a 1 posterior;
+- diferencia absoluta: -102 requests;
+- variacion: -99,03 %;
+- focal backend: 4 suites y 16 pruebas;
+- Payments backend: 22 suites y 156 pruebas;
+- backend completo: 51 suites y 299 pruebas;
+- mobile completo: 19 suites y 71 pruebas;
+- build backend y type-check mobile aprobados.
+
+No se afirma mejora de latencia HTTP ni bytes. El endpoint conserva el trabajo
+de sincronizacion total para no omitir aprobaciones tardias; P2 optimiza la
+amplificacion de red y el rate limiting percibido por mobile.
 
 ### Bloque P3: evaluar imagen backend
 
-Estado: `NO APROBADO`.
+Estado: `APROBADO; LINEA BASE ACTUAL PENDIENTE`.
 
 La imagen medida ocupa 817 MB y la capa de `node_modules` 466 MB. Debe
 compararse un empaquetado productivo alternativo sin cambiar runtime ni cadena
@@ -183,6 +200,8 @@ y validado con 0 errores en 1.560 requests, payload identico y reduccion de p95
 entre 86,88 % y 94,93 %. La evidencia posterior esta en
 `docs/performance/optimization-results.md`.
 
-## Mensaje de commit propuesto
+## Mensajes de commit
 
 `perf(escritorios): optimizar disponibilidad agregada de areas`
+
+`perf(pagos): reducir amplificacion de consultas mobile`

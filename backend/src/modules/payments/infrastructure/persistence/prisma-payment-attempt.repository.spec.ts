@@ -239,4 +239,45 @@ describe('PrismaPaymentAttemptRepository', () => {
       take: 25,
     });
   });
+
+  it('pagina resumenes exclusivamente por miembro y estados pagables', async () => {
+    const reservation = {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'reservation-1',
+          date: new Date('2026-08-01T00:00:00.000Z'),
+          startTime: new Date('1970-01-01T09:00:00.000Z'),
+          endTime: new Date('1970-01-01T13:00:00.000Z'),
+          desk: { code: 'D-1', name: 'Escritorio 1' },
+          payments: [persistedPayment()],
+        },
+      ]),
+      count: jest.fn().mockResolvedValue(1),
+    };
+    const scopedPrisma = { reservation };
+    const scopedRepository = new PrismaPaymentAttemptRepository(
+      scopedPrisma as never,
+    );
+
+    await expect(
+      scopedRepository.listPaymentSummaryCandidates('member-1'),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: 'reservation-1',
+        deskName: 'Escritorio 1',
+        date: '2026-08-01',
+        startTime: '09:00',
+        endTime: '13:00',
+        attempts: [expect.any(PaymentAttempt)],
+      }),
+    ]);
+    expect(reservation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          memberId: 'member-1',
+          status: { in: ['PENDING_PAYMENT', 'RESERVED', 'ACTIVE'] },
+        },
+      }),
+    );
+  });
 });

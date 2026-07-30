@@ -2,15 +2,16 @@
 
 ## Estado
 
-Diagnostico completado. P1 fue autorizado, implementado y validado. Cada bloque
-posterior requiere aprobacion explicita e independiente.
+Diagnostico completado. P1 y P2 fueron autorizados, implementados y validados.
+P3 queda en ejecucion. P4-P6 permanecen como observabilidad o hipotesis sin
+evidencia suficiente para modificar codigo.
 
 ## Matriz de oportunidades
 
 | Oportunidad | Evidencia | Area | Metrica actual | Mejora esperada | Confianza | Costo | Riesgo | Archivos | Validacion |
 | ----------- | --------- | ---- | -------------- | ---------------- | --------- | ----- | ------ | -------- | ---------- |
 | P1 Consulta agregada de disponibilidad de areas | Se materializan 1.000 desks y 4.000 reservas; areas ocupadas y disponibles tienen latencia similar pese a payloads de 12 B y 35.113 B | Backend/DB | p95 c1 53,60-84,67 ms; c10 471,02-778,87 ms | A determinar; debe superar el ruido medido | Media-alta | Medio | Bajo-medio | repositorio/puerto/caso de uso Desks y tests | Igualdad semantica, benchmark 3x, tests y recursos |
-| P2 Evaluar endpoint paginado/agregado para Pagos | Formula estatica `3 + paginas + 2R`; 103 con R=50 | Mobile/backend | Requests confirmados; impacto temporal no medido | Pendiente de medicion | Media | Alto | Medio; contrato nuevo | Payments mobile/backend | requests, bytes, p50/p95/p99 pantalla-ready, auth y rate limiting |
+| P2 Endpoint paginado/agregado para Pagos | Formula y harness: `3 + paginas + 2R`; 103 con R=50 | Mobile/backend | 103 requests y pico 50 con R=50 | 1 request; -102 y -99,03 % | Alta para requests | Alto | Medio; contrato aditivo | Payments mobile/backend | conteo, equivalencia, auth, rate limiting, tests y build |
 | P3 Empaquetado productivo backend | Imagen 817 MB; `node_modules` 466 MB | Docker | 817 MB | Menor transferencia y almacenamiento; magnitud a medir | Alta sobre tamaño | Medio | Medio; Prisma/OpenSSL | Dockerfile y lock/config | build limpio, imagen, inicio, health, E2E |
 | P4 Instrumentar consultas/pool | No hay query count/duracion ni pool saturation | Observabilidad | Sin metrica | Habilitar diagnosticos futuros, no mejora directa | Alta | Medio | Bajo-medio; costo de telemetria | Prisma/infra | overhead, redaccion, seguridad |
 | P5 Cancelar requests mobile obsoletos | Hooks ignoran respuesta pero no cancelan fetch | Mobile | No medido | Menor red ante filtros rapidos | Baja hasta medir | Medio | Medio | hooks y services | 20 cambios de filtro, requests/bytes, estados |
@@ -35,8 +36,7 @@ debe demostrarse su equivalencia funcional y su efecto HTTP.
 
 ### P2: contrato agregado de Pagos
 
-Requiere autorizacion especifica para ampliar el contrato publico. Debe
-preservar:
+Estado: `COMPLETADO`. El contrato aditivo fue autorizado. Preserva:
 
 - propiedad de reservas;
 - sincronizacion autoritativa;
@@ -45,8 +45,9 @@ preservar:
 - errores seguros;
 - paginacion de 9.
 
-No se implementara hasta medir la pantalla contra backend local y definir el
-payload.
+La mejora demostrada corresponde a cantidad y concurrencia de solicitudes. No
+se afirma una reduccion de latencia HTTP o bytes sin benchmark integrado
+comparable.
 
 ### P3: empaquetado Docker backend
 

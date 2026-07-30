@@ -108,3 +108,56 @@ Node y se documento la semantica SQL en el modulo.
 - Los tests unitarios cubren filtros, estados y limites; no existe un E2E
   dedicado para cada combinacion de filtros.
 - Los resultados corresponden al hardware y dataset documentados.
+
+## P2: resumen paginado de pagos
+
+### Problema original
+
+La pantalla de Pagos descargaba todas las paginas de reservas en tres estados,
+consultaba intentos y cotizacion por cada reserva, filtraba aprobados y recien
+entonces paginaba de a 9. El minimo era `3 + 2R` requests, mas paginas
+adicionales.
+
+### Linea base y resultado
+
+El harness determinista de orquestacion se ejecuto 30 veces con Node 22.17.0
+sobre el mismo equipo. Confirma conteo y pico concurrente, no latencia HTTP
+productiva.
+
+| Reservas | Requests antes | Pico antes | Requests despues | Diferencia | Variacion |
+| --------: | -------------: | ---------: | ----------------: | ---------: | --------: |
+| 9 | 21 | 9 | 1 | -20 | -95,24 % |
+| 50 | 103 | 50 | 1 | -102 | -99,03 % |
+| 150 | 303 | 150 | 1 | -302 | -99,67 % |
+
+### Cambio
+
+- nuevo `GET /payments/summary?page&limit`, con limite maximo 9;
+- `memberId` derivado exclusivamente del JWT;
+- sincronizacion de candidatos antes de filtrar intentos aprobados;
+- pricing y moneda calculados por backend;
+- paginacion posterior al filtro, equivalente al flujo anterior;
+- una llamada mobile por carga, pagina o recarga;
+- endpoints anteriores preservados.
+
+Se mantuvo deliberadamente la sincronizacion de todos los candidatos para no
+perder aprobaciones tardias. P2 reduce amplificacion HTTP; no afirma reducir
+todavia el fan-out interno al gateway.
+
+### Validacion
+
+- focal P2 backend: 4 suites, 16 pruebas;
+- Payments backend: 22 suites, 156 pruebas;
+- backend completo: 51 suites, 299 pruebas;
+- mobile focal: 3 suites, 9 pruebas;
+- mobile completo: 19 suites, 71 pruebas;
+- build backend y type-check mobile aprobados;
+- `git diff --check` aprobado.
+
+### Seguridad y limitaciones
+
+JWT, propiedad por miembro, rate limiting, validacion de pagina/limite,
+sincronizacion autoritativa, errores seguros y separacion de estados de pago y
+reserva permanecen activos. No se usaron datos reales ni Mercado Pago real.
+No se afirma mejora de latencia, bytes, CPU o memoria porque no hubo benchmark
+HTTP integrado anterior/posterior bajo condiciones equivalentes.

@@ -65,6 +65,7 @@ Los endpoints de checkout, consulta, cotizacion y operacion requieren JWT.
 ```http
 POST /payments/checkout
 GET /payments/:id
+GET /payments/summary?page=1&limit=9
 GET /reservations/:id/payments
 GET /reservations/:id/payment-quote
 POST /payments/operations/reconcile
@@ -83,6 +84,15 @@ GET /payments/return/:result
 ```
 
 `option` admite `DEPOSIT` para una seña del 30% o `FULL` para el total. No se aceptan monto, moneda, estado, precio, fecha de pago ni identificador de miembro.
+
+`GET /payments/summary` sincroniza los intentos de las reservas operativas del
+miembro autenticado, conserva solamente los resumenes que poseen al menos un
+pago aprobado y pagina el resultado visible con un maximo de 9 items. El
+`memberId` se obtiene exclusivamente del JWT. Cada item incluye los intentos
+sincronizados y los importes `totalMinorUnits`, `approvedMinorUnits` y
+`pendingMinorUnits` calculados por la politica autoritativa del backend. El
+filtrado se realiza despues de sincronizar para no ocultar una aprobacion cuyo
+webhook se haya retrasado.
 
 ## Reglas de negocio
 
@@ -112,6 +122,7 @@ limites independientes:
 
 - `POST /payments/checkout`: 5 solicitudes por minuto y usuario autenticado.
 - `GET /payments/:id`: 30 solicitudes por minuto y usuario autenticado.
+- `GET /payments/summary`: 30 solicitudes por minuto y usuario autenticado.
 - `GET /reservations/:id/payments`: 30 solicitudes por minuto y usuario
   autenticado.
 - `POST /webhooks/payments`: 120 notificaciones por minuto e IP.

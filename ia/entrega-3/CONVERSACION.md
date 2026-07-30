@@ -1143,3 +1143,45 @@ Incidencia:
 El dato exploratorio de 35.113 bytes no correspondía exactamente al fixture
 versionado. Se corrigió mediante una comparación estricta: 38.605 bytes tanto
 antes como después, sin regresión contractual.
+
+### Implementación y validación del bloque P2
+
+El usuario aprobó anticipadamente los bloques restantes y autorizó commits
+locales sin push. Se midió la orquestación de Pagos antes de editar:
+
+- 9 reservas: 21 requests y pico 9;
+- 50 reservas: 103 requests y pico 50;
+- 150 reservas: 303 requests y pico 150.
+
+El primer borrador backend paginaba antes de sincronizar y podía incluir
+reservas sin pagos aprobados. La revisión detectó la regresión antes del cierre.
+Se corrigió a la secuencia equivalente: candidatos propios, sincronización,
+filtro por algún intento `APPROVED` y paginación máxima de 9.
+
+Se agregó `GET /payments/summary`. El `memberId` proviene del JWT; se conservaron
+rate limiting, pricing ARS autoritativo, errores seguros, endpoints existentes
+y sincronización. Mobile reemplazó el fan-out por una solicitud por página y
+formatea la fecha ISO al `dateLabel` existente.
+
+Bugs e incidencias:
+
+1. `node_modules` backend estaba incompleto y faltaban `jest`, `nest`, `tsc`,
+   `picomatch` y `chokidar`. Se restauró exactamente el lockfile con
+   `pnpm install --frozen-lockfile --force`, sin cambiar dependencias.
+2. El test del DTO no cargaba `reflect-metadata`; se corrigió la inicialización.
+3. TypeScript exigió un `import type` para el puerto inyectado; se corrigió sin
+   alterar comportamiento.
+
+Validación:
+
+- focal P2 backend: 4 suites y 16 pruebas;
+- Payments backend: 22 suites y 156 pruebas;
+- backend completo: 51 suites y 299 pruebas;
+- mobile focal: 3 suites y 9 pruebas;
+- mobile completo: 19 suites y 71 pruebas;
+- build backend y type-check mobile aprobados;
+- `git diff --check` aprobado.
+
+Resultado medido para 50 reservas: 103 requests antes y 1 después, diferencia
+de -102 y -99,03 %. No se afirmó una mejora de latencia HTTP, bytes, CPU o
+memoria porque no existió una comparación integrada equivalente.
