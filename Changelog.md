@@ -571,6 +571,8 @@ El commit de corrección fue:
 - Se agregó la sección de créditos del equipo.
 - Se corrigió el formato Prettier de tres archivos detectados por el job de
   calidad backend, sin cambios funcionales.
+- Se eliminó un type import sin uso detectado por ESLint en el repositorio de
+  escritorios, sin modificar la consulta ni su comportamiento.
 
 ### Skills formales de agente verificables
 

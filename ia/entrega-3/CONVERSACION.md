@@ -1260,3 +1260,9 @@ Resultado:
 - 3 suites y 10 pruebas focalizadas aprobadas;
 - `git diff --check` aprobado;
 - los cambios son exclusivamente mecánicos y no alteran comportamiento.
+
+El siguiente intento del job de calidad informó un único error ESLint:
+`WorkAreaProperties` estaba importado pero no se utilizaba en
+`prisma-desk.repository.ts`. Se eliminó exclusivamente ese type import. ESLint
+con cero warnings, Prettier, 4 pruebas focalizadas y `git diff --check`
+aprobaron antes de publicar la rama.

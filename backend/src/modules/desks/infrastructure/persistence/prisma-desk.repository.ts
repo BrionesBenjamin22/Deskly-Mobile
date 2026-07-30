@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DeskZone, Prisma, ReservationStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
-import { Desk, WorkAreaProperties } from '../../domain/entities/desk.entity';
+import { Desk } from '../../domain/entities/desk.entity';
 import {
   CreateDeskParams,
   DeskAvailabilityResult,
