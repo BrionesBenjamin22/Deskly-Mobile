@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { DeskZone, ReservationStatus } from '@prisma/client';
+import { DeskZone, Prisma, ReservationStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
-import { Desk, WorkAreaProperties } from '../../domain/entities/desk.entity';
+import { Desk } from '../../domain/entities/desk.entity';
 import {
   CreateDeskParams,
   DeskAvailabilityResult,
@@ -203,42 +203,86 @@ export class PrismaDeskRepository implements DeskRepositoryPort {
   }
 
   async findAvailableWorkAreasByTimeSlot(params: FindAvailableDesksParams) {
-    const deskAvailability = await this.findAvailableByTimeSlot(params);
-    const grouped = new Map<
-      string,
-      {
-        area: WorkAreaProperties;
-        availableDeskCount: number;
-        totalDeskCount: number;
-      }
-    >();
+    type AvailabilityRow = {
+      id: string;
+      name: string;
+      description: string | null;
+      localityId: string;
+      address: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      active: boolean;
+      localityName: string;
+      localityActive: boolean;
+      availableDeskCount: bigint;
+      totalDeskCount: bigint;
+    };
 
-    for (const { desk, reservedSlots } of deskAvailability) {
-      if (!desk.area) continue;
-      const current = grouped.get(desk.area.id) ?? {
-        area: desk.area,
-        availableDeskCount: 0,
-        totalDeskCount: 0,
-      };
-      const hasOverlap = reservedSlots.some((reservedSlot) =>
-        this.overlaps(
-          params.startTime,
-          params.endTime,
-          reservedSlot.startTime,
-          reservedSlot.endTime,
-        ),
-      );
+    const availableDeskCount = Prisma.sql`
+      COUNT(d.id) FILTER (
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM "reservations" r
+          WHERE r."desk_id" = d.id
+            AND r."date" = ${params.date}::date
+            AND r."status" IN (
+              'PENDING_PAYMENT'::"ReservationStatus",
+              'RESERVED'::"ReservationStatus",
+              'ACTIVE'::"ReservationStatus"
+            )
+            AND r."start_time" < ${params.endTime}::time
+            AND r."end_time" > ${params.startTime}::time
+        )
+      )
+    `;
+    const rows = await this.prisma.$queryRaw<AvailabilityRow[]>(Prisma.sql`
+      SELECT
+        wa.id,
+        wa.name,
+        wa.description,
+        wa."locality_id" AS "localityId",
+        wa.address,
+        wa.latitude,
+        wa.longitude,
+        wa.active,
+        l.name AS "localityName",
+        l.active AS "localityActive",
+        ${availableDeskCount} AS "availableDeskCount",
+        COUNT(d.id) AS "totalDeskCount"
+      FROM "desks" d
+      INNER JOIN "work_areas" wa ON wa.id = d."area_id"
+      INNER JOIN "localities" l ON l.id = wa."locality_id"
+      WHERE d.enabled = TRUE
+        AND d."deleted_at" IS NULL
+        AND wa.active = TRUE
+        AND l.active = TRUE
+        ${params.zone ? Prisma.sql`AND d.zone = ${params.zone}::"DeskZone"` : Prisma.empty}
+        ${params.areaId ? Prisma.sql`AND d."area_id" = ${params.areaId}::uuid` : Prisma.empty}
+        ${params.localityId ? Prisma.sql`AND wa."locality_id" = ${params.localityId}::uuid` : Prisma.empty}
+      GROUP BY wa.id, l.id
+      HAVING ${availableDeskCount} > 0
+      ORDER BY MIN(d.code) ASC
+    `);
 
-      current.totalDeskCount += 1;
-      if (!hasOverlap) {
-        current.availableDeskCount += 1;
-      }
-      grouped.set(desk.area.id, current);
-    }
-
-    return Array.from(grouped.values()).filter(
-      (item) => item.availableDeskCount > 0,
-    );
+    return rows.map((row) => ({
+      area: {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        localityId: row.localityId,
+        address: row.address,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        active: row.active,
+        locality: {
+          id: row.localityId,
+          name: row.localityName,
+          active: row.localityActive,
+        },
+      },
+      availableDeskCount: Number(row.availableDeskCount),
+      totalDeskCount: Number(row.totalDeskCount),
+    }));
   }
 
   async findById(id: string): Promise<Desk | null> {

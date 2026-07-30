@@ -25,9 +25,9 @@ export class PaymentAccessDeniedError extends Error {
   }
 }
 
-export type PaymentAttemptOutput = ReturnType<typeof toOutput>;
+export type PaymentAttemptOutput = ReturnType<typeof toPaymentAttemptOutput>;
 
-function toOutput(payment: PaymentAttempt) {
+export function toPaymentAttemptOutput(payment: PaymentAttempt) {
   return {
     paymentId: payment.id!,
     reservationId: payment.reservationId,
@@ -169,7 +169,9 @@ export class GetPaymentAttemptUseCase {
     const payment = await this.payments.findById(id);
     if (!payment) throw new PaymentNotFoundError();
     assertAccess(payment.memberId, actor);
-    return toOutput(await this.synchronizePayment.execute(payment));
+    return toPaymentAttemptOutput(
+      await this.synchronizePayment.execute(payment),
+    );
   }
 }
 
@@ -193,7 +195,7 @@ export class ListReservationPaymentsUseCase {
     const payments = await this.payments.listByReservationId(reservationId);
     return Promise.all(
       payments.map(async (payment) =>
-        toOutput(await this.synchronizePayment.execute(payment)),
+        toPaymentAttemptOutput(await this.synchronizePayment.execute(payment)),
       ),
     );
   }

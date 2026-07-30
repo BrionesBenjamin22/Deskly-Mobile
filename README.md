@@ -103,12 +103,35 @@ Deskly-Mobile/
 `tasks/README.md` es el registro canónico de tareas, dependencias y estado de las
 etapas.
 
+## Requisitos previos
+
+Para ejecución manual:
+
+- Node.js 22;
+- pnpm 10.33.2 mediante Corepack;
+- PostgreSQL 17;
+- Git.
+
+Para el entorno integrado:
+
+- Docker Desktop o Docker Engine con Docker Compose v2;
+- puertos 3000 y 8081 disponibles;
+- puertos 19000, 19001 y 19002 disponibles para Expo cuando correspondan.
+
+Preparación del package manager:
+
+```bash
+corepack enable
+corepack prepare pnpm@10.33.2 --activate
+```
+
 ## Configuración por entorno
 
 Los valores reales permanecen fuera de Git. El repositorio incluye plantillas
 separadas:
 
 ```text
+.env.example
 backend/.env.development.example
 backend/.env.testing.example
 backend/.env.production.example
@@ -117,43 +140,134 @@ mobile/.env.testing.example
 mobile/.env.production.example
 ```
 
+La plantilla raíz corresponde exclusivamente a Docker Compose. Las plantillas
+de backend se cargan según `NODE_ENV`: `development`, `testing` o `production`.
+El backend busca primero `.env.<entorno>.local`, luego `.env.<entorno>`,
+`.env.local` y finalmente `.env`.
+
+Variables backend:
+
+| Variable | Requerida | Propósito |
+| -------- | --------- | --------- |
+| `NODE_ENV` | No | Entorno; por defecto `development`. |
+| `PORT` | No | Puerto HTTP; por defecto `3000`. |
+| `FRONTEND_URL` | No | Orígenes CORS separados por coma. |
+| `DATABASE_URL` | Sí | Conexión PostgreSQL utilizada por Prisma. |
+| `JWT_SECRET` | Sí | Secreto aleatorio de al menos 32 caracteres. |
+| `JWT_EXPIRES_IN` | No | Duración `Ns`, `Nm`, `Nh` o `Nd`, máximo 7 días. |
+| `PAYMENT_GATEWAY` | No | `FAKE` o `MERCADO_PAGO`; por defecto `FAKE`. |
+| `BOOTSTRAP_ADMIN_*` | Solo bootstrap | Credenciales temporales del primer administrador. |
+| `MERCADO_PAGO_*` | Según proveedor | Obligatorias únicamente con Mercado Pago activo. |
+
+Variables mobile:
+
+| Variable | Requerida | Propósito |
+| -------- | --------- | --------- |
+| `EXPO_PUBLIC_API_URL` | Nativo y Docker | URL HTTP/HTTPS del backend, sin credenciales, query o fragmento. |
+| `EXPO_PUBLIC_APP_ENV` | No | `development`, `testing` o `production`; producción exige HTTPS. |
+
 No deben incluirse tokens, contraseñas ni secretos en variables `EXPO_PUBLIC_*`,
 porque Expo las incorpora al bundle.
 
-## Ejecución local
+### Copia inicial de templates
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item backend/.env.development.example backend/.env.development
+Copy-Item mobile/.env.development.example mobile/.env
+```
+
+Bash:
+
+```bash
+cp .env.example .env
+cp backend/.env.development.example backend/.env.development
+cp mobile/.env.development.example mobile/.env
+```
+
+Después de copiar, reemplazar contraseñas, `JWT_SECRET`, URLs y direcciones IP.
+Los archivos destino están ignorados por Git.
+
+## Inicialización manual
 
 ### Backend
 
+1. Crear una base PostgreSQL acorde con `DATABASE_URL`.
+2. Copiar y completar `backend/.env.development`.
+3. Instalar, migrar e iniciar:
+
 ```bash
 cd backend
-pnpm install
+pnpm install --frozen-lockfile
 pnpm prisma:generate
-pnpm prisma migrate deploy
+pnpm exec prisma migrate deploy
 pnpm start:dev
 ```
 
-El backend requiere como mínimo una conexión PostgreSQL y un secreto JWT válidos.
-Mercado Pago solo exige sus credenciales cuando `PAYMENT_GATEWAY=MERCADO_PAGO`.
+La API queda disponible en `http://localhost:3000`; el healthcheck es
+`GET /health` y Swagger se expone fuera de producción en `/api`.
+
+Para datos de demostración:
+
+```bash
+pnpm prisma:seed
+```
+
+Para crear el primer administrador, completar temporalmente
+`BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_USERNAME` y
+`BOOTSTRAP_ADMIN_PASSWORD`, verificar que la tabla de usuarios esté vacía y
+ejecutar:
+
+```bash
+pnpm admin:bootstrap
+```
+
+Luego retirar esas tres credenciales del archivo local. El bootstrap es
+transaccional y se niega a ejecutarse si ya existe algún usuario.
+
+Para crear una migración durante desarrollo:
+
+```bash
+pnpm prisma:migrate
+```
+
+No utilizar `prisma migrate dev` como comando de despliegue. En testing,
+producción y Docker se utiliza `prisma migrate deploy`.
 
 ### Mobile
 
+En otra terminal:
+
 ```bash
 cd mobile
-pnpm install
+pnpm install --frozen-lockfile
 pnpm start
+```
+
+Comandos alternativos:
+
+```bash
+pnpm android
+pnpm ios
+pnpm web
 ```
 
 En un dispositivo físico, `EXPO_PUBLIC_API_URL` debe apuntar a la IP LAN del
 equipo, por ejemplo `http://192.168.1.20:3000`. `127.0.0.1` representa al propio
 dispositivo. Producción requiere una URL HTTPS.
 
-## Docker Compose
+## Inicialización con Docker Compose
 
-Copiar `.env.example` como `.env` en la raíz y completar únicamente los valores
-locales requeridos:
+Este es el camino recomendado para una revisión completa. Requiere `.env`,
+`backend/.env.development` y una `EXPO_PUBLIC_API_URL` accesible desde el destino
+Expo.
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml up --build -d
+docker compose -f docker-compose.dev.yml ps
+docker compose -f docker-compose.dev.yml logs -f backend mobile
 ```
 
 El entorno:
@@ -167,6 +281,25 @@ El entorno:
 - incorpora healthchecks para base, backend y mobile.
 
 El puerto 3000 debe habilitarse solo en redes privadas de desarrollo.
+
+Detener servicios sin borrar PostgreSQL:
+
+```bash
+docker compose -f docker-compose.dev.yml stop
+```
+
+Retirar contenedores conservando el volumen:
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+Eliminar también los datos locales es destructivo y solo debe hacerse cuando se
+quiera reinicializar completamente:
+
+```bash
+docker compose -f docker-compose.dev.yml down --volumes
+```
 
 GitHub Actions no consume el `.env` raíz ni requiere secretos persistentes para
 sus validaciones. El workflow levanta una base PostgreSQL efímera, genera un
@@ -199,6 +332,8 @@ debe reemplazarse por un backend compartido, por ejemplo Redis.
 
 ```bash
 cd backend
+pnpm format
+pnpm lint
 pnpm build
 pnpm test -- --runInBand
 pnpm test:e2e -- --runInBand
@@ -216,9 +351,10 @@ pnpm run export:web
 pnpm audit --prod
 ```
 
-La validación más reciente de seguridad y pagos aprobó 47 suites y 287 pruebas
-backend, junto con el E2E PostgreSQL de Payments de 1 suite y 7 pruebas. Mobile
-aprobó 19 suites y 69 pruebas en su última barrera completa.
+La barrera más reciente aprobó 51 suites y 299 pruebas backend, 3 suites y
+9 pruebas E2E, 19 suites y 71 pruebas mobile, build backend y type-check mobile.
+Las auditorías, export web y formato dependen de que la instalación local
+contenga todos los binarios fijados por el lockfile.
 
 ## CI/CD
 
@@ -244,3 +380,7 @@ versionadas.
 La documentación estable de cada módulo está en sus respectivos README. Los
 planes ejecutables y tareas pendientes se mantienen exclusivamente en
 [`tasks`](./tasks).
+
+## Créditos
+
+Proyecto ideado y desarrollado por Altamirano German, Briones Benjamin, Falco Valentina, Lugo Avril y Williams Ignacio

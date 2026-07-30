@@ -7,8 +7,11 @@ La feature muestra solamente reservas que ya poseen un pago aprobado. Conserva l
 ## Componentes y flujo
 
 - `PaymentsScreen`: conserva el estilo de tarjetas, muestra el total pendiente arriba y el desglose total, abonado y saldo de cada reserva. Pagina 9 reservas por vez.
-- `usePayments`: carga reservas `PENDING_PAYMENT`, `RESERVED` y `ACTIVE`, sincroniza primero sus intentos y luego solicita la cotizacion actualizada; excluye reservas sin pagos aprobados y no suma estados pendientes o rechazados como dinero abonado.
-- `payments.service.ts`: concentra cotizacion, checkout, consulta de intento y listado por reserva.
+- `usePayments`: consume una pagina autoritativa de 9 resÃºmenes de pago y
+  adapta la fecha ISO al texto visible. La sincronizaciÃ³n, el filtrado de pagos
+  aprobados y el cÃ¡lculo de saldos quedan concentrados en backend.
+- `payments.service.ts`: concentra el resumen paginado, cotizaciÃ³n, checkout,
+  consulta de intento y listado por reserva.
 - `payment.types.ts`: estados, opciones, cotizacion e intentos normalizados.
 
 Flujo:
@@ -26,6 +29,17 @@ Flujo:
    muestra una confirmacion breve si el pago resulta aprobado.
 
 ## Contratos
+
+Resumen paginado:
+
+```http
+GET /payments/summary?page=1&limit=9
+Authorization: Bearer <token>
+```
+
+La respuesta contiene `items` y `pagination`. La pantalla realiza una sola
+solicitud por pÃ¡gina y conserva el mensaje de error y la acciÃ³n de recarga
+cuando el backend no estÃ¡ disponible.
 
 Cotizacion:
 
@@ -69,6 +83,7 @@ Idempotency-Key: <clave estable por accion>
 ## Validaciones automatizadas
 
 - El service agrega JWT y envia un body minimo.
+- El listado de Pagos consume una sola solicitud paginada por carga.
 - El service conserva la clave idempotente entregada por la accion.
 - Los errores mantienen prototipo y mensaje seguro.
 - La suite mobile valida bloqueo de doble toque, ausencia de falsa confirmacion, recuperacion de reservas pendientes, recalculo posterior a la sincronizacion y finalizacion del saldo parcial.

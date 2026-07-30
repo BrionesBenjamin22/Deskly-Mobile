@@ -1,102 +1,73 @@
 import { renderHook, waitFor } from "@testing-library/react-native";
 
-import { listReservations } from "../../reservations/services/reservations.service";
-import { buildReservation } from "../../reservations/testing/reservation.fixtures";
-import {
-  getPaymentQuote,
-  listReservationPayments,
-} from "../services/payments.service";
+import { listPaymentSummaries } from "../services/payments.service";
 import { usePayments } from "./usePayments";
 
-jest.mock("../../reservations/services/reservations.service", () => ({
-  listReservations: jest.fn(),
-}));
 jest.mock("../services/payments.service", () => ({
-  getPaymentQuote: jest.fn(),
-  listReservationPayments: jest.fn(),
+  listPaymentSummaries: jest.fn(),
 }));
 
-const mockedListReservations = jest.mocked(listReservations);
-const mockedListPayments = jest.mocked(listReservationPayments);
-const mockedGetQuote = jest.mocked(getPaymentQuote);
+const mockedListPaymentSummaries = jest.mocked(listPaymentSummaries);
 
 describe("usePayments", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("sincroniza reservas pendientes antes de calcular el saldo visible", async () => {
-    const pendingReservation = buildReservation({
-      id: "reservation-pending",
-      status: "pending_payment",
-      date: "2026-08-01",
-      dateLabel: "sábado, 1 de agosto",
-    });
-    mockedListReservations.mockImplementation(
-      async (_token, _page, _limit, status) => ({
-        reservations: status === "PENDING_PAYMENT" ? [pendingReservation] : [],
-        pagination: {
-          page: 1,
-          limit: 50,
-          total: status === "PENDING_PAYMENT" ? 1 : 0,
-          totalPages: status === "PENDING_PAYMENT" ? 1 : 0,
+  it("carga una pagina autoritativa con una sola solicitud", async () => {
+    mockedListPaymentSummaries.mockResolvedValue({
+      items: [
+        {
+          reservationId: "reservation-paid",
+          deskName: "Escritorio A-01",
+          date: "2026-08-01T00:00:00.000Z",
+          currency: "ARS",
+          pricingVersion: "V1",
+          totalMinorUnits: 600_000,
+          approvedMinorUnits: 600_000,
+          pendingMinorUnits: 0,
+          attempts: [],
         },
-      }),
-    );
-    mockedListPayments.mockResolvedValue([
-      {
-        paymentId: "payment-1",
-        reservationId: pendingReservation.id,
-        amountMinorUnits: 600_000,
-        currency: "ARS",
-        option: "FULL",
-        pricingVersion: "V1",
-        status: "APPROVED",
-        checkoutUrl: null,
-        expiresAt: "2026-08-01T15:00:00.000Z",
+      ],
+      pagination: {
+        page: 2,
+        limit: 9,
+        total: 10,
+        totalPages: 2,
       },
-    ]);
-    mockedGetQuote.mockResolvedValue({
-      reservationId: pendingReservation.id,
-      currency: "ARS",
-      pricingVersion: "V1",
-      totalMinorUnits: 600_000,
-      approvedMinorUnits: 600_000,
-      pendingMinorUnits: 0,
-      options: [],
     });
+
+    const { result } = renderHook(() => usePayments("member-token", 2));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mockedListPaymentSummaries).toHaveBeenCalledTimes(1);
+    expect(mockedListPaymentSummaries).toHaveBeenCalledWith(
+      "member-token",
+      2,
+      9,
+    );
+    expect(result.current.totalPages).toBe(2);
+    expect(result.current.items).toEqual([
+      expect.objectContaining({
+        reservationId: "reservation-paid",
+        dateLabel: "1 de agosto de 2026",
+        approvedMinorUnits: 600_000,
+        pendingMinorUnits: 0,
+      }),
+    ]);
+  });
+
+  it("preserva el error visible cuando falla el resumen", async () => {
+    mockedListPaymentSummaries.mockRejectedValue(new Error("network"));
 
     const { result } = renderHook(() => usePayments("member-token"));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockedListReservations).toHaveBeenCalledWith(
-      "member-token",
-      1,
-      50,
-      "PENDING_PAYMENT",
+    expect(result.current.items).toEqual([]);
+    expect(result.current.errorMessage).toBe(
+      "Lo sentimos, no pudimos recuperar sus pagos. Intente nuevamente.",
     );
-    expect(mockedListReservations).toHaveBeenCalledWith(
-      "member-token",
-      1,
-      50,
-      "RESERVED",
-    );
-    expect(mockedListReservations).toHaveBeenCalledWith(
-      "member-token",
-      1,
-      50,
-      "ACTIVE",
-    );
-    expect(mockedListPayments.mock.invocationCallOrder[0]).toBeLessThan(
-      mockedGetQuote.mock.invocationCallOrder[0],
-    );
-    expect(result.current.items).toEqual([
-      expect.objectContaining({
-        reservationId: "reservation-pending",
-        approvedMinorUnits: 600_000,
-        pendingMinorUnits: 0,
-      }),
-    ]);
   });
 });
