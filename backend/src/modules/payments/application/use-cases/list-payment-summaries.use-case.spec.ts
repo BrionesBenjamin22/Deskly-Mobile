@@ -1,4 +1,5 @@
 import { PaymentAttempt } from '../../domain/entities/payment-attempt.entity';
+import { PaymentGatewayError } from '../../domain/errors/payment-domain.errors';
 import { ListPaymentSummariesUseCase } from './list-payment-summaries.use-case';
 
 const attempt = (status: 'PENDING' | 'APPROVED') =>
@@ -174,5 +175,69 @@ describe('ListPaymentSummariesUseCase', () => {
     ]);
     expect(pending.pagination.total).toBe(1);
     expect(completed.pagination.total).toBe(1);
+  });
+
+  it('conserva el estado persistido si un intento no puede sincronizarse con el proveedor', async () => {
+    const pending = attempt('PENDING');
+    const approved = attempt('APPROVED');
+    const payments = {
+      listPaymentSummaryCandidates: jest.fn().mockResolvedValue([
+        {
+          id: 'reservation-1',
+          deskName: 'Escritorio 1',
+          date: '2026-08-01',
+          startTime: '09:00',
+          endTime: '13:00',
+          attempts: [pending, approved],
+        },
+      ]),
+    };
+    const synchronize = {
+      execute: jest.fn((payment: PaymentAttempt) =>
+        payment.status === 'PENDING'
+          ? Promise.reject(
+              new PaymentGatewayError('Pago externo no encontrado.', false),
+            )
+          : Promise.resolve(payment),
+      ),
+    };
+    const useCase = new ListPaymentSummariesUseCase(
+      payments as never,
+      synchronize as never,
+    );
+
+    const result = await useCase.execute('member-1', 1, 9);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].attempts).toEqual([
+      expect.objectContaining({ status: 'PENDING' }),
+      expect.objectContaining({ status: 'APPROVED' }),
+    ]);
+  });
+
+  it('no oculta errores internos durante la sincronizacion', async () => {
+    const payments = {
+      listPaymentSummaryCandidates: jest.fn().mockResolvedValue([
+        {
+          id: 'reservation-1',
+          deskName: 'Escritorio 1',
+          date: '2026-08-01',
+          startTime: '09:00',
+          endTime: '13:00',
+          attempts: [attempt('PENDING')],
+        },
+      ]),
+    };
+    const synchronize = {
+      execute: jest.fn().mockRejectedValue(new Error('database unavailable')),
+    };
+    const useCase = new ListPaymentSummariesUseCase(
+      payments as never,
+      synchronize as never,
+    );
+
+    await expect(useCase.execute('member-1', 1, 9)).rejects.toThrow(
+      'database unavailable',
+    );
   });
 });

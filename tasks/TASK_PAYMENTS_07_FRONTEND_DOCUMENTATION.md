@@ -192,3 +192,16 @@ cuando exista un pago real de producción.
 ## Commit sugerido
 
 Al completar la prueba manual: `feat(pagos): integrar checkout seguro y documentar su operacion`
+
+## Correccion de disponibilidad del resumen del 31 de julio de 2026
+
+- Se reprodujo que `GET /payments/summary` abortaba el listado completo cuando
+  la sincronizacion de un unico intento arrojaba `PaymentGatewayError`.
+- El resumen ahora aisla el fallo por intento, conserva su ultimo estado
+  persistido y continua procesando los demas pagos.
+- Los errores internos, de persistencia y de dominio siguen propagandose para no
+  ocultar fallos del sistema.
+- Evidencia focal: 1 suite y 6 pruebas aprobadas, incluyendo degradacion segura
+  del proveedor y propagacion de errores internos.
+- Evidencia completa: 53 suites y 331 pruebas backend aprobadas; build backend
+  aprobado.
