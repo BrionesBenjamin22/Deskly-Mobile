@@ -50,6 +50,22 @@ describe('PaymentWebhooksController', () => {
     expect(useCase.execute).not.toHaveBeenCalled();
   });
 
+  it('no convierte objetos de query usando la representacion por defecto', async () => {
+    useCase.execute.mockResolvedValue({ accepted: true });
+    const unsafeRequest = {
+      ...request(),
+      query: { nested: { id: '123' }, repeated: ['payment', 'ignored'] },
+    };
+
+    await controller.process(unsafeRequest as never);
+
+    expect(useCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: { nested: '', repeated: 'payment' },
+      }),
+    );
+  });
+
   it('responde sin detalles internos ante firma invalida', async () => {
     useCase.execute.mockRejectedValue(new InvalidWebhookSignatureError());
     await expect(controller.process(request() as never)).rejects.toBeInstanceOf(

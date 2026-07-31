@@ -23,6 +23,17 @@ import {
 type RawWebhookRequest = Request & { rawBody?: Buffer };
 const MAX_WEBHOOK_BODY_BYTES = 16 * 1024;
 
+function normalizeQueryValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0]);
+  }
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return `${value}`;
+  }
+  return '';
+}
+
 @ApiTags('Payment webhooks')
 @Controller('webhooks/payments')
 export class PaymentWebhooksController {
@@ -46,7 +57,7 @@ export class PaymentWebhooksController {
     const query = Object.fromEntries(
       Object.entries(request.query).map(([key, value]) => [
         key,
-        Array.isArray(value) ? String(value[0]) : String(value),
+        normalizeQueryValue(value),
       ]),
     );
     try {
