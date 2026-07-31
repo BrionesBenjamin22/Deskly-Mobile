@@ -239,6 +239,13 @@ La UI distingue:
 
 Los homes consumen 9 elementos por pagina por defecto. Las pantallas que muestren historial de cambios deben consumirlo con 3 items por pagina cuando el endpoint este disponible.
 
+## Actualizacion de contenido
+
+Las vistas de areas de trabajo, escritorios, reservas, pagos y perfil incorporan
+`RefreshControl` nativo. El hook compartido `usePullToRefresh` evita solicitudes
+manuales simultaneas y mantiene el indicador activo hasta que finaliza la recarga.
+Los `refreshKey` existentes se conservan para sincronizar eventos entre pantallas.
+
 ## Cadena de suministro
 
 La aplicacion mantiene Expo dentro de la matriz compatible del SDK 54. Las

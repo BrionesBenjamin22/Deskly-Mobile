@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
 import { BottomTabBar } from "../../../components/ui/BottomTabBar";
@@ -12,6 +19,7 @@ import {
 } from "../../../components/ui/StatusModal";
 import { colors } from "../../../theme/colors";
 import { radii, spacing } from "../../../theme/spacing";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 import { CalendarPicker } from "../components/CalendarPicker";
 import {
   DateSelector,
@@ -358,7 +366,7 @@ export function DesksScreen({
     }).format(date);
   }, [selectedDate, isCalendarDate]);
 
-  const { desks, errorMessage, isLoading } = useAvailableDesks({
+  const { desks, errorMessage, isLoading, refresh } = useAvailableDesks({
     date: selectedDate,
     startTime,
     endTime,
@@ -369,6 +377,7 @@ export function DesksScreen({
       : { localityId: effectiveLocalityId }),
     ...(effectiveAreaId === "all" ? {} : { areaId: effectiveAreaId }),
   });
+  const pullToRefresh = usePullToRefresh(refresh);
   const visibleDesks = selectedWorkArea
     ? desks.filter(
         (desk) =>
@@ -532,6 +541,15 @@ export function DesksScreen({
     <ScreenContainer>
       <View style={styles.layout}>
         <ScrollView
+          testID="desks-scroll"
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
           contentContainerStyle={styles.content}

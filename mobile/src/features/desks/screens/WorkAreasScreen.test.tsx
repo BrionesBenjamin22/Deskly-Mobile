@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -80,6 +81,18 @@ describe("WorkAreasScreen", () => {
     expect(await screen.findByText("Sala Norte")).toBeOnTheScreen();
     expect(screen.getAllByText("Sede Centro")).toHaveLength(2);
     expect(screen.getAllByText("2 disponibles")).toHaveLength(2);
+  });
+
+  it("vuelve a consultar las areas con pull-to-refresh", async () => {
+    renderScreen({ onSelectWorkArea: jest.fn() });
+    await screen.findByText("Sala Norte");
+
+    await act(async () => {
+      await screen.getByTestId("work-areas-scroll").props.refreshControl.props.onRefresh();
+    });
+
+    expect(mockedListWorkAreas).toHaveBeenCalledTimes(2);
+    expect(mockedListAvailableWorkAreas).toHaveBeenCalledTimes(2);
   });
 
   it("filtra las areas por la localidad seleccionada", async () => {

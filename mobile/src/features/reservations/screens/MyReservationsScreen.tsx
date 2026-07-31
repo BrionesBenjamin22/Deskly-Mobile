@@ -1,5 +1,11 @@
 import { PropsWithChildren, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
@@ -9,6 +15,7 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
 import { CalendarPicker } from '../../desks/components/CalendarPicker';
 import { DateSelector, getDeskDateOptions } from '../../desks/components/DateSelector';
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
@@ -167,6 +174,7 @@ export function MyReservationsScreen({
     userRole === 'GESTOR',
     userRole === 'GESTOR' ? selectedDate : undefined,
   );
+  const pullToRefresh = usePullToRefresh(refresh);
 
   const penaltyAction = useRegisterAbsence(accessToken, async () => {
     await refresh();
@@ -219,6 +227,15 @@ export function MyReservationsScreen({
     <ScreenContainer>
       <View style={styles.layout}>
         <ScrollView
+          testID="reservations-scroll"
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >

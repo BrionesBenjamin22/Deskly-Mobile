@@ -91,6 +91,26 @@ describe('DesksScreen con area seleccionada', () => {
     });
   }, 10_000);
 
+  it('vuelve a consultar la disponibilidad con pull-to-refresh', async () => {
+    const selectedArea = buildWorkArea();
+    mockedGetAvailableDesks.mockResolvedValue([
+      buildDesk({ area: selectedArea, areaId: selectedArea.id }),
+    ]);
+
+    render(
+      <AuthTestProvider>
+        <DesksScreen selectedWorkArea={selectedArea} />
+      </AuthTestProvider>,
+    );
+    await screen.findByText('Escritorio Norte 1');
+
+    await act(async () => {
+      await screen.getByTestId('desks-scroll').props.refreshControl.props.onRefresh();
+    });
+
+    expect(mockedGetAvailableDesks).toHaveBeenCalledTimes(2);
+  });
+
   it('no muestra escritorios pertenecientes a otra area', async () => {
     const selectedArea = buildWorkArea();
     const otherArea = buildWorkArea({

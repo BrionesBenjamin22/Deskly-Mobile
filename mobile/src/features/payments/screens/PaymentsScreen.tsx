@@ -1,5 +1,12 @@
 import { useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
 import { BottomTabBar } from "../../../components/ui/BottomTabBar";
@@ -10,6 +17,7 @@ import { ScreenContainer } from "../../../components/ui/ScreenContainer";
 import { StatusModal } from "../../../components/ui/StatusModal";
 import { colors, statusColors } from "../../../theme/colors";
 import { radii, spacing } from "../../../theme/spacing";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 import { DesksFeedbackCard } from "../../desks/components/DesksFeedbackCard";
 import { usePayments } from "../hooks/usePayments";
 import {
@@ -72,6 +80,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
     page,
     (props.refreshKey ?? 0) + localRefresh,
   );
+  const pullToRefresh = usePullToRefresh(reload);
   const [quote, setQuote] = useState<PaymentQuote | null>(null);
   const [busyReservation, setBusyReservation] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -174,7 +183,18 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
   return (
     <ScreenContainer>
       <View style={styles.layout}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          testID="payments-scroll"
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
+        >
           <View style={styles.header}>
             <AppText variant="title">Pagos</AppText>
             <AppText

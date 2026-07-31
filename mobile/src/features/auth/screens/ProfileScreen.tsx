@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
@@ -8,6 +8,7 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal } from '../../../components/ui/StatusModal';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
 import { ProfileDetailRow } from '../components/ProfileDetailRow';
 import { EditableProfileField } from '../components/EditableProfileField';
 import { AuthServiceError, getCurrentUser, updateProfile } from '../services/auth.service';
@@ -67,26 +68,35 @@ export function ProfileScreen({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [localPenaltiesRefreshKey, setLocalPenaltiesRefreshKey] = useState(0);
+  const requestIdRef = useRef(0);
+
+  const loadProfile = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setErrorMessage(null);
+
+    try {
+      const response = await getCurrentUser(accessToken);
+      if (requestId === requestIdRef.current) setUser(response.user);
+    } catch (error) {
+      if (requestId === requestIdRef.current) {
+        setErrorMessage(getErrorMessage(error));
+      }
+    }
+  }, [accessToken]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    getCurrentUser(accessToken)
-      .then((response) => {
-        if (isMounted) {
-          setUser(response.user);
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setErrorMessage(getErrorMessage(error));
-        }
-      });
-
+    void loadProfile();
     return () => {
-      isMounted = false;
+      requestIdRef.current += 1;
     };
-  }, [accessToken]);
+  }, [loadProfile]);
+
+  const refreshProfile = useCallback(async () => {
+    await loadProfile();
+    setLocalPenaltiesRefreshKey((current) => current + 1);
+  }, [loadProfile]);
+  const pullToRefresh = usePullToRefresh(refreshProfile);
 
   const handleUpdateProfile = async (
     field: 'email' | 'username' | 'fullName' | 'phone',
@@ -111,6 +121,15 @@ export function ProfileScreen({
     <ScreenContainer>
       <View style={styles.layout}>
         <ScrollView
+          testID="profile-scroll"
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
@@ -238,7 +257,9 @@ export function ProfileScreen({
           </Card>
 
           {user.member ? (
-            <ProfilePenaltiesCard refreshKey={penaltiesRefreshKey} />
+            <ProfilePenaltiesCard
+              refreshKey={penaltiesRefreshKey + localPenaltiesRefreshKey}
+            />
           ) : null}
         </ScrollView>
 

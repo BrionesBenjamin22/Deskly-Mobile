@@ -36,6 +36,7 @@ const mockedCheckout = createPaymentCheckout as jest.MockedFunction<
 const mockedAttempt = getPaymentAttempt as jest.MockedFunction<
   typeof getPaymentAttempt
 >;
+const reloadMock = jest.fn<Promise<void>, []>();
 
 describe("PaymentsScreen checkout seguro", () => {
   beforeEach(() => {
@@ -55,7 +56,7 @@ describe("PaymentsScreen checkout seguro", () => {
       totalPages: 1,
       isLoading: false,
       errorMessage: null,
-      reload: jest.fn(),
+      reload: reloadMock,
     });
     mockedQuote.mockResolvedValue({
       reservationId: "reservation-1",
@@ -92,6 +93,21 @@ describe("PaymentsScreen checkout seguro", () => {
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  it("recarga los pagos con pull-to-refresh", async () => {
+    reloadMock.mockResolvedValue();
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
+
+    await act(async () => {
+      await screen.getByTestId("payments-scroll").props.refreshControl.props.onRefresh();
+    });
+
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+  });
 
   it("bloquea el doble toque y confirma solo tras consultar APPROVED", async () => {
     render(

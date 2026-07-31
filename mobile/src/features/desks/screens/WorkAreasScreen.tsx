@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
@@ -7,6 +13,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
 import { CalendarPicker } from '../components/CalendarPicker';
 import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
 import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
@@ -93,6 +100,7 @@ export function WorkAreasScreen({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTimeOptions, setShowTimeOptions] = useState(false);
+  const requestIdRef = useRef(0);
 
   const quickDates = useMemo(() => getDeskDateOptions(new Date(), 30), []);
   const isCalendarDate = !quickDates
@@ -112,51 +120,51 @@ export function WorkAreasScreen({
     (time) => timeToMinutes(time) > timeToMinutes(startTime),
   );
 
-  const loadAreas = useCallback(() => {
-    let isMounted = true;
-
+  const loadAreas = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setErrorMessage(null);
 
-    Promise.all([
-      listLocalities(),
-      listWorkAreas(),
-      listAvailableWorkAreas({ date: selectedDate, startTime, endTime }),
-    ])
-      .then(([localityItems, areaItems, availableAreaItems]) => {
-        if (!isMounted) return;
-        const availabilityByAreaId = new Map(
-          availableAreaItems.map((area) => [area.id, area]),
-        );
-        const mergedAreas = areaItems.map((area) => {
-          const availableArea = availabilityByAreaId.get(area.id);
+    try {
+      const [localityItems, areaItems, availableAreaItems] = await Promise.all([
+        listLocalities(),
+        listWorkAreas(),
+        listAvailableWorkAreas({ date: selectedDate, startTime, endTime }),
+      ]);
+      if (requestId !== requestIdRef.current) return;
+      const availabilityByAreaId = new Map(
+        availableAreaItems.map((area) => [area.id, area]),
+      );
+      const mergedAreas = areaItems.map((area) => {
+        const availableArea = availabilityByAreaId.get(area.id);
 
-          return {
-            ...area,
-            availableDeskCount: availableArea?.availableDeskCount ?? 0,
-            totalDeskCount: availableArea?.totalDeskCount ?? 0,
-          };
-        });
-
-        setLocalities(localityItems);
-        setAreas(mergedAreas);
-      })
-      .catch((error: unknown) => {
-        if (!isMounted) return;
-        setLocalities([]);
-        setAreas([]);
-        setErrorMessage(getFriendlyErrorMessage(error));
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
+        return {
+          ...area,
+          availableDeskCount: availableArea?.availableDeskCount ?? 0,
+          totalDeskCount: availableArea?.totalDeskCount ?? 0,
+        };
       });
 
-    return () => {
-      isMounted = false;
-    };
+      setLocalities(localityItems);
+      setAreas(mergedAreas);
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      setLocalities([]);
+      setAreas([]);
+      setErrorMessage(getFriendlyErrorMessage(error));
+    } finally {
+      if (requestId === requestIdRef.current) setIsLoading(false);
+    }
   }, [endTime, selectedDate, startTime]);
 
-  useEffect(() => loadAreas(), [loadAreas, refreshKey]);
+  useEffect(() => {
+    void loadAreas();
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [loadAreas, refreshKey]);
+
+  const pullToRefresh = usePullToRefresh(loadAreas);
 
   const visibleLocalities = selectedLocalityId
     ? localities.filter((locality) => locality.id === selectedLocalityId)
@@ -193,6 +201,15 @@ export function WorkAreasScreen({
     <ScreenContainer>
       <View style={styles.layout}>
         <ScrollView
+          testID="work-areas-scroll"
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >

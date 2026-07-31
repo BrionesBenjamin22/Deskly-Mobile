@@ -1400,3 +1400,41 @@ validacion:
 Detalle tematico:
 
 `ia/entrega-3/auth-context-prop-drilling.md`
+
+---
+
+### E3-26 — Pull-to-refresh nativo y actualización de deuda técnica
+
+solicitud:
+
+> Implementar pull-to-refresh, corregir la referencia inconsistente, mantener
+> el registro, probar, levantar el proyecto y ejecutar el commit.
+
+resultado:
+
+- se incorporó `RefreshControl` en áreas, escritorios, reservas, pagos y perfil;
+- el hook compartido evita recargas manuales simultáneas;
+- se conservaron los `refreshKey` usados para sincronización entre pantallas;
+- se protegieron las cargas contra respuestas obsoletas;
+- se actualizó la deuda de `AuthContext` y pull-to-refresh a completada;
+- no se modificaron contratos HTTP, permisos, filtros ni navegación.
+
+validación:
+
+- TypeScript aprobado;
+- 5 suites focales y 23 pruebas aprobadas;
+- suite completa: 22 suites y 84 pruebas aprobadas;
+- export Expo web y build Docker mobile aprobados;
+- database, backend y mobile con healthchecks aprobados;
+- backend `/health` respondió 200;
+- Metro reportó `packager-status:running`;
+- `git diff --check` aprobado;
+- entorno levantado para la prueba visual del usuario.
+
+commit_autorizado:
+
+`feat(mobile): incorporar pull-to-refresh nativo`
+
+Detalle temático:
+
+`ia/entrega-3/pull-to-refresh.md`

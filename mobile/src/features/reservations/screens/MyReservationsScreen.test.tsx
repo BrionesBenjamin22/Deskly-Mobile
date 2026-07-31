@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 
 import {
   AuthTestProvider,
@@ -71,6 +71,22 @@ describe('MyReservationsScreen current rendering states', () => {
       );
     });
     expect(mockedListReservations).toHaveBeenCalledTimes(1);
+  });
+
+  it('vuelve a consultar las reservas con pull-to-refresh', async () => {
+    mockedListReservations.mockResolvedValue(buildListResponse([]));
+    renderMemberScreen();
+    await waitFor(() =>
+      expect(mockedListReservations).toHaveBeenCalledTimes(1),
+    );
+
+    await act(async () => {
+      await screen
+        .getByTestId('reservations-scroll')
+        .props.refreshControl.props.onRefresh();
+    });
+
+    expect(mockedListReservations).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the loading feedback visible while the query is pending', () => {
