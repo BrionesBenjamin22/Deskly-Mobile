@@ -256,7 +256,7 @@ export function ProfileScreen({
             )}
           </Card>
 
-          {user.member ? (
+          {userRole === 'MIEMBRO' && user.member ? (
             <ProfilePenaltiesCard
               refreshKey={penaltiesRefreshKey + localPenaltiesRefreshKey}
             />
