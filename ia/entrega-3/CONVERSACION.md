@@ -1590,3 +1590,26 @@ mensajes_de_commit_propuestos:
 
 - `feat(pagos): mostrar opciones de saldo pendiente en modal`
 - `feat(pagos): filtrar pagos pendientes y completados`
+
+---
+
+### E3-31 — Requisitos dinámicos de contraseña
+
+resultado:
+
+- el registro muestra longitud, mayúscula y número mientras sigan pendientes;
+- cada requisito desaparece inmediatamente al cumplirse;
+- frontend y backend validan el mismo contrato de contraseña;
+- login, sesiones, tokens y navegación conservaron su comportamiento.
+
+validación:
+
+- focal backend: 1 suite y 5 pruebas;
+- focal mobile: 2 suites y 5 pruebas;
+- backend completo: 53 suites y 328 pruebas;
+- mobile completo: 24 suites y 92 pruebas;
+- build backend y TypeScript mobile: aprobados.
+
+mensaje_de_commit_propuesto:
+
+`feat(auth): mostrar requisitos dinamicos de contraseña`

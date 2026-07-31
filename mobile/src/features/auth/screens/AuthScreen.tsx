@@ -19,6 +19,7 @@ import {
 import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { AuthField } from '../components/AuthField';
+import { PasswordRequirements } from '../components/PasswordRequirements';
 import {
   AuthServiceError,
   BlockedAccountServiceError,
@@ -482,6 +483,7 @@ function RegisterForm({
         required
         onChangeText={(value) => onChange('password', value)}
       />
+      <PasswordRequirements password={values.password} />
       {requiresMember ? (
         <>
           <AuthField

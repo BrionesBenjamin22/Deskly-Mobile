@@ -150,6 +150,10 @@ export function validateRegister(
 
   if (values.password.length < 8 || values.password.length > 72) {
     errors.password = 'La contraseña debe tener entre 8 y 72 caracteres.';
+  } else if (!/[A-Z]/.test(values.password)) {
+    errors.password = 'La contraseña debe tener al menos una mayúscula.';
+  } else if (!/[0-9]/.test(values.password)) {
+    errors.password = 'La contraseña debe tener al menos un número.';
   }
 
   if (requiresMember) {

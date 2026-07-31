@@ -5,6 +5,8 @@
 - `AuthScreen`: login y registro publico.
 - `ProfileScreen`: consulta y edicion del perfil permitido por rol.
 - `ChangePasswordModal`: cambio de contrasena y cierre posterior de sesion.
+- `PasswordRequirements`: muestra durante el registro solo las reglas de
+  contraseña pendientes y las anuncia como region accesible.
 - `AuthProvider`: distribuye la sesion autenticada sin prop drilling.
 - `useAuth`: expone token, usuario y rol exclusivamente dentro del provider.
 
@@ -46,6 +48,10 @@ Para ADMIN incluye Panel, Gestion de usuarios y Cuenta; el cambio de pantalla
 continua centralizado en `App.tsx`.
 
 ## Validaciones
+
+El registro exige entre 8 y 72 caracteres, al menos una mayuscula y al menos un
+numero. Cada requisito desaparece visualmente al cumplirse. Login conserva su
+validacion de credenciales existentes sin mostrar estas reglas.
 
 `session.service.test.ts` cubre almacenamiento de ambos tokens, restauracion
 autoritativa, rechazo, fallos de red, cierre y ausencia de SecureStore.
