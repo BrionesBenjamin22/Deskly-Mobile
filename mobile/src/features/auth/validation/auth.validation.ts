@@ -132,8 +132,7 @@ export function validateLogin(
     errors.identifier = 'Ingrese su email o nombre de usuario.';
   }
 
-  const passwordError = validatePassword(values.password);
-  if (passwordError) errors.password = passwordError;
+  if (!values.password) errors.password = 'Ingrese su contraseña.';
 
   return errors;
 }
