@@ -26,9 +26,21 @@ describe('validateRegister password', () => {
 });
 
 describe('validateLogin password', () => {
-  it('no exige mayúscula ni número a una contraseña existente', () => {
+  it('exige una mayuscula', () => {
     expect(
       validateLogin({ identifier: 'member', password: 'password' }).password,
-    ).toBeUndefined();
+    ).toBe('La contraseña debe tener al menos una mayúscula.');
+  });
+
+  it('exige un numero', () => {
+    expect(
+      validateLogin({ identifier: 'member', password: 'Password' }).password,
+    ).toBe('La contraseña debe tener al menos un número.');
+  });
+
+  it('acepta una contraseña que cumple todos los requisitos', () => {
+    const errors = validateLogin({ identifier: 'member', password: 'Password1' });
+    expect(errors.password).toBeUndefined();
+    expect(Object.keys(errors)).toHaveLength(0);
   });
 });

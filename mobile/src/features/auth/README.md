@@ -64,3 +64,9 @@ No se administran sesiones por dispositivo ni biometria. La navegacion,
 callbacks, refresh keys y estados de cada flujo permanecen fuera de
 `AuthContext`. Tampoco existe deteccion persistente de replay por refresh token;
 la revocacion global se mantiene mediante `tokenVersion`.
+
+## Validacion efectiva del login
+
+El login exige entre 8 y 72 caracteres, al menos una mayuscula y al menos un
+numero. La validacion se actualiza al editar y se repite antes del request; la
+guia `PasswordRequirements` refleja el mismo contrato y no es solo informativa.

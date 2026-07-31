@@ -34,6 +34,7 @@ import {
   LoginFormValues,
   RegisterFormValues,
   validateLogin,
+  validatePassword,
   validateRegister,
   getRealtimeDNIError,
   getRealtimePhoneError,
@@ -301,7 +302,10 @@ export function AuthScreen({
                   setLoginValues((current) => ({ ...current, [field]: value }));
                   setLoginErrors((current) => ({
                     ...current,
-                    [field]: undefined,
+                    [field]:
+                      field === 'password' && value
+                        ? validatePassword(value)
+                        : undefined,
                   }));
                 }}
                 onSubmit={handleLogin}

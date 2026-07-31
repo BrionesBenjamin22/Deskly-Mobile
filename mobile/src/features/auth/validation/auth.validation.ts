@@ -21,6 +21,20 @@ const INTEGER_PATTERN = /^\d+$/;
 const DNI_LENGTH = 8;
 const PHONE_LENGTH = 10;
 
+export function validatePassword(value: string): string | undefined {
+  if (!value) return 'Ingrese su contraseña.';
+  if (value.length < 8 || value.length > 72) {
+    return 'La contraseña debe tener entre 8 y 72 caracteres.';
+  }
+  if (!/[A-Z]/.test(value)) {
+    return 'La contraseña debe tener al menos una mayúscula.';
+  }
+  if (!/[0-9]/.test(value)) {
+    return 'La contraseña debe tener al menos un número.';
+  }
+  return undefined;
+}
+
 function isValidDNI(dni: string): boolean {
   const cleanDNI = dni.replace(/\D/g, '');
 
@@ -118,11 +132,8 @@ export function validateLogin(
     errors.identifier = 'Ingrese su email o nombre de usuario.';
   }
 
-  if (!values.password) {
-    errors.password = 'Ingrese su contraseña.';
-  } else if (values.password.length < 8 || values.password.length > 72) {
-    errors.password = 'La contraseña debe tener entre 8 y 72 caracteres.';
-  }
+  const passwordError = validatePassword(values.password);
+  if (passwordError) errors.password = passwordError;
 
   return errors;
 }
@@ -148,13 +159,8 @@ export function validateRegister(
       'Use entre 3 y 60 letras, números, puntos, guiones o guion bajo.';
   }
 
-  if (values.password.length < 8 || values.password.length > 72) {
-    errors.password = 'La contraseña debe tener entre 8 y 72 caracteres.';
-  } else if (!/[A-Z]/.test(values.password)) {
-    errors.password = 'La contraseña debe tener al menos una mayúscula.';
-  } else if (!/[0-9]/.test(values.password)) {
-    errors.password = 'La contraseña debe tener al menos un número.';
-  }
+  const passwordError = validatePassword(values.password);
+  if (passwordError) errors.password = passwordError;
 
   if (requiresMember) {
     const fullName = values.fullName.trim();
