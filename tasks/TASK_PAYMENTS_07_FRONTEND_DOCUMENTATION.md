@@ -185,6 +185,9 @@ cuando exista un pago real de producción.
   pruebas; builds y TypeScript aprobados.
 - Barrera completa posterior: backend 53 suites/325 pruebas y mobile 22
   suites/87 pruebas; build backend, TypeScript y `git diff --check` aprobados.
+- Los cambios entre filtros usan una transicion de opacidad de 180 ms y la vista
+  `Completados` oculta el resumen de saldo pendiente. Evidencia focal: 1 suite y
+  6 pruebas; TypeScript aprobado.
 
 ## Commit sugerido
 

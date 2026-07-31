@@ -157,6 +157,7 @@ describe("PaymentsScreen checkout seguro", () => {
       </AuthTestProvider>,
     );
 
+    expect(screen.getByText("TOTAL PENDIENTE")).toBeOnTheScreen();
     fireEvent.press(screen.getByText("Completados"));
 
     expect(mockedUsePayments).toHaveBeenLastCalledWith(
@@ -169,6 +170,7 @@ describe("PaymentsScreen checkout seguro", () => {
       "accessibilityState",
       { selected: true },
     );
+    expect(screen.queryByText("TOTAL PENDIENTE")).toBeNull();
   });
 
   it("no confirma por abrir y volver del checkout mientras backend sigue pendiente", async () => {

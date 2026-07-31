@@ -31,6 +31,8 @@ Flujo:
 9. La pantalla permite filtrar `Todos`, `Pendientes` y `Completados`. El filtro
    se envia al resumen backend y se aplica antes de paginar para conservar el
    limite de 9 resultados y conteos coherentes.
+10. Los resultados cambian con una transicion breve de opacidad. El resumen
+    `TOTAL PENDIENTE` no se presenta en la vista `Completados`.
 8. Durante la espera el loader permanece animado. Tanto al reservar desde
    Escritorios como al completar saldo desde Pagos, `Dejar de esperar` cierra
    solamente el modal bloqueante: la verificacion continua en segundo plano y

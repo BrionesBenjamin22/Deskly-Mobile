@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Linking,
   Pressable,
   RefreshControl,
@@ -86,6 +87,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
   const { accessToken } = useAuth();
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<PaymentSummaryFilter>("ALL");
+  const filterOpacity = useRef(new Animated.Value(1)).current;
   const [localRefresh, setLocalRefresh] = useState(0);
   const { items, totalPages, isLoading, errorMessage, reload } = usePayments(
     accessToken,
@@ -108,6 +110,17 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
     (total, item) => total + item.pendingMinorUnits,
     0,
   );
+
+  useEffect(() => {
+    filterOpacity.setValue(0);
+    const animation = Animated.timing(filterOpacity, {
+      duration: 180,
+      toValue: 1,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [filter, filterOpacity]);
 
   const requestQuote = async (reservationId: string) => {
     setBusyReservation(reservationId);
@@ -219,7 +232,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
               {items.length === 1 ? "" : "s"}
             </AppText>
           </View>
-          {!isLoading && items.length > 0 ? (
+          {!isLoading && items.length > 0 && filter !== "COMPLETED" ? (
             <View style={styles.statCard}>
               <View style={styles.statLabel}>
                 <Icon name="creditCard" size={16} color={colors.blackOverlay} />
@@ -270,67 +283,69 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
               );
             })}
           </View>
-          {isLoading ? (
-            <DesksFeedbackCard
-              icon="loader"
-              title="Cargando pagos"
-              description="Consultamos estados confirmados por Deskly."
-            />
-          ) : errorMessage ? (
-            <DesksFeedbackCard
-              icon="circleAlert"
-              title="No pudimos cargar sus pagos"
-              description={errorMessage}
-            />
-          ) : items.length === 0 ? (
-            <DesksFeedbackCard
-              icon="wallet"
-              title={
-                filter === "COMPLETED"
-                  ? "No hay pagos completados"
-                  : filter === "PENDING"
-                    ? "No hay saldos pendientes"
-                    : "No hay pagos registrados"
-              }
-              description={
-                filter === "COMPLETED"
-                  ? "Los pagos abonados en su totalidad aparecerán aquí."
-                  : filter === "PENDING"
-                    ? "Las reservas con una seña y saldo restante aparecerán aquí."
-                    : "Sus pagos confirmados y saldos parciales aparecerán aquí."
-              }
-            />
-          ) : (
-            items.map((item) => (
-              <PaymentCard
-                key={item.reservationId}
-                item={item}
-                busy={busyReservation === item.reservationId}
-                onQuote={() => void requestQuote(item.reservationId)}
+          <Animated.View style={[styles.results, { opacity: filterOpacity }]}>
+            {isLoading ? (
+              <DesksFeedbackCard
+                icon="loader"
+                title="Cargando pagos"
+                description="Consultamos estados confirmados por Deskly."
               />
-            ))
-          )}
-          {totalPages > 1 ? (
-            <View style={styles.pagination}>
-              <Button
-                title="Anterior"
-                variant="ghost"
-                disabled={page === 1}
-                onPress={() => setPage((value) => Math.max(1, value - 1))}
+            ) : errorMessage ? (
+              <DesksFeedbackCard
+                icon="circleAlert"
+                title="No pudimos cargar sus pagos"
+                description={errorMessage}
               />
-              <AppText variant="caption">
-                Pagina {page} de {totalPages}
-              </AppText>
-              <Button
-                title="Siguiente"
-                variant="ghost"
-                disabled={page >= totalPages}
-                onPress={() =>
-                  setPage((value) => Math.min(totalPages, value + 1))
+            ) : items.length === 0 ? (
+              <DesksFeedbackCard
+                icon="wallet"
+                title={
+                  filter === "COMPLETED"
+                    ? "No hay pagos completados"
+                    : filter === "PENDING"
+                      ? "No hay saldos pendientes"
+                      : "No hay pagos registrados"
+                }
+                description={
+                  filter === "COMPLETED"
+                    ? "Los pagos abonados en su totalidad aparecerán aquí."
+                    : filter === "PENDING"
+                      ? "Las reservas con una seña y saldo restante aparecerán aquí."
+                      : "Sus pagos confirmados y saldos parciales aparecerán aquí."
                 }
               />
-            </View>
-          ) : null}
+            ) : (
+              items.map((item) => (
+                <PaymentCard
+                  key={item.reservationId}
+                  item={item}
+                  busy={busyReservation === item.reservationId}
+                  onQuote={() => void requestQuote(item.reservationId)}
+                />
+              ))
+            )}
+            {totalPages > 1 ? (
+              <View style={styles.pagination}>
+                <Button
+                  title="Anterior"
+                  variant="ghost"
+                  disabled={page === 1}
+                  onPress={() => setPage((value) => Math.max(1, value - 1))}
+                />
+                <AppText variant="caption">
+                  Pagina {page} de {totalPages}
+                </AppText>
+                <Button
+                  title="Siguiente"
+                  variant="ghost"
+                  disabled={page >= totalPages}
+                  onPress={() =>
+                    setPage((value) => Math.min(totalPages, value + 1))
+                  }
+                />
+              </View>
+            ) : null}
+          </Animated.View>
         </ScrollView>
         <BottomTabBar
           activeTab="payments"
@@ -516,6 +531,7 @@ const styles = StyleSheet.create({
   },
   filterPressed: { opacity: 0.8 },
   filterLabel: { fontWeight: "700" },
+  results: { gap: spacing.md },
   card: {
     backgroundColor: colors.white,
     borderColor: colors.border,
