@@ -5,6 +5,7 @@ import {
 } from '@nestjs/throttler/dist/throttler.constants';
 
 import { PaymentSummariesController } from './payment-summaries.controller';
+import { PaymentSummaryFilter } from './dto/list-payment-summaries-query.dto';
 
 describe('PaymentSummariesController', () => {
   it('deriva memberId del JWT y no lo acepta desde la consulta', async () => {
@@ -14,9 +15,12 @@ describe('PaymentSummariesController', () => {
       user: { id: 'user-1', member: { id: 'member-1' } },
     } as never;
 
-    await controller.list({ page: 2, limit: 9 }, request);
+    await controller.list(
+      { page: 2, limit: 9, filter: PaymentSummaryFilter.PENDING },
+      request,
+    );
 
-    expect(execute).toHaveBeenCalledWith('member-1', 2, 9);
+    expect(execute).toHaveBeenCalledWith('member-1', 2, 9, 'PENDING');
   });
 
   it('rechaza usuarios sin miembro antes de consultar pagos', async () => {
@@ -24,7 +28,7 @@ describe('PaymentSummariesController', () => {
     const controller = new PaymentSummariesController({ execute } as never);
 
     await expect(
-      controller.list({ page: 1, limit: 9 }, {
+      controller.list({ page: 1, limit: 9, filter: PaymentSummaryFilter.ALL }, {
         user: { id: 'admin-1' },
       } as never),
     ).rejects.toBeInstanceOf(BadRequestException);

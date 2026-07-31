@@ -46,6 +46,7 @@ describe("usePayments", () => {
       "member-token",
       2,
       9,
+      "ALL",
     );
     expect(result.current.totalPages).toBe(2);
     expect(result.current.items).toEqual([

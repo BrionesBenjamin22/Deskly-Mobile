@@ -25,4 +25,26 @@ describe('ListPaymentSummariesQueryDto', () => {
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('limit');
   });
+
+  it('acepta filtros conocidos y rechaza valores desconocidos', async () => {
+    await expect(
+      validate(
+        plainToInstance(ListPaymentSummariesQueryDto, {
+          page: '1',
+          limit: '9',
+          filter: 'PENDING',
+        }),
+      ),
+    ).resolves.toHaveLength(0);
+
+    const errors = await validate(
+      plainToInstance(ListPaymentSummariesQueryDto, {
+        page: '1',
+        limit: '9',
+        filter: 'UNKNOWN',
+      }),
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0].property).toBe('filter');
+  });
 });

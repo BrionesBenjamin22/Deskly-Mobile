@@ -169,6 +169,23 @@ El bloqueo actual es externo: el sandbox limita el acceso por exceso de redirecc
 cuentas fake, webhook y aprobación de la reserva, esta prueba puede documentarse como diferida. La medición de calidad productiva quedará para
 cuando exista un pago real de producción.
 
+## Ajuste UX de saldo pendiente del 31 de julio de 2026
+
+- `Completar pago` abre las mismas opciones de cotizacion en un modal centrado,
+  en lugar de insertar una tarjeta al final del listado.
+- Se conservaron cotizacion backend, importes, idempotencia, checkout y polling.
+- El modal se puede cancelar sin llamadas adicionales y bloquea acciones durante
+  el inicio del checkout.
+- Evidencia focal: 1 suite y 5 pruebas aprobadas.
+- Mobile completo: 22 suites y 86 pruebas aprobadas; TypeScript y formato de
+  archivos modificados aprobados.
+- Se agregaron filtros `Todos`, `Pendientes` y `Completados`; backend filtra
+  antes de paginar y mobile reinicia en pagina 1 al cambiar de vista.
+- Evidencia focal del filtro: backend 3 suites/9 pruebas y mobile 3 suites/12
+  pruebas; builds y TypeScript aprobados.
+- Barrera completa posterior: backend 53 suites/325 pruebas y mobile 22
+  suites/87 pruebas; build backend, TypeScript y `git diff --check` aprobados.
+
 ## Commit sugerido
 
 Al completar la prueba manual: `feat(pagos): integrar checkout seguro y documentar su operacion`

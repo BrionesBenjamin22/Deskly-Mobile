@@ -103,7 +103,9 @@ describe("PaymentsScreen checkout seguro", () => {
     );
 
     await act(async () => {
-      await screen.getByTestId("payments-scroll").props.refreshControl.props.onRefresh();
+      await screen
+        .getByTestId("payments-scroll")
+        .props.refreshControl.props.onRefresh();
     });
 
     expect(reloadMock).toHaveBeenCalledTimes(1);
@@ -117,6 +119,9 @@ describe("PaymentsScreen checkout seguro", () => {
     );
 
     fireEvent.press(screen.getByText(/Completar pago/));
+    expect(
+      await screen.findByLabelText("Cerrar opciones de pago"),
+    ).toBeOnTheScreen();
     const option = await screen.findByText(/Pagar total/);
     fireEvent.press(option);
     fireEvent.press(option);
@@ -127,6 +132,43 @@ describe("PaymentsScreen checkout seguro", () => {
     );
     await screen.findByText("Pago confirmado");
     expect(mockedAttempt).toHaveBeenCalledWith("access-token", "payment-1");
+  });
+
+  it("presenta la cotizacion en un modal y permite cerrarla", async () => {
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
+
+    fireEvent.press(screen.getByText(/Completar pago/));
+
+    expect(await screen.findByText("Completar pago")).toBeOnTheScreen();
+    expect(screen.getByText(/Pagar total/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Cancelar"));
+    expect(screen.queryByText(/Pagar total/)).toBeNull();
+    expect(mockedCheckout).not.toHaveBeenCalled();
+  });
+
+  it("filtra pagos pendientes o completados desde la pantalla", () => {
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
+
+    fireEvent.press(screen.getByText("Completados"));
+
+    expect(mockedUsePayments).toHaveBeenLastCalledWith(
+      "access-token",
+      1,
+      0,
+      "COMPLETED",
+    );
+    expect(screen.getByRole("radio", { name: "Completados" })).toHaveProp(
+      "accessibilityState",
+      { selected: true },
+    );
   });
 
   it("no confirma por abrir y volver del checkout mientras backend sigue pendiente", async () => {

@@ -1,12 +1,13 @@
-import { API_BASE_URL } from '../../../config/api';
-import { authenticatedFetch } from '../../auth/services/authenticated-fetch';
+import { API_BASE_URL } from "../../../config/api";
+import { authenticatedFetch } from "../../auth/services/authenticated-fetch";
 import type {
   PaymentAttempt,
   PaymentCheckout,
   PaymentOption,
   PaymentQuote,
+  PaymentSummaryFilter,
   PaymentSummaryResponse,
-} from '../types/payment.types';
+} from "../types/payment.types";
 
 type ApiErrorBody = {
   error?: string;
@@ -18,7 +19,7 @@ const REQUEST_TIMEOUT_MS = 8000;
 export class PaymentServiceError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PaymentServiceError';
+    this.name = "PaymentServiceError";
     Object.setPrototypeOf(this, PaymentServiceError.prototype);
   }
 }
@@ -30,9 +31,9 @@ export function createPaymentOperationKey(): string {
 
 function getErrorMessage(body: ApiErrorBody | null) {
   if (body?.error) return body.error;
-  if (Array.isArray(body?.message)) return body.message.join(' ');
+  if (Array.isArray(body?.message)) return body.message.join(" ");
   if (body?.message) return body.message;
-  return 'Lo sentimos, no pudimos procesar el pago. Intente nuevamente.';
+  return "Lo sentimos, no pudimos procesar el pago. Intente nuevamente.";
 }
 
 async function requestJson<T>(
@@ -47,17 +48,17 @@ async function requestJson<T>(
     response = await authenticatedFetch(`${API_BASE_URL}${path}`, accessToken, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(init?.headers ?? {}),
       },
       signal: controller.signal,
     });
   } catch (error) {
-    const timeout = error instanceof Error && error.name === 'AbortError';
+    const timeout = error instanceof Error && error.name === "AbortError";
     throw new PaymentServiceError(
       timeout
-        ? 'Lo sentimos, la consulta esta tardando demasiado. Intente nuevamente.'
-        : 'Lo sentimos, no pudimos conectar con Deskly. Revise su conexion e intente nuevamente.',
+        ? "Lo sentimos, la consulta esta tardando demasiado. Intente nuevamente."
+        : "Lo sentimos, no pudimos conectar con Deskly. Revise su conexion e intente nuevamente.",
     );
   } finally {
     clearTimeout(timeoutId);
@@ -87,9 +88,9 @@ export function createPaymentCheckout(
     idempotencyKey: string;
   },
 ) {
-  return requestJson<PaymentCheckout>('/payments/checkout', accessToken, {
-    method: 'POST',
-    headers: { 'Idempotency-Key': input.idempotencyKey },
+  return requestJson<PaymentCheckout>("/payments/checkout", accessToken, {
+    method: "POST",
+    headers: { "Idempotency-Key": input.idempotencyKey },
     body: JSON.stringify({
       reservationId: input.reservationId,
       option: input.option,
@@ -118,10 +119,12 @@ export function listPaymentSummaries(
   accessToken: string,
   page = 1,
   limit = 9,
+  filter: PaymentSummaryFilter = "ALL",
 ) {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
+    filter,
   });
   return requestJson<PaymentSummaryResponse>(
     `/payments/summary?${params}`,

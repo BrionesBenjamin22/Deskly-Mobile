@@ -1485,3 +1485,108 @@ validacion:
 mensaje_de_commit_propuesto:
 
 `fix(seguridad): exigir autenticacion en consultas de escritorios`
+
+---
+
+### E3-28 — Confirmacion resiliente de pagos sandbox
+
+solicitud:
+
+> Ejecutar el plan para diagnosticar la falta de confirmacion sandbox. Diferir
+> la simulacion manual y el cierre visual consecuente.
+
+diagnostico:
+
+- la preferencia no enviaba `notification_url`;
+- un pago sin `payment_id` podia expirar sin buscarse por
+  `external_reference`;
+- la conciliacion existia como caso de uso, pero no tenia ejecucion periodica;
+- mobile ya esperaba el estado autoritativo del backend y no confirmaba por el
+  retorno visual.
+
+implementacion:
+
+- validacion estricta de URL HTTPS, origen permitido, ruta y query del webhook;
+- `notification_url` incorporada a cada preferencia de Checkout Pro;
+- busqueda autoritativa por referencia antes de expirar pagos pendientes;
+- worker de conciliacion configurable, con lotes acotados y bloqueo de
+  solapamiento;
+- variables de entorno de ejemplo y documentacion operativa actualizadas;
+- comportamiento mobile preservado.
+
+validacion:
+
+- configuracion y gateway: 2 suites y 37 pruebas aprobadas;
+- conciliacion y worker: 2 suites y 11 pruebas aprobadas;
+- Payments backend: 23 suites y 165 pruebas aprobadas;
+- backend completo: 53 suites y 321 pruebas aprobadas;
+- E2E PostgreSQL: 3 suites y 17 pruebas aprobadas;
+- mobile completo: 22 suites y 85 pruebas aprobadas;
+- build backend, TypeScript, Expo web, Docker, lint, formato y
+  `git diff --check`: aprobados;
+- database, backend y mobile saludables; `/health` 200 y Metro activo.
+
+pendiente_manual:
+
+- ejecutar el pago con cuentas y credenciales de prueba;
+- emitir la notificacion mediante el simulador oficial usando el identificador
+  real;
+- verificar pago `APPROVED`, reserva confirmada y actualizacion visual;
+- cerrar `PAYMENTS-08` y el cierre manual dependiente de `PAYMENTS-07`.
+
+mensajes_de_commit_propuestos:
+
+- `feat(pagos): configurar notificaciones por preferencia`
+- `feat(pagos): automatizar conciliacion de pagos pendientes`
+- `docs(pagos): registrar validacion sandbox pendiente`
+
+---
+
+### E3-29 — Validacion real del webhook de Mercado Pago
+
+resultado:
+
+- se corrigio la firma para usar `data.id` de query segun el contrato oficial;
+- el simulador entrego un POST con firma y request ID validos;
+- ngrok respondio HTTP 200;
+- Deskly correlaciono el pago `170515659197` y conservo `APPROVED`;
+- conciliacion y webhook convergieron sin duplicar la transicion;
+- `PAYMENTS-08` se marco `COMPLETADA`;
+- `PAYMENTS-07` conserva pendientes sus comprobaciones visuales especificas.
+
+validacion_automatizada:
+
+- focal: 2 suites y 34 pruebas aprobadas;
+- Payments: 23 suites y 167 pruebas aprobadas;
+- backend completo: 53 suites y 323 pruebas aprobadas;
+- build backend y `git diff --check` aprobados.
+
+mensaje_de_commit_propuesto:
+
+`fix(pagos): adaptar webhooks al contrato firmado de Mercado Pago`
+
+---
+
+### E3-30 — Modal de saldo y filtros de pagos
+
+resultado:
+
+- `Completar pago` muestra la cotizacion en un modal sin alterar el checkout;
+- se agregaron filtros `Todos`, `Pendientes` y `Completados`;
+- backend aplica el filtro antes de paginar y mobile vuelve a pagina 1;
+- los estados vacios explican el filtro seleccionado;
+- se conservaron importes, idempotencia, polling y navegacion.
+
+validacion:
+
+- focal modal: 1 suite y 5 pruebas;
+- focal filtros backend: 3 suites y 9 pruebas;
+- focal filtros mobile: 3 suites y 12 pruebas;
+- backend completo: 53 suites y 325 pruebas;
+- mobile completo: 22 suites y 87 pruebas;
+- build backend, TypeScript, formato y `git diff --check`: aprobados.
+
+mensajes_de_commit_propuestos:
+
+- `feat(pagos): mostrar opciones de saldo pendiente en modal`
+- `feat(pagos): filtrar pagos pendientes y completados`

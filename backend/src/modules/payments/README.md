@@ -39,6 +39,13 @@ El host debe mantener el reloj sincronizado mediante NTP. La preferencia usa una
 
 La verificacion del webhook no se delega al transporte: valida el cuerpo crudo, `x-signature` y `x-request-id` mediante HMAC SHA-256 y comparacion en tiempo constante antes de consultar el pago por SDK. Los errores del SDK se traducen a `PaymentGatewayError`; nunca se propagan bodies, tokens ni mensajes del proveedor. Los estados HTTP 408, 429 y 5xx se clasifican como reintentables; los 4xx restantes son definitivos.
 
+El identificador usado en el manifiesto HMAC se toma de `data.id` en la query,
+segun el contrato oficial de Mercado Pago. El body se usa como corroboracion:
+si informa un ID o tipo diferente, la notificacion se rechaza. El simulador puede
+mostrar un body vacio; en ese caso se acepta solo con query, `x-request-id` y
+`x-signature` validos, usando el request ID como identificador idempotente del
+evento.
+
 La preferencia y el pago son recursos externos diferentes. Crear Checkout Pro guarda solamente la URL de la preferencia; no utiliza su ID como si fuera un pago. Cuando llega una notificacion, el backend consulta el ID real del pago, correlaciona mediante la referencia unica `payment:<id interno>`, valida importe y moneda, y recien entonces persiste el identificador real y aplica la transicion.
 
 Las consultas autenticadas de un intento o de los pagos de una reserva tambien sincronizan estados no terminales. Si todavia no existe `externalPaymentId`, `Payment.search` recupera candidatos por `external_reference`; solo se vincula el resultado cuya referencia, importe y moneda coinciden con el intento autoritativo. Luego la misma transaccion que persiste `APPROVED` confirma la reserva y elimina el hold. Un fallo externo reintentable conserva el estado local para permitir una consulta posterior.
@@ -52,7 +59,17 @@ Las consultas autenticadas de un intento o de los pagos de una reserva tambien s
 | Reembolsar duplicado       | `PaymentRefund` y `Payment`   | Idempotencia del reembolso y lectura posterior del estado definitivo.                                                                                  |
 | Fallo externo              | Todos                         | Timeout, desconexion, 408, 429 y 5xx reintentables; errores sanitizados sin secretos.                                                                  |
 
-Variables: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `MERCADO_PAGO_SUCCESS_URL`, `MERCADO_PAGO_FAILURE_URL`, `MERCADO_PAGO_PENDING_URL`, `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` y `MERCADO_PAGO_TIMEOUT_MS`. La allowlist contiene origenes separados por coma. Nunca versionar valores reales.
+Variables: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`,
+`MERCADO_PAGO_SUCCESS_URL`, `MERCADO_PAGO_FAILURE_URL`,
+`MERCADO_PAGO_PENDING_URL`, `MERCADO_PAGO_NOTIFICATION_URL`,
+`MERCADO_PAGO_ALLOWED_RETURN_ORIGINS`,
+`MERCADO_PAGO_ALLOWED_NOTIFICATION_ORIGINS` y
+`MERCADO_PAGO_TIMEOUT_MS`. Las allowlists contienen origenes separados por
+coma. Nunca versionar valores reales.
+
+Cada preferencia incluye una `notification_url` HTTPS terminada en
+`/webhooks/payments?source_news=webhooks`. Esta configuracion tiene prioridad
+sobre la URL del panel y debe apuntar al mismo backend que persiste el intento.
 
 ## Funcionalidad
 
@@ -65,12 +82,19 @@ Los endpoints de checkout, consulta, cotizacion y operacion requieren JWT.
 ```http
 POST /payments/checkout
 GET /payments/:id
-GET /payments/summary?page=1&limit=9
+GET /payments/summary?page=1&limit=9&filter=ALL
 GET /reservations/:id/payments
 GET /reservations/:id/payment-quote
 POST /payments/operations/reconcile
 GET /payments/return/:result
 ```
+
+La conciliacion puede ejecutarse mediante el endpoint administrativo o mediante
+el worker interno. Este ultimo esta deshabilitado por defecto y se configura con
+`PAYMENT_RECONCILIATION_ENABLED`, `PAYMENT_RECONCILIATION_INTERVAL_MS`,
+`PAYMENT_RECONCILIATION_LIMIT` y
+`PAYMENT_RECONCILIATION_MIN_AGE_MINUTES`. Solo debe habilitarse en una instancia
+lider; con multiples replicas se recomienda un scheduler externo autenticado.
 
 `GET /payments/return/:result` es publico y admite `success`, `pending` o `failure`. Devuelve una pagina estatica para cerrar el checkout y volver a la instancia de Deskly que inicio la operacion. No recibe decisiones de negocio ni aprueba pagos mediante parametros del navegador.
 
@@ -93,6 +117,11 @@ sincronizados y los importes `totalMinorUnits`, `approvedMinorUnits` y
 `pendingMinorUnits` calculados por la politica autoritativa del backend. El
 filtrado se realiza despues de sincronizar para no ocultar una aprobacion cuyo
 webhook se haya retrasado.
+
+`filter` admite `ALL`, `PENDING` y `COMPLETED`. `PENDING` conserva resumenes con
+`pendingMinorUnits > 0`; `COMPLETED`, aquellos sin saldo restante. El filtro se
+aplica antes de paginar para que total, paginas y limite describan el conjunto
+seleccionado.
 
 ## Reglas de negocio
 

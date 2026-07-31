@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsInt, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, Max, Min } from 'class-validator';
+
+export enum PaymentSummaryFilter {
+  ALL = 'ALL',
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+}
 
 export class ListPaymentSummariesQueryDto {
   @Type(() => Number)
@@ -12,4 +18,7 @@ export class ListPaymentSummariesQueryDto {
   @Min(1)
   @Max(9)
   limit = 9;
+
+  @IsEnum(PaymentSummaryFilter)
+  filter: PaymentSummaryFilter = PaymentSummaryFilter.ALL;
 }

@@ -11,6 +11,8 @@ import {
   toPaymentAttemptOutput,
 } from './query-payment-attempts.use-cases';
 
+export type PaymentSummaryFilter = 'ALL' | 'PENDING' | 'COMPLETED';
+
 @Injectable()
 export class ListPaymentSummariesUseCase {
   private readonly pricing = new PaymentPricingPolicy();
@@ -21,7 +23,12 @@ export class ListPaymentSummariesUseCase {
     private readonly synchronizePayment: SynchronizePaymentAttemptUseCase,
   ) {}
 
-  async execute(memberId: string, page: number, limit: number) {
+  async execute(
+    memberId: string,
+    page: number,
+    limit: number,
+    filter: PaymentSummaryFilter = 'ALL',
+  ) {
     const candidates =
       await this.payments.listPaymentSummaryCandidates(memberId);
     const synchronized = await Promise.all(
@@ -56,16 +63,21 @@ export class ListPaymentSummariesUseCase {
     const visible = synchronized.filter((item) =>
       item.attempts.some((attempt) => attempt.status === 'APPROVED'),
     );
+    const filtered = visible.filter((item) => {
+      if (filter === 'PENDING') return item.pendingMinorUnits > 0;
+      if (filter === 'COMPLETED') return item.pendingMinorUnits === 0;
+      return true;
+    });
     const start = (page - 1) * limit;
-    const items = visible.slice(start, start + limit);
+    const items = filtered.slice(start, start + limit);
 
     return {
       items,
       pagination: {
         page,
         limit,
-        total: visible.length,
-        totalPages: Math.ceil(visible.length / limit),
+        total: filtered.length,
+        totalPages: Math.ceil(filtered.length / limit),
       },
     };
   }
