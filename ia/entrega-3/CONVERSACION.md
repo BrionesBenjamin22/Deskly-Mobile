@@ -1438,3 +1438,50 @@ commit_autorizado:
 Detalle temático:
 
 `ia/entrega-3/pull-to-refresh.md`
+
+---
+
+### E3-27 — Autenticacion obligatoria de endpoints funcionales
+
+solicitud:
+
+> Los endpoints deben requerir autenticacion porque el flujo de la pagina es
+> autenticado. Implementar para que no sean accesibles sin sesion.
+
+decision:
+
+- todas las rutas de Desks, catalogo, localidades, areas y disponibilidad
+  requieren `JwtAuthGuard`;
+- las mutaciones conservan `RolesGuard` para `ADMIN` y `GESTOR`;
+- Payments funcional ya estaba protegido;
+- `/webhooks/payments` y `/payments/return` permanecen publicos por ser entradas
+  del proveedor y no formar parte de la navegacion autenticada;
+- `Desk-Settings` se corrige como referencia historica: no es un modulo backend
+  independiente.
+
+implementacion:
+
+- guard JWT y Bearer Auth de Swagger a nivel de los cinco controladores Desks;
+- service mobile alineado para autenticar tambien todas las lecturas mediante
+  la sesion centralizada y conservar refresh automatico;
+- pruebas de metadata y HTTP para impedir acceso anonimo.
+
+validacion:
+
+- prueba focal backend: 1 suite y 20 pruebas aprobadas;
+- backend completo: 52 suites y 312 pruebas aprobadas;
+- E2E HTTP focal: 1 suite y 8 pruebas aprobadas;
+- E2E PostgreSQL limpio: 18 migraciones, 3 suites y 17 pruebas aprobadas;
+- pruebas mobile focales: 2 suites y 4 pruebas aprobadas;
+- mobile completo: 22 suites y 85 pruebas aprobadas;
+- build backend, TypeScript y export Expo web aprobados;
+- Prettier y ESLint focales aprobados;
+- build Docker backend y mobile aprobado;
+- database, backend y mobile con healthchecks aprobados;
+- ocho rutas funcionales verificadas manualmente respondieron `401` sin JWT;
+- `/health` respondio 200 y Metro `packager-status:running`;
+- la deuda tecnica declarada al cierre de E2 queda completada.
+
+mensaje_de_commit_propuesto:
+
+`fix(seguridad): exigir autenticacion en consultas de escritorios`

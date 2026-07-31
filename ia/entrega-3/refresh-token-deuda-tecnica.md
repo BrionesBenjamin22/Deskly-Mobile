@@ -64,7 +64,16 @@ primero el refresh token por ser el bloque independiente de menor complejidad.
 | `AuthContext` y eliminación de prop drilling | `COMPLETADA` | `AuthProvider` y `useAuth` centralizan la sesión; pantallas y barra inferior dejaron de propagar autenticación por props. |
 | Refresh token | `COMPLETADA` | Renovación backend/mobile, persistencia segura y reintento automático. |
 | Pull-to-refresh nativo | `COMPLETADA` | `RefreshControl` reutiliza las recargas de áreas, escritorios, reservas, pagos y perfil; los `refreshKey` se conservan para eventos cruzados. |
-| Cobertura de `JwtAuthGuard` | `MAYORMENTE COMPLETADA` | Mutaciones y operaciones sensibles protegidas; las lecturas públicas requieren una decisión contractual explícita. |
+| Cobertura de `JwtAuthGuard` | `COMPLETADA` | Desks, catálogo, localidades, áreas, disponibilidad y Payments funcional exigen JWT; pruebas HTTP confirman `401` sin sesión. |
+
+La referencia histórica a `Desk-Settings` no corresponde a un modulo backend
+independiente. Su funcionalidad pertenece actualmente a Desks, Desk Catalog,
+Localities y Work Areas, todos incluidos en la auditoria.
+
+Los callbacks externos `/webhooks/payments` y `/payments/return` no son
+endpoints de navegación de usuario y permanecen públicos por diseño. Su
+seguridad depende de firma, anti-replay, validación de origen y datos
+autoritativos del backend.
 
 ## Cierre del prop drilling
 

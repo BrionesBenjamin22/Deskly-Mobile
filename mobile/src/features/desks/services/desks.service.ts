@@ -139,13 +139,11 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
       },
       signal: controller.signal,
     };
-    response = accessToken
-      ? await authenticatedFetch(
-          `${API_BASE_URL}${path}`,
-          accessToken,
-          requestInit,
-        )
-      : await fetch(`${API_BASE_URL}${path}`, requestInit);
+    response = await authenticatedFetch(
+      `${API_BASE_URL}${path}`,
+      accessToken,
+      requestInit,
+    );
   } catch (error) {
     const isTimeout =
       error instanceof Error &&

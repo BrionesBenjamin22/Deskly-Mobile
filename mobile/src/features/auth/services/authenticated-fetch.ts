@@ -40,15 +40,15 @@ function refreshOnce() {
 
 export async function authenticatedFetch(
   input: RequestInfo | URL,
-  accessToken: string,
+  accessToken?: string,
   init?: RequestInit,
 ) {
-  const execute = (token: string) =>
+  const execute = (token?: string) =>
     fetch(input, {
       ...init,
       headers: {
         ...init?.headers,
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
 

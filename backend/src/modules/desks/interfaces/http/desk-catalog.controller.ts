@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiConflictResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -42,6 +43,8 @@ import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guar
 import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Desk catalog')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller()
 export class DeskCatalogController {
   constructor(
@@ -64,7 +67,7 @@ export class DeskCatalogController {
   }
 
   @Post('desk-descriptions')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({ description: 'Descripcion creada correctamente.' })
   createDescription(@Body() body: CreateDeskDescriptionBodyDto) {
@@ -83,7 +86,7 @@ export class DeskCatalogController {
   }
 
   @Patch('desk-descriptions/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({ description: 'Descripcion actualizada correctamente.' })
   @ApiNotFoundResponse({ description: 'Descripcion no encontrada.' })
@@ -99,7 +102,7 @@ export class DeskCatalogController {
   }
 
   @Delete('desk-descriptions/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Descripcion eliminada correctamente.' })
@@ -122,7 +125,7 @@ export class DeskCatalogController {
   }
 
   @Post('amenities')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({ description: 'Amenities creado correctamente.' })
   createAmenity(@Body() body: CreateAmenityBodyDto) {
@@ -141,7 +144,7 @@ export class DeskCatalogController {
   }
 
   @Patch('amenities/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({ description: 'Amenities actualizado correctamente.' })
   @ApiNotFoundResponse({ description: 'Amenities no encontrado.' })
@@ -157,7 +160,7 @@ export class DeskCatalogController {
   }
 
   @Delete('amenities/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Amenities eliminado correctamente.' })

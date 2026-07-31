@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -39,6 +40,8 @@ import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guar
 import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Desks')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('desks')
 export class DesksController {
   constructor(
@@ -50,7 +53,7 @@ export class DesksController {
   ) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @ApiCreatedResponse({
     description: 'Escritorio creado correctamente.',
@@ -86,7 +89,7 @@ export class DesksController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @ApiOkResponse({
     description: 'Escritorio actualizado correctamente.',
@@ -109,7 +112,7 @@ export class DesksController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Escritorio eliminado logicamente.' })

@@ -1,6 +1,18 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
+import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
 import { GetAvailableDesksUseCase } from '../../application/use-cases/get-available-desks.use-case';
 import { InvalidReservationDateError } from '../../domain/errors/invalid-reservation-date.error';
 import { InvalidTimeFormatError } from '../../domain/errors/invalid-time-format.error';
@@ -8,6 +20,8 @@ import { InvalidTimeRangeError } from '../../domain/errors/invalid-time-range.er
 import { GetAvailableDesksQueryDto } from './dto/get-available-desks-query.dto';
 
 @ApiTags('Desks')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('desks')
 export class DeskAvailabilityController {
   constructor(
