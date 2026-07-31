@@ -3,9 +3,9 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { colors } from '../../theme/colors';
 import { radii, spacing } from '../../theme/spacing';
+import { useAuth } from '../../features/auth/context/AuthContext';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
-import { UserRole } from '../../features/auth/types/auth.types';
 
 type BottomTab =
   | 'desks'
@@ -28,7 +28,6 @@ export type BottomTabBarProps = {
   onPressUserManagement?: () => void;
   onPressAdminCatalog?: () => void;
   onPressChangePassword?: () => void;
-  userRole?: UserRole;
 };
 
 const tabs: { key: BottomTab; label: string; icon: IconName }[] = [
@@ -54,8 +53,8 @@ export function BottomTabBar({
   onPressUserManagement,
   onPressAdminCatalog,
   onPressChangePassword,
-  userRole,
 }: BottomTabBarProps) {
+  const { role: userRole } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const handlers = {
     desks: onPressDesks,

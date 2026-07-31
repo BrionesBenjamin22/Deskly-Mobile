@@ -6,6 +6,7 @@ import { Card } from '../../../components/ui/Card';
 import { Icon } from '../../../components/ui/Icon';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { useAuth } from '../../auth/context/AuthContext';
 import { useProfilePenalties } from '../hooks/useProfilePenalties';
 import {
   InfractionLevel,
@@ -73,12 +74,11 @@ function PenaltyDetail({ penalty }: { penalty: Penalty }) {
 }
 
 export function ProfilePenaltiesCard({
-  accessToken,
   refreshKey = 0,
 }: {
-  accessToken: string;
   refreshKey?: number;
 }) {
+  const { accessToken } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const penalties = useProfilePenalties(accessToken, refreshKey);
 

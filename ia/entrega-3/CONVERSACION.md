@@ -1346,3 +1346,57 @@ commit_ejecutado:
 Detalle temático:
 
 `ia/entrega-3/refresh-token-deuda-tecnica.md`
+
+---
+
+## 14. Cierre de deuda tecnica: navegacion ADMIN y AuthContext
+
+### E3-24 — Navegacion desde Mi perfil
+
+solicitud:
+
+> Desde una cuenta ADMIN, Mi perfil no permite recorrer las demas pantallas de
+> la Bottom Tab Bar. Verificarlo, corregirlo y ejecutar el commit.
+
+resultado:
+
+- se confirmo que Panel era visible pero no recibia callback;
+- `ProfileScreen` ahora propaga `onPressAdminCatalog`;
+- se agrego la regresion Panel → Mi perfil → Panel;
+- TypeScript, 20 suites con 74 pruebas y export Expo aprobaron.
+
+commit_ejecutado:
+
+`824bbaf fix(mobile): restaurar navegacion admin desde perfil`
+
+### E3-25 — Eliminacion de prop drilling sin cambios funcionales
+
+solicitud:
+
+> Solucionar el prop drilling con un enfoque multiagente para validar, testear,
+> desarrollar y orquestar el flujo. No modificar el comportamiento actual.
+
+resultado:
+
+- se coordinaron auditorias de arquitectura, pruebas y revision final;
+- `AuthProvider` y `useAuth` centralizan sesion, token, usuario y rol;
+- `App.tsx` conserva navegacion, persistencia y ciclo de sesion;
+- las pantallas y la barra dejaron de propagar datos de autenticacion por props;
+- refresh, logout, cambio de cuenta, cambio de contraseña, permisos y tabs
+  mantienen sus contratos;
+- la actualizacion de sesion por runtime conserva la pantalla activa.
+
+validacion:
+
+- TypeScript aprobado;
+- 21 suites y 77 pruebas con cobertura aprobadas;
+- suite final: 21 suites y 78 pruebas aprobadas;
+- `AuthContext` con 100 % de cobertura;
+- export Expo web y build Docker mobile aprobados;
+- servicios Docker con healthchecks aprobados;
+- revision independiente sin regresiones bloqueantes;
+- prueba manual pendiente a cargo del usuario.
+
+Detalle tematico:
+
+`ia/entrega-3/auth-context-prop-drilling.md`

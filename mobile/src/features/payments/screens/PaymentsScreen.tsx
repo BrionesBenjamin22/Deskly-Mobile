@@ -3,13 +3,13 @@ import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
 import { BottomTabBar } from "../../../components/ui/BottomTabBar";
+import { useAuth } from "../../auth/context/AuthContext";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ScreenContainer } from "../../../components/ui/ScreenContainer";
 import { StatusModal } from "../../../components/ui/StatusModal";
 import { colors, statusColors } from "../../../theme/colors";
 import { radii, spacing } from "../../../theme/spacing";
-import type { UserRole } from "../../auth/types/auth.types";
 import { DesksFeedbackCard } from "../../desks/components/DesksFeedbackCard";
 import { usePayments } from "../hooks/usePayments";
 import {
@@ -27,7 +27,6 @@ import type {
 } from "../types/payment.types";
 
 type PaymentsScreenProps = {
-  accessToken: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressSettings?: () => void;
@@ -36,7 +35,6 @@ type PaymentsScreenProps = {
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
   onPressChangePassword?: () => void;
-  userRole?: UserRole;
   refreshKey?: number;
 };
 
@@ -66,10 +64,11 @@ function formatMoney(minorUnits: number) {
 }
 
 export function PaymentsScreen(props: PaymentsScreenProps) {
+  const { accessToken } = useAuth();
   const [page, setPage] = useState(1);
   const [localRefresh, setLocalRefresh] = useState(0);
   const { items, totalPages, isLoading, errorMessage, reload } = usePayments(
-    props.accessToken,
+    accessToken,
     page,
     (props.refreshKey ?? 0) + localRefresh,
   );
@@ -91,7 +90,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
   const requestQuote = async (reservationId: string) => {
     setBusyReservation(reservationId);
     try {
-      setQuote(await getPaymentQuote(props.accessToken, reservationId));
+      setQuote(await getPaymentQuote(accessToken, reservationId));
     } catch (error) {
       showError(error);
     } finally {
@@ -113,7 +112,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
       description: "Estamos preparando el checkout. No cierre la aplicacion.",
     });
     try {
-      const checkout = await createPaymentCheckout(props.accessToken, {
+      const checkout = await createPaymentCheckout(accessToken, {
         reservationId: quote.reservationId,
         option,
         idempotencyKey,
@@ -131,7 +130,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
         canContinueInBackground: true,
       });
       const status = await pollPayment(
-        props.accessToken,
+        accessToken,
         checkout.paymentId,
         checkout.expiresAt,
       );
@@ -283,7 +282,6 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
           onPressSwitchAccount={props.onPressSwitchAccount}
           onPressUserManagement={props.onPressUserManagement}
           onPressChangePassword={props.onPressChangePassword}
-          userRole={props.userRole}
         />
       </View>
       {feedback ? (

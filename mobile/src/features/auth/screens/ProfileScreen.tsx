@@ -19,11 +19,9 @@ import {
   validateProfilePhone,
 } from '../validation/auth.validation';
 import { ProfilePenaltiesCard } from '../../penalties/components/ProfilePenaltiesCard';
+import { useAuth } from '../context/AuthContext';
 
 type ProfileScreenProps = {
-  accessToken: string;
-  initialUser: AuthUser;
-  userRole: UserRole;
   onPressDesks: () => void;
   onPressReservations: () => void;
   onPressPayments: () => void;
@@ -51,9 +49,6 @@ function getErrorMessage(error: unknown) {
 }
 
 export function ProfileScreen({
-  accessToken,
-  initialUser,
-  userRole,
   onPressDesks,
   onPressReservations,
   onPressPayments,
@@ -65,6 +60,7 @@ export function ProfileScreen({
   onPressChangePassword,
   penaltiesRefreshKey = 0,
 }: ProfileScreenProps) {
+  const { accessToken, role: userRole, user: initialUser } = useAuth();
   const [user, setUser] = useState<AuthUser | CurrentUserResponse['user']>(
     initialUser,
   );
@@ -242,16 +238,12 @@ export function ProfileScreen({
           </Card>
 
           {user.member ? (
-            <ProfilePenaltiesCard
-              accessToken={accessToken}
-              refreshKey={penaltiesRefreshKey}
-            />
+            <ProfilePenaltiesCard refreshKey={penaltiesRefreshKey} />
           ) : null}
         </ScrollView>
 
         <BottomTabBar
           activeTab="profile"
-          userRole={userRole}
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
           onPressPayments={onPressPayments}

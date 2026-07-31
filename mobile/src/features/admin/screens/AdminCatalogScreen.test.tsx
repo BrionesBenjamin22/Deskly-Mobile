@@ -6,6 +6,8 @@ import {
 } from '@testing-library/react-native';
 
 import { AdminCatalogScreen } from './AdminCatalogScreen';
+import { AuthProvider } from '../../auth/context/AuthContext';
+import type { LoginResponse } from '../../auth/types/auth.types';
 
 const mockRemoveAmenity = jest.fn();
 const mockSaveDesk = jest.fn().mockResolvedValue(true);
@@ -68,7 +70,6 @@ jest.mock('../hooks/useAdminCatalog', () => ({
 }));
 
 const props = {
-  accessToken: 'token',
   onPressAdminCatalog: jest.fn(),
   onPressUserManagement: jest.fn(),
   onPressProfile: jest.fn(),
@@ -76,6 +77,27 @@ const props = {
   onPressSwitchAccount: jest.fn(),
   onPressChangePassword: jest.fn(),
 };
+
+const session: LoginResponse = {
+  access_token: 'token',
+  refresh_token: 'refresh-token',
+  user: {
+    id: 'admin-1',
+    email: 'admin@deskly.test',
+    username: 'admin',
+    role: 'ADMIN',
+    active: true,
+    member: null,
+  },
+};
+
+function renderScreen() {
+  return render(
+    <AuthProvider session={session}>
+      <AdminCatalogScreen {...props} />
+    </AuthProvider>,
+  );
+}
 
 describe('AdminCatalogScreen', () => {
   beforeEach(() => {
@@ -85,7 +107,7 @@ describe('AdminCatalogScreen', () => {
   });
 
   it('muestra las categorias administrables y sus instancias', () => {
-    render(<AdminCatalogScreen {...props} />);
+    renderScreen();
 
     expect(screen.getByText('Escritorios')).toBeOnTheScreen();
     expect(screen.queryByText('Tipos de escritorio')).not.toBeOnTheScreen();
@@ -98,7 +120,7 @@ describe('AdminCatalogScreen', () => {
   });
 
   it('solicita confirmacion antes de eliminar', () => {
-    render(<AdminCatalogScreen {...props} />);
+    renderScreen();
 
     fireEvent.press(screen.getByText('Amenities'));
     fireEvent.press(screen.getAllByText('Eliminar')[0]);
@@ -111,7 +133,7 @@ describe('AdminCatalogScreen', () => {
   });
 
   it('permite agregar y quitar amenities al editar un escritorio', async () => {
-    render(<AdminCatalogScreen {...props} />);
+    renderScreen();
 
     fireEvent.press(screen.getByText('Escritorios'));
     fireEvent.press(screen.getByText('Editar'));
@@ -131,7 +153,7 @@ describe('AdminCatalogScreen', () => {
     ['Localidades', 'Chascomús'],
     ['Áreas de trabajo', 'Sede central'],
   ])('lista las instancias de %s', (category, instance) => {
-    render(<AdminCatalogScreen {...props} />);
+    renderScreen();
 
     fireEvent.press(screen.getByText(category));
 
@@ -143,7 +165,7 @@ describe('AdminCatalogScreen', () => {
   it('muestra una confirmacion visual cuando una accion finaliza con exito', () => {
     mockSuccessMessage = 'La localidad se creó correctamente.';
 
-    render(<AdminCatalogScreen {...props} />);
+    renderScreen();
 
     expect(screen.getByText('Acción completada')).toBeOnTheScreen();
     expect(
@@ -154,7 +176,7 @@ describe('AdminCatalogScreen', () => {
   it('muestra una confirmacion visual cuando una accion falla', () => {
     mockErrorMessage = 'No fue posible eliminar el área.';
 
-    render(<AdminCatalogScreen {...props} />);
+    renderScreen();
 
     expect(screen.getByText('No pudimos completar la acción')).toBeOnTheScreen();
     expect(screen.getByText('No fue posible eliminar el área.')).toBeOnTheScreen();

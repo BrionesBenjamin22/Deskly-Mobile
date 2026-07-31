@@ -7,7 +7,6 @@ import { Icon } from '../../../components/ui/Icon';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
-import { UserRole } from '../../auth/types/auth.types';
 import { CalendarPicker } from '../components/CalendarPicker';
 import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
 import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
@@ -25,7 +24,6 @@ import { Locality, WorkArea } from '../types/desk.types';
 type WorkAreasScreenProps = {
   initialAvailabilityContext?: Partial<DeskAvailabilityContext>;
   refreshKey?: number;
-  userRole?: UserRole;
   onSelectWorkArea: (area: WorkArea, context: DeskAvailabilityContext) => void;
   onPressReservations?: () => void;
   onPressPayments?: () => void;
@@ -69,7 +67,6 @@ function getFriendlyErrorMessage(error: unknown) {
 export function WorkAreasScreen({
   initialAvailabilityContext,
   refreshKey = 0,
-  userRole,
   onSelectWorkArea,
   onPressReservations,
   onPressPayments,
@@ -386,7 +383,6 @@ export function WorkAreasScreen({
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
           onPressChangePassword={onPressChangePassword}
-          userRole={userRole}
         />
       </View>
 

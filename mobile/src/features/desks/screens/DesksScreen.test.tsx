@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 
+import { AuthTestProvider } from '../../auth/testing/AuthTestProvider';
 import {
   createPaymentCheckout,
   getPaymentAttempt,
@@ -74,10 +75,9 @@ describe('DesksScreen con area seleccionada', () => {
     ]);
 
     render(
-      <DesksScreen
-        accessToken="access-token"
-        selectedWorkArea={selectedArea}
-      />,
+      <AuthTestProvider>
+        <DesksScreen selectedWorkArea={selectedArea} />
+      </AuthTestProvider>,
     );
 
     expect(await screen.findByText('Escritorio Norte 1')).toBeOnTheScreen();
@@ -109,10 +109,9 @@ describe('DesksScreen con area seleccionada', () => {
     ]);
 
     render(
-      <DesksScreen
-        accessToken="access-token"
-        selectedWorkArea={selectedArea}
-      />,
+      <AuthTestProvider>
+        <DesksScreen selectedWorkArea={selectedArea} />
+      </AuthTestProvider>,
     );
 
     expect(await screen.findByText('Escritorio Norte 1')).toBeOnTheScreen();
@@ -158,11 +157,12 @@ describe('DesksScreen con area seleccionada', () => {
     jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
     render(
-      <DesksScreen
-        accessToken="access-token"
-        selectedWorkArea={selectedArea}
-        onReservationCreated={onReservationCreated}
-      />,
+      <AuthTestProvider>
+        <DesksScreen
+          selectedWorkArea={selectedArea}
+          onReservationCreated={onReservationCreated}
+        />
+      </AuthTestProvider>,
     );
 
     await screen.findByText('Escritorio Norte 1');

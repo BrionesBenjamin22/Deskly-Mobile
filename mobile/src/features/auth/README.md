@@ -5,6 +5,8 @@
 - `AuthScreen`: login y registro publico.
 - `ProfileScreen`: consulta y edicion del perfil permitido por rol.
 - `ChangePasswordModal`: cambio de contrasena y cierre posterior de sesion.
+- `AuthProvider`: distribuye la sesion autenticada sin prop drilling.
+- `useAuth`: expone token, usuario y rol exclusivamente dentro del provider.
 
 ## Services
 
@@ -51,7 +53,7 @@ autoritativa, rechazo, fallos de red, cierre y ausencia de SecureStore.
 
 ## Limites
 
-No se administran sesiones por dispositivo ni biometria. El prop drilling de
-sesion permanece reservado para una migracion posterior a `AuthContext`.
-Tampoco existe deteccion persistente de replay por refresh token; la revocacion
-global se mantiene mediante `tokenVersion`.
+No se administran sesiones por dispositivo ni biometria. La navegacion,
+callbacks, refresh keys y estados de cada flujo permanecen fuera de
+`AuthContext`. Tampoco existe deteccion persistente de replay por refresh token;
+la revocacion global se mantiene mediante `tokenVersion`.

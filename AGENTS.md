@@ -319,7 +319,10 @@ La navegacion es state-based. No se usa React Navigation ni ningun router extern
 Reglas:
 - Toda nueva pantalla debe recibir sus callbacks de navegacion como props.
 - Los modales globales (como `ChangePasswordModal`) se renderizan en `App.tsx` y se abren/cierran con estado local en ese nivel.
-- El `accessToken` y datos de sesion se pasan como props desde `App.tsx` hacia cada pantalla. No usar Context para esto a menos que se decida migrar.
+- El `accessToken`, el usuario y el rol se consumen mediante `AuthProvider` y
+  `useAuth`. No volver a propagarlos como props entre pantallas o componentes.
+- `App.tsx` conserva el ciclo de vida de la sesion y la navegacion state-based.
+  No mover callbacks, tabs, refresh keys ni estados de flujo a `AuthContext`.
 - Toda nueva pantalla que use `BottomTabBar` debe recibir y propagar `onPressChangePassword`.
 
 ## 24. Endpoints implementados por modulo

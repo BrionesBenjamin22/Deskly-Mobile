@@ -3,6 +3,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
 import { BottomTabBar } from "../../../components/ui/BottomTabBar";
+import { useAuth } from "../../auth/context/AuthContext";
 import { Icon } from "../../../components/ui/Icon";
 import { ScreenContainer } from "../../../components/ui/ScreenContainer";
 import {
@@ -28,7 +29,6 @@ import {
   listReservations,
   ReservationServiceError,
 } from "../../reservations/services/reservations.service";
-import { UserRole } from "../../auth/types/auth.types";
 import {
   createPaymentCheckout,
   createPaymentOperationKey,
@@ -52,7 +52,6 @@ export type DeskAvailabilityContext = {
 };
 
 type DesksScreenProps = {
-  accessToken: string;
   initialAvailabilityContext?: Partial<DeskAvailabilityContext>;
   selectedWorkArea?: WorkArea | null;
   onBackToWorkAreas?: (context: DeskAvailabilityContext) => void;
@@ -63,7 +62,6 @@ type DesksScreenProps = {
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
   onPressChangePassword?: () => void;
-  userRole?: UserRole;
   onReservationCreated?: () => void;
   externalRefreshKey?: number;
 };
@@ -253,7 +251,6 @@ function FilterDropdown<TValue extends string>({
 }
 
 export function DesksScreen({
-  accessToken,
   initialAvailabilityContext,
   selectedWorkArea,
   onBackToWorkAreas,
@@ -264,10 +261,10 @@ export function DesksScreen({
   onPressSwitchAccount,
   onPressUserManagement,
   onPressChangePassword,
-  userRole,
   onReservationCreated,
   externalRefreshKey = 0,
 }: DesksScreenProps) {
+  const { accessToken } = useAuth();
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDate, setSelectedDate] = useState(
     () => initialAvailabilityContext?.date ?? getDeskDateOptions()[0].id,
@@ -792,7 +789,6 @@ export function DesksScreen({
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
           onPressChangePassword={onPressChangePassword}
-          userRole={userRole}
         />
       </View>
 

@@ -15,10 +15,9 @@ import { UserRole } from '../../auth/types/auth.types';
 import { ManagedUserCard } from '../components/ManagedUserCard';
 import { useUserManagement } from '../hooks/useUserManagement';
 import { ManagedUser } from '../types/managed-user.types';
+import { useAuth } from '../../auth/context/AuthContext';
 
 type UserManagementScreenProps = {
-  accessToken: string;
-  currentUserId: string;
   onPressDesks: () => void;
   onPressReservations: () => void;
   onPressPayments: () => void;
@@ -33,7 +32,8 @@ type UserManagementScreenProps = {
 type ActionFeedback = { type: 'loading' | 'success' | 'error'; title: string; description: string };
 
 export function UserManagementScreen(props: UserManagementScreenProps) {
-  const management = useUserManagement(props.accessToken);
+  const { accessToken, user: currentUser } = useAuth();
+  const management = useUserManagement(accessToken);
   const [searchInput, setSearchInput] = useState('');
   const [userToDeactivate, setUserToDeactivate] = useState<ManagedUser | null>(null);
   const [userToRestore, setUserToRestore] = useState<ManagedUser | null>(null);
@@ -109,7 +109,7 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
                 <ManagedUserCard
                   key={user.id}
                   user={user}
-                  isCurrentUser={user.id === props.currentUserId}
+                  isCurrentUser={user.id === currentUser.id}
                   onSaveRole={(target, role) => void handleSaveRole(target, role)}
                   onDeactivate={setUserToDeactivate}
                   onRestoreAccess={setUserToRestore}
@@ -127,7 +127,6 @@ export function UserManagementScreen(props: UserManagementScreenProps) {
 
         <BottomTabBar
           activeTab="users"
-          userRole="ADMIN"
           onPressDesks={props.onPressDesks}
           onPressReservations={props.onPressReservations}
           onPressPayments={props.onPressPayments}

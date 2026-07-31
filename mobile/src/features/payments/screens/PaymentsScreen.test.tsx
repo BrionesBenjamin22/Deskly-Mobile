@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react-native";
 import { Linking } from "react-native";
 
+import { AuthTestProvider } from "../../auth/testing/AuthTestProvider";
 import { usePayments } from "../hooks/usePayments";
 import {
   createPaymentCheckout,
@@ -93,7 +94,11 @@ describe("PaymentsScreen checkout seguro", () => {
   afterEach(() => jest.restoreAllMocks());
 
   it("bloquea el doble toque y confirma solo tras consultar APPROVED", async () => {
-    render(<PaymentsScreen accessToken="access-token" />);
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
 
     fireEvent.press(screen.getByText(/Completar pago/));
     const option = await screen.findByText(/Pagar total/);
@@ -121,7 +126,11 @@ describe("PaymentsScreen checkout seguro", () => {
       checkoutUrl: null,
       expiresAt: "2026-07-21T12:15:00.000Z",
     });
-    render(<PaymentsScreen accessToken="access-token" />);
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
     fireEvent.press(screen.getByText(/Completar pago/));
     fireEvent.press(await screen.findByText(/Pagar total/));
 
@@ -143,7 +152,11 @@ describe("PaymentsScreen checkout seguro", () => {
         approvePayment = resolve;
       }),
     );
-    render(<PaymentsScreen accessToken="access-token" />);
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
     fireEvent.press(screen.getByText(/Completar pago/));
     fireEvent.press(await screen.findByText(/Pagar total/));
 

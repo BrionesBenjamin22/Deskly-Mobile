@@ -12,6 +12,7 @@ infraestructura y optimizaciones posteriores.
 - [Performance y optimizaciones](performance-optimizaciones.md)
 - [Debug del pipeline mobile](debug-pipeline-mobile.md)
 - [Refresh token y deuda técnica](refresh-token-deuda-tecnica.md)
+- [AuthContext y eliminacion de prop drilling](auth-context-prop-drilling.md)
 
 La bitácora acumulativa y la evidencia detallada permanecen en
 [CONVERSACION.md](CONVERSACION.md), `/tasks` y `docs/performance`.

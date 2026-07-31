@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
+import { useAuth } from '../../auth/context/AuthContext';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal, StatusModalType } from '../../../components/ui/StatusModal';
@@ -13,7 +14,6 @@ import { DateSelector, getDeskDateOptions } from '../../desks/components/DateSel
 import { DesksFeedbackCard } from '../../desks/components/DesksFeedbackCard';
 import { PenaltyReasonModal } from '../../penalties/components/PenaltyReasonModal';
 import { useRegisterAbsence } from '../../penalties/hooks/useRegisterAbsence';
-import { UserRole } from '../../auth/types/auth.types';
 import { ReservationEmptyState } from '../components/ReservationEmptyState';
 import { ReservationList } from '../components/ReservationList';
 import { useReservations } from '../hooks/useReservations';
@@ -37,8 +37,6 @@ function getStatusLabel(status: StatusFilter): string {
 }
 
 type MyReservationsScreenProps = {
-  accessToken: string;
-  userRole: UserRole;
   onPressDesks?: () => void;
   onPressPayments?: () => void;
   onPressProfile?: () => void;
@@ -112,8 +110,6 @@ function FilterChip({ label, selected, onPress }: FilterChipProps) {
 }
 
 export function MyReservationsScreen({
-  accessToken,
-  userRole,
   onPressDesks,
   onPressPayments,
   onPressProfile,
@@ -124,6 +120,7 @@ export function MyReservationsScreen({
   onPressChangePassword,
   refreshKey = 0,
 }: MyReservationsScreenProps) {
+  const { accessToken, role: userRole } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState<StatusFilter>('all');
   const [reservationToCancel, setReservationToCancel] = useState<Reservation | null>(null);
   const [reservationToPenalize, setReservationToPenalize] = useState<Reservation | null>(null);
@@ -341,7 +338,6 @@ export function MyReservationsScreen({
 
         <BottomTabBar
           activeTab="reservations"
-          userRole={userRole}
           onPressDesks={onPressDesks}
           onPressPayments={onPressPayments}
           onPressProfile={onPressProfile}

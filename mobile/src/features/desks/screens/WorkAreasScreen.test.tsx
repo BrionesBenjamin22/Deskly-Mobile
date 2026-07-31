@@ -12,6 +12,8 @@ import {
 } from "../services/desks.service";
 import { buildLocality, buildWorkArea } from "../testing/desk.fixtures";
 import { WorkAreasScreen } from "./WorkAreasScreen";
+import { AuthProvider } from "../../auth/context/AuthContext";
+import type { LoginResponse } from "../../auth/types/auth.types";
 
 jest.mock("../services/desks.service", () => ({
   DeskServiceError: class DeskServiceError extends Error {},
@@ -23,6 +25,31 @@ jest.mock("../services/desks.service", () => ({
 const mockedListLocalities = jest.mocked(listLocalities);
 const mockedListWorkAreas = jest.mocked(listWorkAreas);
 const mockedListAvailableWorkAreas = jest.mocked(listAvailableWorkAreas);
+
+const session: LoginResponse = {
+  access_token: "access-token",
+  refresh_token: "refresh-token",
+  user: {
+    id: "member-1",
+    email: "member@deskly.test",
+    username: "member",
+    role: "MIEMBRO",
+    active: true,
+    member: {
+      id: "member-1",
+      fullName: "Miembro Deskly",
+      active: true,
+    },
+  },
+};
+
+function renderScreen(props: React.ComponentProps<typeof WorkAreasScreen>) {
+  return render(
+    <AuthProvider session={session}>
+      <WorkAreasScreen {...props} />
+    </AuthProvider>,
+  );
+}
 
 describe("WorkAreasScreen", () => {
   beforeEach(() => {
@@ -48,7 +75,7 @@ describe("WorkAreasScreen", () => {
   });
 
   it("muestra las areas de trabajo disponibles al ingresar", async () => {
-    render(<WorkAreasScreen onSelectWorkArea={jest.fn()} />);
+    renderScreen({ onSelectWorkArea: jest.fn() });
 
     expect(await screen.findByText("Sala Norte")).toBeOnTheScreen();
     expect(screen.getAllByText("Sede Centro")).toHaveLength(2);
@@ -56,7 +83,7 @@ describe("WorkAreasScreen", () => {
   });
 
   it("filtra las areas por la localidad seleccionada", async () => {
-    render(<WorkAreasScreen onSelectWorkArea={jest.fn()} />);
+    renderScreen({ onSelectWorkArea: jest.fn() });
 
     expect(await screen.findByText("Laboratorio Digital")).toBeOnTheScreen();
     fireEvent.press(screen.getByLabelText("Filtrar por Sede Centro"));
@@ -66,7 +93,7 @@ describe("WorkAreasScreen", () => {
   });
 
   it("actualiza el listado al cambiar y limpiar el filtro", async () => {
-    render(<WorkAreasScreen onSelectWorkArea={jest.fn()} />);
+    renderScreen({ onSelectWorkArea: jest.fn() });
 
     await screen.findByText("Sala Norte");
     fireEvent.press(screen.getByLabelText("Filtrar por Sede Centro"));
@@ -82,7 +109,7 @@ describe("WorkAreasScreen", () => {
   });
 
   it("muestra un estado vacio si la localidad no tiene areas", async () => {
-    render(<WorkAreasScreen onSelectWorkArea={jest.fn()} />);
+    renderScreen({ onSelectWorkArea: jest.fn() });
 
     await screen.findByText("Sala Norte");
     fireEvent.press(screen.getByLabelText("Filtrar por Sede Costanera"));
@@ -100,7 +127,7 @@ describe("WorkAreasScreen", () => {
     mockedListWorkAreas.mockResolvedValue([area]);
     mockedListAvailableWorkAreas.mockResolvedValue([area]);
 
-    render(<WorkAreasScreen onSelectWorkArea={onSelectWorkArea} />);
+    renderScreen({ onSelectWorkArea });
 
     fireEvent.press(await screen.findByText("Sala Norte"));
     fireEvent.press(screen.getByText("Ver Escritorios"));
