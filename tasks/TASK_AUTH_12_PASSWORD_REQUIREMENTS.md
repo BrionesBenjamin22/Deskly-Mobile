@@ -11,9 +11,9 @@
 
 ## Objetivo
 
-Mostrar durante el registro solamente los requisitos de contraseña pendientes y
-ocultarlos a medida que se cumplen, manteniendo el mismo contrato en frontend y
-backend.
+Mostrar durante el ingreso de contraseñas los requisitos pendientes y ocultarlos
+a medida que se cumplen. En registro son validaciones obligatorias; en login son
+solo una ayuda visual compatible con credenciales existentes.
 
 ## Contexto inspeccionado
 
@@ -24,12 +24,13 @@ backend.
 ## Riesgos heredados
 
 - No aceptar en frontend contraseñas que backend rechace, ni viceversa.
-- No revelar reglas durante login ni alterar sus mensajes de error.
+- No convertir la guia del login en una validacion que bloquee credenciales.
 - Mantener accesibilidad para cambios dinamicos de contenido.
 
 ## Alcance
 
 - Unificar registro con longitud, mayuscula y numero.
+- Mostrar la guia tambien en login sin exigir mayuscula ni numero.
 - Mostrar requisitos pendientes con region accesible dinamica.
 - Ocultar cada requisito inmediatamente al cumplirlo.
 - Probar componente, validacion y DTO.
@@ -51,7 +52,7 @@ backend.
 
 - Frontend y backend exigen 8–72 caracteres, una mayuscula y un numero.
 - La lista contiene solo requisitos pendientes.
-- Login conserva su comportamiento.
+- Login conserva su comportamiento y solo agrega ayuda visual.
 - Todas las validaciones automatizables aprueban.
 
 ## Evidencia
@@ -59,7 +60,7 @@ backend.
 - Focal backend: 1 suite y 5 pruebas aprobadas.
 - Focal mobile: 2 suites y 5 pruebas aprobadas.
 - Backend completo: 53 suites y 328 pruebas aprobadas.
-- Mobile completo: 24 suites y 92 pruebas aprobadas.
+- Mobile completo: 24 suites y 93 pruebas aprobadas, incluida compatibilidad del login.
 - Build backend y TypeScript mobile aprobados.
 - `git diff --check` aprobado.
 

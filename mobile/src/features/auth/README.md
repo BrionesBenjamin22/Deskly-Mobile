@@ -50,8 +50,9 @@ continua centralizado en `App.tsx`.
 ## Validaciones
 
 El registro exige entre 8 y 72 caracteres, al menos una mayuscula y al menos un
-numero. Cada requisito desaparece visualmente al cumplirse. Login conserva su
-validacion de credenciales existentes sin mostrar estas reglas.
+numero. Cada requisito desaparece visualmente al cumplirse. Login muestra la
+misma guia visual, pero conserva la validacion compatible con credenciales
+existentes y no exige mayuscula ni numero.
 
 `session.service.test.ts` cubre almacenamiento de ambos tokens, restauracion
 autoritativa, rechazo, fallos de red, cierre y ausencia de SecureStore.

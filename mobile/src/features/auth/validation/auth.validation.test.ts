@@ -1,4 +1,4 @@
-import { validateRegister } from './auth.validation';
+import { validateLogin, validateRegister } from './auth.validation';
 
 const validValues = {
   email: 'member@deskly.test',
@@ -22,5 +22,13 @@ describe('validateRegister password', () => {
 
   it('acepta una contraseña que cumple todos los requisitos', () => {
     expect(validateRegister(validValues, false).password).toBeUndefined();
+  });
+});
+
+describe('validateLogin password', () => {
+  it('no exige mayúscula ni número a una contraseña existente', () => {
+    expect(
+      validateLogin({ identifier: 'member', password: 'password' }).password,
+    ).toBeUndefined();
   });
 });

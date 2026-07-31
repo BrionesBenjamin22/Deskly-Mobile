@@ -1613,3 +1613,9 @@ validación:
 mensaje_de_commit_propuesto:
 
 `feat(auth): mostrar requisitos dinamicos de contraseña`
+
+ajuste_posterior:
+
+- la guía progresiva también se muestra en el formulario de login;
+- funciona solo como ayuda visual y no exige mayúscula ni número a credenciales existentes;
+- mobile completo: 24 suites y 93 pruebas, más TypeScript aprobado.

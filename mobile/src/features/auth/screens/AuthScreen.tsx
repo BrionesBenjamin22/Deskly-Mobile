@@ -426,6 +426,7 @@ function LoginForm({
         onChangeText={(value) => onChange('password', value)}
         onSubmitEditing={onSubmit}
       />
+      <PasswordRequirements password={values.password} />
       <Button title="Ingresar" disabled={disabled} onPress={onSubmit} />
     </View>
   );
