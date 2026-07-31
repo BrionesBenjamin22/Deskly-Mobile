@@ -323,15 +323,20 @@ export function AdminCatalogScreen(props: Props) {
                     {items.length} elementos registrados
                   </AppText>
                 </View>
-                <Button
-                  title="Volver al panel"
-                  variant="ghost"
-                  onPress={() => {
-                    resetForm();
-                    setPage(1);
-                    setCategory(null);
-                  }}
-                />
+                <View
+                  testID="back-to-panel-button-border"
+                  style={styles.backButtonBorder}
+                >
+                  <Button
+                    title="Volver al panel"
+                    variant="ghost"
+                    onPress={() => {
+                      resetForm();
+                      setPage(1);
+                      setCategory(null);
+                    }}
+                  />
+                </View>
               </View>
 
               <Card style={styles.formCard}>
@@ -695,6 +700,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  backButtonBorder: {
+    borderColor: colors.primary,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexShrink: 0,
   },
   formCard: { gap: spacing.md },
   list: { gap: spacing.md },

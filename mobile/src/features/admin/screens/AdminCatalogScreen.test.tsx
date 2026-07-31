@@ -119,6 +119,16 @@ describe('AdminCatalogScreen', () => {
     expect(screen.getAllByText('Eliminar')).toHaveLength(2);
   });
 
+  it('resalta el regreso al panel con un borde visible', () => {
+    renderScreen();
+
+    fireEvent.press(screen.getByText('Amenities'));
+
+    expect(screen.getByTestId('back-to-panel-button-border')).toHaveStyle({
+      borderWidth: 1,
+    });
+  });
+
   it('solicita confirmacion antes de eliminar', () => {
     renderScreen();
 
