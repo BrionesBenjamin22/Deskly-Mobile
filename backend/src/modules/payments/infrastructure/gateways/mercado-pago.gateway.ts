@@ -99,6 +99,7 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
             failure: this.config.failureUrl,
             pending: this.config.pendingUrl,
           },
+          notification_url: this.config.notificationUrl,
           auto_return: 'approved',
           expires: true,
           expiration_date_to: input.expiresAt.toISOString(),
@@ -223,10 +224,24 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
       throw new InvalidWebhookSignatureError();
     }
     const event = this.object(body);
-    const data = this.object(event.data);
-    const dataId = this.safeIdentifier(data.id);
-    const eventId = this.safeIdentifier(event.id);
-    const eventType = this.safeIdentifier(event.type);
+    const data =
+      event.data && typeof event.data === 'object' && !Array.isArray(event.data)
+        ? (event.data as JsonObject)
+        : {};
+    const queryDataId = this.safeIdentifier(
+      request.query?.['data.id'] ?? request.query?.data_id,
+    );
+    const bodyDataId = this.safeIdentifier(data.id);
+    const queryEventType = this.safeIdentifier(request.query?.type);
+    const bodyEventType = this.safeIdentifier(event.type);
+    if (
+      (bodyDataId && bodyDataId !== queryDataId) ||
+      (bodyEventType && queryEventType && bodyEventType !== queryEventType)
+    )
+      throw new InvalidWebhookSignatureError();
+    const dataId = queryDataId;
+    const eventId = this.safeIdentifier(event.id) || requestId;
+    const eventType = queryEventType || bodyEventType;
     if (!signature || !requestId || !dataId || !eventId || !eventType)
       throw new InvalidWebhookSignatureError();
     const parts: Record<string, string> = {};

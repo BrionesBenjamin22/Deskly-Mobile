@@ -7,7 +7,9 @@
 ## Puesta en marcha
 
 1. Configurar credenciales del ambiente correspondiente en el gestor de secretos.
-2. Registrar `POST /webhooks/payments` como URL HTTPS del proveedor.
+2. Registrar `POST /webhooks/payments` como URL HTTPS del proveedor y configurar
+   la misma direccion en `MERCADO_PAGO_NOTIFICATION_URL`, agregando
+   `?source_news=webhooks`.
 3. Verificar `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` y las tres URLs de retorno.
 4. Aplicar migraciones antes de iniciar el backend.
 5. Ejecutar healthcheck, cotizacion autenticada y checkout de prueba.
@@ -21,12 +23,19 @@ Rotar access token y webhook secret de forma coordinada. Durante la ventana, det
 
 - Timeout, desconexion, 408, 429 y 5xx son reintentables con backoff externo acotado.
 - Ejecutar `POST /payments/operations/reconcile` con JWT `ADMIN` o `GESTOR`, lote maximo 100 y antiguedad minima.
+- Alternativamente, habilitar `PAYMENT_RECONCILIATION_ENABLED=true` en una sola
+  instancia. El worker evita solapamientos dentro del proceso y respeta
+  intervalo, lote y antiguedad configurados.
+- En despliegues con balanceo, mantener el worker interno deshabilitado y usar
+  un scheduler externo para evitar que cada replica inicie su propio ciclo.
 - Revisar `retryableFailures` e `inconsistencies`; nunca cambiar estados directamente en base.
 - Las reentregas de webhook son seguras por constraint de proveedor/evento.
 
 ## Diagnostico
 
-- `PENDING` antiguo: verificar proveedor y ejecutar conciliacion.
+- `PENDING` antiguo: verificar proveedor y ejecutar conciliacion. Si el intento
+  aun no posee ID de pago, se busca primero por `external_reference`; solo se
+  marca `EXPIRED` cuando no existe coincidencia autoritativa y vencio el hold.
 - `inconsistencies > 0`: correlacionar por ID local truncado y revisar carrera de version.
 - Segunda aprobacion: el backend solicita reembolso idempotente.
 - Retorno visual sin aprobacion: comportamiento esperado; esperar webhook o conciliar.

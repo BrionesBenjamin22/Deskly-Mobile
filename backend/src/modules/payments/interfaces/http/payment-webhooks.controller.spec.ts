@@ -20,6 +20,7 @@ describe('PaymentWebhooksController', () => {
   const request = (rawBody = '{}', headers: Record<string, string> = {}) => ({
     rawBody: Buffer.from(rawBody),
     headers,
+    query: { 'data.id': '123', type: 'payment' },
   });
 
   beforeEach(() => jest.clearAllMocks());
@@ -38,6 +39,7 @@ describe('PaymentWebhooksController', () => {
     expect(useCase.execute).toHaveBeenCalledWith({
       rawBody: '{"id":1}',
       headers: { 'x-signature': 'firma' },
+      query: { 'data.id': '123', type: 'payment' },
     });
   });
 

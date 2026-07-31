@@ -41,6 +41,7 @@ export type CreateGatewayPaymentResult = {
 export type GatewayWebhookRequest = {
   rawBody: string;
   headers: Readonly<Record<string, string | undefined>>;
+  query?: Readonly<Record<string, string | undefined>>;
 };
 
 export type GatewayNotification = {

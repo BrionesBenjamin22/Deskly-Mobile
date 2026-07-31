@@ -60,6 +60,8 @@ Variables utilizadas:
 | `MERCADO_PAGO_SUCCESS_URL` | Retorno visual para un resultado exitoso. |
 | `MERCADO_PAGO_FAILURE_URL` | Retorno visual para un resultado fallido. |
 | `MERCADO_PAGO_PENDING_URL` | Retorno visual para un resultado pendiente. |
+| `MERCADO_PAGO_NOTIFICATION_URL` | Receptor HTTPS incluido en cada preferencia. |
+| `MERCADO_PAGO_ALLOWED_NOTIFICATION_ORIGINS` | Allowlist exclusiva del receptor de webhooks. |
 | `MERCADO_PAGO_ALLOWED_RETURN_ORIGINS` | Allowlist de origenes permitidos para los retornos. |
 | `MERCADO_PAGO_TIMEOUT_MS` | Tiempo maximo de espera de una llamada externa. |
 

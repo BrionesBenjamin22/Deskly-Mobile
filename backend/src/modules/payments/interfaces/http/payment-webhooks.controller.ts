@@ -43,8 +43,14 @@ export class PaymentWebhooksController {
         Array.isArray(value) ? value[0] : value,
       ]),
     );
+    const query = Object.fromEntries(
+      Object.entries(request.query).map(([key, value]) => [
+        key,
+        Array.isArray(value) ? String(value[0]) : String(value),
+      ]),
+    );
     try {
-      return await this.processWebhook.execute({ rawBody, headers });
+      return await this.processWebhook.execute({ rawBody, headers, query });
     } catch (error) {
       if (
         error instanceof InvalidWebhookSignatureError ||
