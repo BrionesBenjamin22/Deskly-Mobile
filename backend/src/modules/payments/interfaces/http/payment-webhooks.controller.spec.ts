@@ -20,6 +20,7 @@ describe('PaymentWebhooksController', () => {
   const request = (rawBody = '{}', headers: Record<string, string> = {}) => ({
     rawBody: Buffer.from(rawBody),
     headers,
+    query: { 'data.id': '123', type: 'payment' },
   });
 
   beforeEach(() => jest.clearAllMocks());
@@ -38,6 +39,7 @@ describe('PaymentWebhooksController', () => {
     expect(useCase.execute).toHaveBeenCalledWith({
       rawBody: '{"id":1}',
       headers: { 'x-signature': 'firma' },
+      query: { 'data.id': '123', type: 'payment' },
     });
   });
 
@@ -46,6 +48,22 @@ describe('PaymentWebhooksController', () => {
       controller.process(request('x'.repeat(16 * 1024 + 1)) as never),
     ).rejects.toBeInstanceOf(PayloadTooLargeException);
     expect(useCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('no convierte objetos de query usando la representacion por defecto', async () => {
+    useCase.execute.mockResolvedValue({ accepted: true });
+    const unsafeRequest = {
+      ...request(),
+      query: { nested: { id: '123' }, repeated: ['payment', 'ignored'] },
+    };
+
+    await controller.process(unsafeRequest as never);
+
+    expect(useCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: { nested: '', repeated: 'payment' },
+      }),
+    );
   });
 
   it('responde sin detalles internos ante firma invalida', async () => {

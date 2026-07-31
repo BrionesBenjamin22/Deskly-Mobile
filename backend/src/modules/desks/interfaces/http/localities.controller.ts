@@ -10,7 +10,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { LocalitiesService } from '../../application/services/localities.service';
 import { Roles } from '../../../auth/interfaces/http/decorators/roles.decorator';
@@ -22,6 +22,8 @@ import {
 } from './dto/locality-body.dto';
 
 @ApiTags('Localities')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('localities')
 export class LocalitiesController {
   constructor(private readonly localitiesService: LocalitiesService) {}
@@ -37,14 +39,14 @@ export class LocalitiesController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   create(@Body() body: CreateLocalityBodyDto) {
     return this.localitiesService.create(body);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -55,7 +57,7 @@ export class LocalitiesController {
 
   @Delete(':id')
   @HttpCode(204)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.localitiesService.remove(id);

@@ -93,6 +93,8 @@ Documentacion tecnica: `src/modules/auth/README.md`.
 ### Desks
 
 Gestiona escritorios y consulta disponibilidad por fecha y rango horario.
+Todos los endpoints de este modulo requieren Bearer JWT. Las mutaciones exigen
+ademas rol `ADMIN` o `GESTOR`.
 
 Endpoints:
 

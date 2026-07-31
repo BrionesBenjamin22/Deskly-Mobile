@@ -23,6 +23,18 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
+  it.each([
+    '/desks',
+    '/desks/availability',
+    '/desk-descriptions',
+    '/amenities',
+    '/localities',
+    '/work-areas',
+    '/work-areas/availability',
+  ])('rechaza GET %s sin autenticacion', (path) => {
+    return request(app.getHttpServer()).get(path).expect(401);
+  });
+
   afterEach(async () => {
     await app.close();
   });

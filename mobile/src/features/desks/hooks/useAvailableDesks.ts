@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DeskServiceError, getAvailableDesks } from '../services/desks.service';
 import { Desk, DeskZone } from '../types/desk.types';
@@ -33,40 +33,38 @@ export function useAvailableDesks({
   const [desks, setDesks] = useState<Desk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const loadDesks = useCallback(() => {
-    let isMounted = true;
-
+  const requestIdRef = useRef(0);
+  const loadDesks = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setErrorMessage(null);
 
-    getAvailableDesks({ date, startTime, endTime, zone, areaId, localityId })
-      .then((availableDesks) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setDesks(availableDesks);
-      })
-      .catch((error: unknown) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setDesks([]);
-        setErrorMessage(getFriendlyErrorMessage(error));
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+    try {
+      const availableDesks = await getAvailableDesks({
+        date,
+        startTime,
+        endTime,
+        zone,
+        areaId,
+        localityId,
       });
-
-    return () => {
-      isMounted = false;
-    };
+      if (requestId !== requestIdRef.current) return;
+      setDesks(availableDesks);
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      setDesks([]);
+      setErrorMessage(getFriendlyErrorMessage(error));
+    } finally {
+      if (requestId === requestIdRef.current) setIsLoading(false);
+    }
   }, [areaId, date, endTime, localityId, startTime, zone]);
 
-  useEffect(() => loadDesks(), [loadDesks, refreshKey]);
+  useEffect(() => {
+    void loadDesks();
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [loadDesks, refreshKey]);
 
   return {
     desks,

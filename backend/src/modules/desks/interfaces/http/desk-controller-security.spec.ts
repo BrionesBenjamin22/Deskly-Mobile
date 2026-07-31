@@ -3,6 +3,7 @@ import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { ROLES_KEY } from '../../../auth/interfaces/http/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
+import { DeskAvailabilityController } from './desk-availability.controller';
 import { DeskCatalogController } from './desk-catalog.controller';
 import { DesksController } from './desks.controller';
 import { LocalitiesController } from './localities.controller';
@@ -17,8 +18,13 @@ function expectProtected(
 
   expect(Reflect.getMetadata(ROLES_KEY, handler) as unknown).toEqual(roles);
   expect(Reflect.getMetadata(GUARDS_METADATA, handler) as unknown).toEqual([
-    JwtAuthGuard,
     RolesGuard,
+  ]);
+}
+
+function expectControllerAuthenticated(controller: object) {
+  expect(Reflect.getMetadata(GUARDS_METADATA, controller) as unknown).toEqual([
+    JwtAuthGuard,
   ]);
 }
 
@@ -42,6 +48,16 @@ describe('Desk administration endpoint security', () => {
       string,
       (...args: never[]) => unknown
     >;
+
+  it.each([
+    DesksController,
+    DeskAvailabilityController,
+    DeskCatalogController,
+    LocalitiesController,
+    WorkAreasController,
+  ])('protege todas las rutas de %p con JWT', (controller) => {
+    expectControllerAuthenticated(controller);
+  });
 
   it.each(['create', 'update', 'delete'])(
     'protege DesksController.%s',

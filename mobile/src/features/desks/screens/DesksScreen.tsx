@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
 import { BottomTabBar } from "../../../components/ui/BottomTabBar";
+import { useAuth } from "../../auth/context/AuthContext";
 import { Icon } from "../../../components/ui/Icon";
 import { ScreenContainer } from "../../../components/ui/ScreenContainer";
 import {
@@ -11,6 +19,7 @@ import {
 } from "../../../components/ui/StatusModal";
 import { colors } from "../../../theme/colors";
 import { radii, spacing } from "../../../theme/spacing";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 import { CalendarPicker } from "../components/CalendarPicker";
 import {
   DateSelector,
@@ -28,7 +37,6 @@ import {
   listReservations,
   ReservationServiceError,
 } from "../../reservations/services/reservations.service";
-import { UserRole } from "../../auth/types/auth.types";
 import {
   createPaymentCheckout,
   createPaymentOperationKey,
@@ -52,7 +60,6 @@ export type DeskAvailabilityContext = {
 };
 
 type DesksScreenProps = {
-  accessToken: string;
   initialAvailabilityContext?: Partial<DeskAvailabilityContext>;
   selectedWorkArea?: WorkArea | null;
   onBackToWorkAreas?: (context: DeskAvailabilityContext) => void;
@@ -63,7 +70,6 @@ type DesksScreenProps = {
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
   onPressChangePassword?: () => void;
-  userRole?: UserRole;
   onReservationCreated?: () => void;
   externalRefreshKey?: number;
 };
@@ -253,7 +259,6 @@ function FilterDropdown<TValue extends string>({
 }
 
 export function DesksScreen({
-  accessToken,
   initialAvailabilityContext,
   selectedWorkArea,
   onBackToWorkAreas,
@@ -264,10 +269,10 @@ export function DesksScreen({
   onPressSwitchAccount,
   onPressUserManagement,
   onPressChangePassword,
-  userRole,
   onReservationCreated,
   externalRefreshKey = 0,
 }: DesksScreenProps) {
+  const { accessToken } = useAuth();
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDate, setSelectedDate] = useState(
     () => initialAvailabilityContext?.date ?? getDeskDateOptions()[0].id,
@@ -361,7 +366,7 @@ export function DesksScreen({
     }).format(date);
   }, [selectedDate, isCalendarDate]);
 
-  const { desks, errorMessage, isLoading } = useAvailableDesks({
+  const { desks, errorMessage, isLoading, refresh } = useAvailableDesks({
     date: selectedDate,
     startTime,
     endTime,
@@ -372,6 +377,7 @@ export function DesksScreen({
       : { localityId: effectiveLocalityId }),
     ...(effectiveAreaId === "all" ? {} : { areaId: effectiveAreaId }),
   });
+  const pullToRefresh = usePullToRefresh(refresh);
   const visibleDesks = selectedWorkArea
     ? desks.filter(
         (desk) =>
@@ -535,6 +541,15 @@ export function DesksScreen({
     <ScreenContainer>
       <View style={styles.layout}>
         <ScrollView
+          testID="desks-scroll"
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
           contentContainerStyle={styles.content}
@@ -792,7 +807,6 @@ export function DesksScreen({
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
           onPressChangePassword={onPressChangePassword}
-          userRole={userRole}
         />
       </View>
 

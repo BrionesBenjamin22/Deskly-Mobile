@@ -11,8 +11,11 @@ const valid = {
   MERCADO_PAGO_SUCCESS_URL: 'https://deskly.example/success',
   MERCADO_PAGO_FAILURE_URL: 'https://deskly.example/failure',
   MERCADO_PAGO_PENDING_URL: 'https://deskly.example/pending',
+  MERCADO_PAGO_NOTIFICATION_URL:
+    'https://api.deskly.example/webhooks/payments?source_news=webhooks',
   MERCADO_PAGO_TIMEOUT_MS: '3000',
   MERCADO_PAGO_ALLOWED_RETURN_ORIGINS: 'https://deskly.example',
+  MERCADO_PAGO_ALLOWED_NOTIFICATION_ORIGINS: 'https://api.deskly.example',
 };
 
 describe('MercadoPagoConfig', () => {
@@ -23,6 +26,8 @@ describe('MercadoPagoConfig', () => {
     expect(readMercadoPagoConfig(valid)).toMatchObject({
       production: true,
       timeoutMs: 3000,
+      notificationUrl:
+        'https://api.deskly.example/webhooks/payments?source_news=webhooks',
     });
   });
   it.each([
@@ -50,5 +55,17 @@ describe('MercadoPagoConfig', () => {
         MERCADO_PAGO_FAILURE_URL: 'https://evil.example/failure',
       }),
     ).toThrow('MERCADO_PAGO_FAILURE_URL');
+  });
+  it.each([
+    ['http://api.deskly.example/webhooks/payments', 'protocolo inseguro'],
+    ['https://evil.example/webhooks/payments', 'origen no permitido'],
+    ['https://api.deskly.example/otro-endpoint', 'ruta incorrecta'],
+  ])('rechaza notification_url con %s (%s)', (url) => {
+    expect(() =>
+      readMercadoPagoConfig({
+        ...valid,
+        MERCADO_PAGO_NOTIFICATION_URL: url,
+      }),
+    ).toThrow('MERCADO_PAGO_NOTIFICATION_URL');
   });
 });

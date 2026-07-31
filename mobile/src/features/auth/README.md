@@ -5,6 +5,10 @@
 - `AuthScreen`: login y registro publico.
 - `ProfileScreen`: consulta y edicion del perfil permitido por rol.
 - `ChangePasswordModal`: cambio de contrasena y cierre posterior de sesion.
+- `PasswordRequirements`: muestra durante el registro solo las reglas de
+  contraseña pendientes y las anuncia como region accesible.
+- `AuthProvider`: distribuye la sesion autenticada sin prop drilling.
+- `useAuth`: expone token, usuario y rol exclusivamente dentro del provider.
 
 ## Services
 
@@ -39,7 +43,16 @@ La autorizacion permanece en backend. La restauracion no confia en datos
 persistidos del usuario y nunca interpreta el retorno visual como prueba de una
 sesion valida. Los errores no incluyen tokens ni respuestas completas.
 
+`ProfileScreen` propaga a la barra inferior los callbacks habilitados por rol.
+Para ADMIN incluye Panel, Gestion de usuarios y Cuenta; el cambio de pantalla
+continua centralizado en `App.tsx`.
+
 ## Validaciones
+
+El registro exige entre 8 y 72 caracteres, al menos una mayuscula y al menos un
+numero. Cada requisito desaparece visualmente al cumplirse. Login muestra la
+misma guia visual, pero conserva la validacion compatible con credenciales
+existentes y no exige mayuscula ni numero.
 
 `session.service.test.ts` cubre almacenamiento de ambos tokens, restauracion
 autoritativa, rechazo, fallos de red, cierre y ausencia de SecureStore.
@@ -47,7 +60,13 @@ autoritativa, rechazo, fallos de red, cierre y ausencia de SecureStore.
 
 ## Limites
 
-No se administran sesiones por dispositivo ni biometria. El prop drilling de
-sesion permanece reservado para una migracion posterior a `AuthContext`.
-Tampoco existe deteccion persistente de replay por refresh token; la revocacion
-global se mantiene mediante `tokenVersion`.
+No se administran sesiones por dispositivo ni biometria. La navegacion,
+callbacks, refresh keys y estados de cada flujo permanecen fuera de
+`AuthContext`. Tampoco existe deteccion persistente de replay por refresh token;
+la revocacion global se mantiene mediante `tokenVersion`.
+
+## Validacion efectiva del login
+
+El login exige entre 8 y 72 caracteres, al menos una mayuscula y al menos un
+numero. La validacion se actualiza al editar y se repite antes del request; la
+guia `PasswordRequirements` refleja el mismo contrato y no es solo informativa.

@@ -131,4 +131,48 @@ describe('ListPaymentSummariesUseCase', () => {
       totalPages: 1,
     });
   });
+
+  it('filtra saldos pendientes y pagos completados antes de paginar', async () => {
+    const deposit = attempt('APPROVED');
+    const full = attempt('APPROVED');
+    const payments = {
+      listPaymentSummaryCandidates: jest.fn().mockResolvedValue([
+        {
+          id: 'reservation-pending',
+          deskName: 'Pendiente',
+          date: '2026-08-01',
+          startTime: '09:00',
+          endTime: '13:00',
+          attempts: [deposit],
+        },
+        {
+          id: 'reservation-completed',
+          deskName: 'Completada',
+          date: '2026-08-02',
+          startTime: '09:00',
+          endTime: '11:00',
+          attempts: [full, attempt('APPROVED')],
+        },
+      ]),
+    };
+    const synchronize = {
+      execute: jest.fn((payment: PaymentAttempt) => Promise.resolve(payment)),
+    };
+    const useCase = new ListPaymentSummariesUseCase(
+      payments as never,
+      synchronize as never,
+    );
+
+    const pending = await useCase.execute('member-1', 1, 9, 'PENDING');
+    const completed = await useCase.execute('member-1', 1, 9, 'COMPLETED');
+
+    expect(pending.items.map((item) => item.reservationId)).toEqual([
+      'reservation-pending',
+    ]);
+    expect(completed.items.map((item) => item.reservationId)).toEqual([
+      'reservation-completed',
+    ]);
+    expect(pending.pagination.total).toBe(1);
+    expect(completed.pagination.total).toBe(1);
+  });
 });

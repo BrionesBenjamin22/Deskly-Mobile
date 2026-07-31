@@ -22,7 +22,17 @@ Flujo:
 4. Las URLs de retorno abren una pagina backend que permite cerrar el checkout. Volver a la app no confirma el pago: se consulta `GET /payments/:id` hasta recibir un estado terminal o alcanzar el vencimiento informado por backend.
 5. Solo `APPROVED` confirma la reserva y se presenta como exito.
 6. Si el webhook no llego, las consultas autenticadas permiten que backend recupere el pago por referencia externa, lo valide y actualice la reserva.
+   La conciliacion periodica del backend ofrece el mismo respaldo aunque el
+   usuario cierre la aplicacion.
 7. La pestaña Pagos queda reservada visualmente para reservas con un pago aprobado. Incluye temporalmente reservas pendientes durante la sincronizacion; si fue una seña, ofrece completar exclusivamente el saldo pendiente.
+8. La accion `Completar pago` presenta la cotizacion y sus opciones en un modal
+   centrado. Cerrar el modal no modifica el intento ni llama al backend; iniciar
+   una opcion conserva el mismo checkout, idempotencia y polling existentes.
+9. La pantalla permite filtrar `Todos`, `Pendientes` y `Completados`. El filtro
+   se envia al resumen backend y se aplica antes de paginar para conservar el
+   limite de 9 resultados y conteos coherentes.
+10. Los resultados cambian con una transicion breve de opacidad. El resumen
+    `TOTAL PENDIENTE` no se presenta en la vista `Completados`.
 8. Durante la espera el loader permanece animado. Tanto al reservar desde
    Escritorios como al completar saldo desde Pagos, `Dejar de esperar` cierra
    solamente el modal bloqueante: la verificacion continua en segundo plano y
@@ -90,4 +100,8 @@ Idempotency-Key: <clave estable por accion>
 
 ## Prueba manual sandbox
 
-La compra sandbox real abrio Checkout Pro y acredito la operacion en la cuenta de prueba. Se detecto que un webhook perdido dejaba el intento local pendiente; el flujo ahora recupera el pago por referencia externa antes de calcular el saldo. Resta repetir visualmente una compra sandbox para confirmar el cierre de la pagina de retorno, el cartel de exito y la opcion de completar el saldo cuando corresponda.
+La compra sandbox real abrio Checkout Pro y acredito la operacion en la cuenta
+de prueba. La recepcion se debe disparar con el simulador oficial cuando se usan
+credenciales de prueba. El flujo recupera pagos por referencia tanto durante el
+polling como mediante conciliacion. Resta ejecutar la simulacion manual acordada
+y confirmar visualmente el cierre, el cartel de exito y el saldo restante.

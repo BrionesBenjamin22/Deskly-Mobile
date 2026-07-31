@@ -184,7 +184,9 @@ anteriormente dejan de ser validos inmediatamente.
 
 - bcrypt con factor de costo 12.
 - DTOs con whitelist global, rechazo de campos desconocidos y longitudes acotadas.
-- contrasenas de 8 a 72 caracteres para respetar el limite efectivo de bcrypt.
+- contrasenas de registro de 8 a 72 caracteres, con al menos una mayuscula y un
+  numero, para alinearse con el cambio de contraseña y respetar el limite
+  efectivo de bcrypt.
 - consulta del usuario actual en cada request protegida para aplicar desactivaciones y cambios de rol inmediatamente.
 - limite por instancia y direccion de origen de 10 intentos de login, 5
   registros y 30 consultas del estado de registro por minuto. En despliegues

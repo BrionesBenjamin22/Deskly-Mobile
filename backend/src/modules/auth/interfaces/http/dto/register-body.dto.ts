@@ -45,6 +45,12 @@ export class RegisterBodyDto {
 
   @IsString()
   @Length(8, 72)
+  @Matches(/[A-Z]/, {
+    message: 'La contraseña debe tener al menos una mayúscula.',
+  })
+  @Matches(/[0-9]/, {
+    message: 'La contraseña debe tener al menos un número.',
+  })
   password!: string;
 
   @IsOptional()

@@ -48,6 +48,7 @@ export class PaymentSummariesController {
       request.user.member.id,
       query.page,
       query.limit,
+      query.filter,
     );
   }
 }

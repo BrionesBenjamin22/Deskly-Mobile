@@ -12,6 +12,8 @@ const config: MercadoPagoConfig = {
   successUrl: 'https://deskly.test/success',
   failureUrl: 'https://deskly.test/failure',
   pendingUrl: 'https://deskly.test/pending',
+  notificationUrl:
+    'https://api.deskly.test/webhooks/payments?source_news=webhooks',
   allowedReturnOrigins: ['https://deskly.test'],
   timeoutMs: 50,
   production: false,
@@ -76,6 +78,7 @@ describe('MercadoPagoGateway', () => {
           failure: config.failureUrl,
           pending: config.pendingUrl,
         },
+        notification_url: config.notificationUrl,
       }),
       {
         timeout: config.timeoutMs,
@@ -300,6 +303,7 @@ describe('MercadoPagoGateway', () => {
     await expect(
       gateway.verifyAndParseWebhook({
         rawBody,
+        query: { 'data.id': 'PAY-123', type: 'payment' },
         headers: {
           'x-signature': `ts=${ts},v1=${v1}`,
           'x-request-id': requestId,
@@ -313,8 +317,56 @@ describe('MercadoPagoGateway', () => {
     await expect(
       gateway.verifyAndParseWebhook({
         rawBody,
+        query: { 'data.id': 'PAY-123', type: 'payment' },
         headers: {
           'x-signature': `ts=${ts},v1=${'0'.repeat(64)}`,
+          'x-request-id': requestId,
+        },
+      }),
+    ).rejects.toBeInstanceOf(InvalidWebhookSignatureError);
+  });
+
+  it('admite el simulador con body vacio y datos firmados en query', async () => {
+    const ts = '1742505638683';
+    const requestId = 'simulator-request-1';
+    const dataId = '170515659197';
+    const v1 = createHmac('sha256', config.webhookSecret)
+      .update(`id:${dataId};request-id:${requestId};ts:${ts};`)
+      .digest('hex');
+
+    await expect(
+      new MercadoPagoGateway(config, sdk()).verifyAndParseWebhook({
+        rawBody: '{}',
+        query: { 'data.id': dataId, type: 'payment' },
+        headers: {
+          'x-signature': `ts=${ts},v1=${v1}`,
+          'x-request-id': requestId,
+        },
+      }),
+    ).resolves.toEqual({
+      eventId: requestId,
+      externalPaymentId: dataId,
+      eventType: 'payment',
+    });
+  });
+
+  it('rechaza IDs distintos entre query firmada y body', async () => {
+    const ts = '1742505638683';
+    const requestId = 'request-1';
+    const v1 = createHmac('sha256', config.webhookSecret)
+      .update(`id:query-id;request-id:${requestId};ts:${ts};`)
+      .digest('hex');
+
+    await expect(
+      new MercadoPagoGateway(config, sdk()).verifyAndParseWebhook({
+        rawBody: JSON.stringify({
+          id: 987,
+          type: 'payment',
+          data: { id: 'body-id' },
+        }),
+        query: { 'data.id': 'query-id', type: 'payment' },
+        headers: {
+          'x-signature': `ts=${ts},v1=${v1}`,
           'x-request-id': requestId,
         },
       }),

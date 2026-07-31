@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
@@ -8,6 +8,7 @@ import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { StatusModal } from '../../../components/ui/StatusModal';
 import { colors, statusColors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
+import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
 import { ProfileDetailRow } from '../components/ProfileDetailRow';
 import { EditableProfileField } from '../components/EditableProfileField';
 import { AuthServiceError, getCurrentUser, updateProfile } from '../services/auth.service';
@@ -19,11 +20,9 @@ import {
   validateProfilePhone,
 } from '../validation/auth.validation';
 import { ProfilePenaltiesCard } from '../../penalties/components/ProfilePenaltiesCard';
+import { useAuth } from '../context/AuthContext';
 
 type ProfileScreenProps = {
-  accessToken: string;
-  initialUser: AuthUser;
-  userRole: UserRole;
   onPressDesks: () => void;
   onPressReservations: () => void;
   onPressPayments: () => void;
@@ -31,6 +30,7 @@ type ProfileScreenProps = {
   onPressLogout: () => void;
   onPressSwitchAccount: () => void;
   onPressUserManagement: () => void;
+  onPressAdminCatalog: () => void;
   onPressChangePassword?: () => void;
   penaltiesRefreshKey?: number;
 };
@@ -50,9 +50,6 @@ function getErrorMessage(error: unknown) {
 }
 
 export function ProfileScreen({
-  accessToken,
-  initialUser,
-  userRole,
   onPressDesks,
   onPressReservations,
   onPressPayments,
@@ -60,35 +57,46 @@ export function ProfileScreen({
   onPressLogout,
   onPressSwitchAccount,
   onPressUserManagement,
+  onPressAdminCatalog,
   onPressChangePassword,
   penaltiesRefreshKey = 0,
 }: ProfileScreenProps) {
+  const { accessToken, role: userRole, user: initialUser } = useAuth();
   const [user, setUser] = useState<AuthUser | CurrentUserResponse['user']>(
     initialUser,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [localPenaltiesRefreshKey, setLocalPenaltiesRefreshKey] = useState(0);
+  const requestIdRef = useRef(0);
+
+  const loadProfile = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setErrorMessage(null);
+
+    try {
+      const response = await getCurrentUser(accessToken);
+      if (requestId === requestIdRef.current) setUser(response.user);
+    } catch (error) {
+      if (requestId === requestIdRef.current) {
+        setErrorMessage(getErrorMessage(error));
+      }
+    }
+  }, [accessToken]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    getCurrentUser(accessToken)
-      .then((response) => {
-        if (isMounted) {
-          setUser(response.user);
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setErrorMessage(getErrorMessage(error));
-        }
-      });
-
+    void loadProfile();
     return () => {
-      isMounted = false;
+      requestIdRef.current += 1;
     };
-  }, [accessToken]);
+  }, [loadProfile]);
+
+  const refreshProfile = useCallback(async () => {
+    await loadProfile();
+    setLocalPenaltiesRefreshKey((current) => current + 1);
+  }, [loadProfile]);
+  const pullToRefresh = usePullToRefresh(refreshProfile);
 
   const handleUpdateProfile = async (
     field: 'email' | 'username' | 'fullName' | 'phone',
@@ -113,6 +121,15 @@ export function ProfileScreen({
     <ScreenContainer>
       <View style={styles.layout}>
         <ScrollView
+          testID="profile-scroll"
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
@@ -241,15 +258,13 @@ export function ProfileScreen({
 
           {user.member ? (
             <ProfilePenaltiesCard
-              accessToken={accessToken}
-              refreshKey={penaltiesRefreshKey}
+              refreshKey={penaltiesRefreshKey + localPenaltiesRefreshKey}
             />
           ) : null}
         </ScrollView>
 
         <BottomTabBar
           activeTab="profile"
-          userRole={userRole}
           onPressDesks={onPressDesks}
           onPressReservations={onPressReservations}
           onPressPayments={onPressPayments}
@@ -257,6 +272,7 @@ export function ProfileScreen({
           onPressLogout={onPressLogout}
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
+          onPressAdminCatalog={onPressAdminCatalog}
           onPressChangePassword={onPressChangePassword}
         />
       </View>

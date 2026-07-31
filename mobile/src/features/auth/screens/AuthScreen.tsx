@@ -19,6 +19,7 @@ import {
 import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { AuthField } from '../components/AuthField';
+import { PasswordRequirements } from '../components/PasswordRequirements';
 import {
   AuthServiceError,
   BlockedAccountServiceError,
@@ -33,6 +34,7 @@ import {
   LoginFormValues,
   RegisterFormValues,
   validateLogin,
+  validatePassword,
   validateRegister,
   getRealtimeDNIError,
   getRealtimePhoneError,
@@ -300,7 +302,10 @@ export function AuthScreen({
                   setLoginValues((current) => ({ ...current, [field]: value }));
                   setLoginErrors((current) => ({
                     ...current,
-                    [field]: undefined,
+                    [field]:
+                      field === 'password' && value
+                        ? validatePassword(value)
+                        : undefined,
                   }));
                 }}
                 onSubmit={handleLogin}
@@ -425,6 +430,7 @@ function LoginForm({
         onChangeText={(value) => onChange('password', value)}
         onSubmitEditing={onSubmit}
       />
+      <PasswordRequirements password={values.password} />
       <Button title="Ingresar" disabled={disabled} onPress={onSubmit} />
     </View>
   );
@@ -482,6 +488,7 @@ function RegisterForm({
         required
         onChangeText={(value) => onChange('password', value)}
       />
+      <PasswordRequirements password={values.password} />
       {requiresMember ? (
         <>
           <AuthField

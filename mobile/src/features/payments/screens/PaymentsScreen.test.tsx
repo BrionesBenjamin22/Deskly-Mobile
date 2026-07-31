@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react-native";
 import { Linking } from "react-native";
 
+import { AuthTestProvider } from "../../auth/testing/AuthTestProvider";
 import { usePayments } from "../hooks/usePayments";
 import {
   createPaymentCheckout,
@@ -35,6 +36,7 @@ const mockedCheckout = createPaymentCheckout as jest.MockedFunction<
 const mockedAttempt = getPaymentAttempt as jest.MockedFunction<
   typeof getPaymentAttempt
 >;
+const reloadMock = jest.fn<Promise<void>, []>();
 
 describe("PaymentsScreen checkout seguro", () => {
   beforeEach(() => {
@@ -54,7 +56,7 @@ describe("PaymentsScreen checkout seguro", () => {
       totalPages: 1,
       isLoading: false,
       errorMessage: null,
-      reload: jest.fn(),
+      reload: reloadMock,
     });
     mockedQuote.mockResolvedValue({
       reservationId: "reservation-1",
@@ -92,10 +94,34 @@ describe("PaymentsScreen checkout seguro", () => {
 
   afterEach(() => jest.restoreAllMocks());
 
+  it("recarga los pagos con pull-to-refresh", async () => {
+    reloadMock.mockResolvedValue();
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
+
+    await act(async () => {
+      await screen
+        .getByTestId("payments-scroll")
+        .props.refreshControl.props.onRefresh();
+    });
+
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+  });
+
   it("bloquea el doble toque y confirma solo tras consultar APPROVED", async () => {
-    render(<PaymentsScreen accessToken="access-token" />);
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
 
     fireEvent.press(screen.getByText(/Completar pago/));
+    expect(
+      await screen.findByLabelText("Cerrar opciones de pago"),
+    ).toBeOnTheScreen();
     const option = await screen.findByText(/Pagar total/);
     fireEvent.press(option);
     fireEvent.press(option);
@@ -106,6 +132,45 @@ describe("PaymentsScreen checkout seguro", () => {
     );
     await screen.findByText("Pago confirmado");
     expect(mockedAttempt).toHaveBeenCalledWith("access-token", "payment-1");
+  });
+
+  it("presenta la cotizacion en un modal y permite cerrarla", async () => {
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
+
+    fireEvent.press(screen.getByText(/Completar pago/));
+
+    expect(await screen.findByText("Completar pago")).toBeOnTheScreen();
+    expect(screen.getByText(/Pagar total/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Cancelar"));
+    expect(screen.queryByText(/Pagar total/)).toBeNull();
+    expect(mockedCheckout).not.toHaveBeenCalled();
+  });
+
+  it("filtra pagos pendientes o completados desde la pantalla", () => {
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
+
+    expect(screen.getByText("TOTAL PENDIENTE")).toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Completados"));
+
+    expect(mockedUsePayments).toHaveBeenLastCalledWith(
+      "access-token",
+      1,
+      0,
+      "COMPLETED",
+    );
+    expect(screen.getByRole("radio", { name: "Completados" })).toHaveProp(
+      "accessibilityState",
+      { selected: true },
+    );
+    expect(screen.queryByText("TOTAL PENDIENTE")).toBeNull();
   });
 
   it("no confirma por abrir y volver del checkout mientras backend sigue pendiente", async () => {
@@ -121,7 +186,11 @@ describe("PaymentsScreen checkout seguro", () => {
       checkoutUrl: null,
       expiresAt: "2026-07-21T12:15:00.000Z",
     });
-    render(<PaymentsScreen accessToken="access-token" />);
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
     fireEvent.press(screen.getByText(/Completar pago/));
     fireEvent.press(await screen.findByText(/Pagar total/));
 
@@ -143,7 +212,11 @@ describe("PaymentsScreen checkout seguro", () => {
         approvePayment = resolve;
       }),
     );
-    render(<PaymentsScreen accessToken="access-token" />);
+    render(
+      <AuthTestProvider>
+        <PaymentsScreen />
+      </AuthTestProvider>,
+    );
     fireEvent.press(screen.getByText(/Completar pago/));
     fireEvent.press(await screen.findByText(/Pagar total/));
 

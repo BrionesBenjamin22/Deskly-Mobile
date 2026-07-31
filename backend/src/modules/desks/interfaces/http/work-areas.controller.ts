@@ -12,7 +12,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { GetAvailableWorkAreasUseCase } from '../../application/use-cases/get-available-work-areas.use-case';
 import { WorkAreasService } from '../../application/services/work-areas.service';
@@ -30,6 +35,8 @@ import { JwtAuthGuard } from '../../../auth/interfaces/http/guards/jwt-auth.guar
 import { RolesGuard } from '../../../auth/interfaces/http/guards/roles.guard';
 
 @ApiTags('Work areas')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller()
 export class WorkAreasController {
   constructor(
@@ -74,14 +81,14 @@ export class WorkAreasController {
   }
 
   @Post('work-areas')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   create(@Body() body: CreateWorkAreaBodyDto) {
     return this.workAreasService.create(body);
   }
 
   @Patch('work-areas/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -92,7 +99,7 @@ export class WorkAreasController {
 
   @Delete('work-areas/:id')
   @HttpCode(204)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'GESTOR')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.workAreasService.remove(id);

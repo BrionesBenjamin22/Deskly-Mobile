@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { listPaymentSummaries } from "../services/payments.service";
-import type { PaymentReservationItem } from "../types/payment.types";
+import type {
+  PaymentReservationItem,
+  PaymentSummaryFilter,
+} from "../types/payment.types";
 
 const PAGE_SIZE = 9;
 
@@ -17,7 +20,12 @@ function toDateLabel(dateValue: string) {
   }).format(date);
 }
 
-export function usePayments(accessToken: string, page = 1, refreshKey = 0) {
+export function usePayments(
+  accessToken: string,
+  page = 1,
+  refreshKey = 0,
+  filter: PaymentSummaryFilter = "ALL",
+) {
   const [items, setItems] = useState<PaymentReservationItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,12 +39,20 @@ export function usePayments(accessToken: string, page = 1, refreshKey = 0) {
         accessToken,
         page,
         PAGE_SIZE,
+        filter,
       );
       setItems(
-        response.items.map(({ date, currency: _currency, pricingVersion: _pricingVersion, ...item }) => ({
-          ...item,
-          dateLabel: toDateLabel(date),
-        })),
+        response.items.map(
+          ({
+            date,
+            currency: _currency,
+            pricingVersion: _pricingVersion,
+            ...item
+          }) => ({
+            ...item,
+            dateLabel: toDateLabel(date),
+          }),
+        ),
       );
       setTotalPages(Math.max(1, response.pagination.totalPages));
     } catch {
@@ -47,7 +63,7 @@ export function usePayments(accessToken: string, page = 1, refreshKey = 0) {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, page]);
+  }, [accessToken, filter, page]);
 
   useEffect(() => {
     void load();

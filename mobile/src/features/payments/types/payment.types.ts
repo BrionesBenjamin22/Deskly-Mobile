@@ -8,6 +8,7 @@ export type PaymentStatus =
   | "REFUNDED";
 
 export type PaymentOption = "DEPOSIT" | "FULL";
+export type PaymentSummaryFilter = "ALL" | "PENDING" | "COMPLETED";
 
 export type PaymentQuote = {
   reservationId: string;

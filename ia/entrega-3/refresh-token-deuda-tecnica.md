@@ -61,21 +61,25 @@ primero el refresh token por ser el bloque independiente de menor complejidad.
 
 | Deuda | Estado | Evidencia |
 |---|---|---|
-| `AuthContext` y eliminación de prop drilling | `PENDIENTE` | `App.tsx` continúa entregando sesión, rol y callbacks por props. |
+| `AuthContext` y eliminación de prop drilling | `COMPLETADA` | `AuthProvider` y `useAuth` centralizan la sesión; pantallas y barra inferior dejaron de propagar autenticación por props. |
 | Refresh token | `COMPLETADA` | Renovación backend/mobile, persistencia segura y reintento automático. |
-| Pull-to-refresh nativo | `PENDIENTE` | Continúan los contadores `refreshKey`; no existe `RefreshControl`. |
-| Cobertura de `JwtAuthGuard` | `MAYORMENTE COMPLETADA` | Mutaciones y operaciones sensibles protegidas; las lecturas públicas requieren una decisión contractual explícita. |
+| Pull-to-refresh nativo | `COMPLETADA` | `RefreshControl` reutiliza las recargas de áreas, escritorios, reservas, pagos y perfil; los `refreshKey` se conservan para eventos cruzados. |
+| Cobertura de `JwtAuthGuard` | `COMPLETADA` | Desks, catálogo, localidades, áreas, disponibilidad y Payments funcional exigen JWT; pruebas HTTP confirman `401` sin sesión. |
 
-## Complejidad estimada del prop drilling
+La referencia histórica a `Desk-Settings` no corresponde a un modulo backend
+independiente. Su funcionalidad pertenece actualmente a Desks, Desk Catalog,
+Localities y Work Areas, todos incluidos en la auditoria.
 
-Complejidad media, estimada entre medio día y un día de trabajo cuidadoso.
-Crear el contexto es sencillo; el riesgo está en migrar siete pantallas,
-services, hooks, restauración, logout, cambio de cuenta y tests sin romper la
-navegación basada en estado ni provocar renders globales innecesarios.
+Los callbacks externos `/webhooks/payments` y `/payments/return` no son
+endpoints de navegación de usuario y permanecen públicos por diseño. Su
+seguridad depende de firma, anti-replay, validación de origen y datos
+autoritativos del backend.
 
-`session-runtime.ts` reduce el trabajo pendiente porque ya centraliza los
-cambios de sesión y puede convertirse en la fuente interna del futuro
-`AuthContext`.
+## Cierre del prop drilling
+
+La migración se completó sin alterar la navegación basada en estado, la
+restauración, el logout, el cambio de cuenta ni el refresh token. El detalle y
+la evidencia están registrados en `auth-context-prop-drilling.md`.
 
 ## Commit ejecutado
 

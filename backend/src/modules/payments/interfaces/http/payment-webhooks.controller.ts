@@ -23,6 +23,17 @@ import {
 type RawWebhookRequest = Request & { rawBody?: Buffer };
 const MAX_WEBHOOK_BODY_BYTES = 16 * 1024;
 
+function normalizeQueryValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0]);
+  }
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return `${value}`;
+  }
+  return '';
+}
+
 @ApiTags('Payment webhooks')
 @Controller('webhooks/payments')
 export class PaymentWebhooksController {
@@ -43,8 +54,14 @@ export class PaymentWebhooksController {
         Array.isArray(value) ? value[0] : value,
       ]),
     );
+    const query = Object.fromEntries(
+      Object.entries(request.query).map(([key, value]) => [
+        key,
+        normalizeQueryValue(value),
+      ]),
+    );
     try {
-      return await this.processWebhook.execute({ rawBody, headers });
+      return await this.processWebhook.execute({ rawBody, headers, query });
     } catch (error) {
       if (
         error instanceof InvalidWebhookSignatureError ||

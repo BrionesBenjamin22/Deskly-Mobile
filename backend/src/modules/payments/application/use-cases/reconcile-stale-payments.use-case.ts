@@ -78,10 +78,10 @@ export class ReconcileStalePaymentsUseCase {
 
     for (const payment of payments) {
       try {
-        const changed = await this.reconcileOne(payment, now);
-        if (changed) {
+        const reconciledStatus = await this.reconcileOne(payment, now);
+        if (reconciledStatus) {
           result.updated += 1;
-          if (payment.status === 'EXPIRED') result.expired += 1;
+          if (reconciledStatus === 'EXPIRED') result.expired += 1;
         }
       } catch (error) {
         if (this.isRetryableGatewayError(error)) {
@@ -114,21 +114,43 @@ export class ReconcileStalePaymentsUseCase {
   private async reconcileOne(
     payment: PaymentAttempt,
     now: Date,
-  ): Promise<boolean> {
+  ): Promise<PaymentAttempt['status'] | null> {
     const previousStatus = payment.status;
     let occurredAt = now;
+    let synchronized = payment;
+    const expectation = {
+      externalReference: payment.externalReference,
+      amountMinorUnits: payment.amount.minorUnits,
+      currency: payment.amount.currency,
+    };
 
     if (!payment.externalPaymentId) {
-      if (payment.expiresAt.getTime() > now.getTime()) return false;
-      payment.transitionTo('EXPIRED', now);
+      const snapshot = await this.gateway.findPaymentByExternalReference(
+        payment.externalReference,
+        expectation,
+      );
+      if (snapshot) {
+        synchronized = await this.repository.bindExternalPaymentId(
+          payment.id!,
+          payment.provider,
+          snapshot.externalPaymentId,
+        );
+        occurredAt = snapshot.occurredAt;
+        const nextStatus =
+          snapshot.status === 'PENDING' &&
+          payment.expiresAt.getTime() <= now.getTime()
+            ? 'EXPIRED'
+            : snapshot.status;
+        if (!synchronized.canTransitionTo(nextStatus)) return null;
+        synchronized.transitionTo(nextStatus, occurredAt);
+      } else {
+        if (payment.expiresAt.getTime() > now.getTime()) return null;
+        synchronized.transitionTo('EXPIRED', now);
+      }
     } else {
       const snapshot = await this.gateway.getPayment(
         payment.externalPaymentId,
-        {
-          externalReference: payment.externalReference,
-          amountMinorUnits: payment.amount.minorUnits,
-          currency: payment.amount.currency,
-        },
+        expectation,
       );
       occurredAt = snapshot.occurredAt;
       const nextStatus =
@@ -136,33 +158,33 @@ export class ReconcileStalePaymentsUseCase {
         payment.expiresAt.getTime() <= now.getTime()
           ? 'EXPIRED'
           : snapshot.status;
-      if (!payment.canTransitionTo(nextStatus)) return false;
-      payment.transitionTo(nextStatus, occurredAt);
+      if (!synchronized.canTransitionTo(nextStatus)) return null;
+      synchronized.transitionTo(nextStatus, occurredAt);
     }
 
-    if (payment.status === previousStatus) return false;
+    if (synchronized.status === previousStatus) return null;
     const event = {
       eventId: randomUUID(),
-      paymentId: payment.id!,
-      provider: payment.provider,
+      paymentId: synchronized.id!,
+      provider: synchronized.provider,
       externalEventId: `reconciliation:${randomUUID()}`,
       previousStatus,
-      newStatus: payment.status,
+      newStatus: synchronized.status,
       occurredAt,
       processedAt: now,
     };
     try {
-      await this.repository.saveStatus(payment, event);
+      await this.repository.saveStatus(synchronized, event);
     } catch (error) {
-      if (!this.isDuplicateApproval(error) || !payment.externalPaymentId) {
+      if (!this.isDuplicateApproval(error) || !synchronized.externalPaymentId) {
         throw error;
       }
       const refunded = await this.gateway.refundPayment(
-        payment.externalPaymentId,
-        `duplicate-approval:${payment.id}`,
+        synchronized.externalPaymentId,
+        `duplicate-approval:${synchronized.id}`,
       );
-      payment.transitionTo('REFUNDED', refunded.occurredAt);
-      await this.repository.saveStatus(payment, {
+      synchronized.transitionTo('REFUNDED', refunded.occurredAt);
+      await this.repository.saveStatus(synchronized, {
         ...event,
         eventId: randomUUID(),
         externalEventId: `reconciliation:${randomUUID()}`,
@@ -170,7 +192,7 @@ export class ReconcileStalePaymentsUseCase {
         occurredAt: refunded.occurredAt,
       });
     }
-    return true;
+    return synchronized.status;
   }
 
   private isRetryableGatewayError(error: unknown): boolean {

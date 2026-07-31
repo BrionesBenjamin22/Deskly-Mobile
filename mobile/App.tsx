@@ -19,6 +19,7 @@ import { PaymentsScreen } from './src/features/payments/screens/PaymentsScreen';
 import { MyReservationsScreen } from './src/features/reservations/screens/MyReservationsScreen';
 import { AuthScreen } from './src/features/auth/screens/AuthScreen';
 import { ChangePasswordModal } from './src/features/auth/components/ChangePasswordModal';
+import { AuthProvider } from './src/features/auth/context/AuthContext';
 import { ProfileScreen } from './src/features/auth/screens/ProfileScreen';
 import { LoginResponse } from './src/features/auth/types/auth.types';
 import {
@@ -258,7 +259,8 @@ export default function App() {
   };
 
   return (
-    <SafeAreaProvider>
+    <AuthProvider session={session}>
+      <SafeAreaProvider>
       <View style={styles.root}>
         {isRestoringSession ? (
           <View
@@ -276,7 +278,6 @@ export default function App() {
           <AnimatedTabScreen isActive={activeTab === 'desks'}>
             {deskFlowScreen === 'areas' ? (
               <WorkAreasScreen
-                userRole={session.user.role}
                 initialAvailabilityContext={deskAvailabilityContext}
                 refreshKey={desksRefreshKey}
                 onSelectWorkArea={handleSelectWorkArea}
@@ -290,8 +291,6 @@ export default function App() {
               />
             ) : (
               <DesksScreen
-                accessToken={session.access_token}
-                userRole={session.user.role}
                 initialAvailabilityContext={deskAvailabilityContext}
                 selectedWorkArea={selectedWorkArea}
                 onBackToWorkAreas={handleBackToWorkAreas}
@@ -315,8 +314,6 @@ export default function App() {
         {session && mountedTabs.has('reservations') ? (
           <AnimatedTabScreen isActive={activeTab === 'reservations'}>
             <MyReservationsScreen
-              accessToken={session.access_token}
-              userRole={session.user.role}
               refreshKey={reservationsRefreshKey}
               onPressDesks={handlePressDesks}
               onPressPayments={() => handleTabChange('payments')}
@@ -336,8 +333,6 @@ export default function App() {
         {session && mountedTabs.has('payments') ? (
           <AnimatedTabScreen isActive={activeTab === 'payments'}>
             <PaymentsScreen
-              accessToken={session.access_token}
-              userRole={session?.user.role}
               refreshKey={paymentsRefreshKey}
               onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
@@ -354,8 +349,6 @@ export default function App() {
         {session && mountedTabs.has('settings') ? (
           <AnimatedTabScreen isActive={activeTab === 'settings'}>
             <DeskSettingsScreen
-              accessToken={session.access_token}
-              userRole={session.user.role}
               onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
               onPressPayments={() => handleTabChange('payments')}
@@ -372,9 +365,6 @@ export default function App() {
         {session && mountedTabs.has('profile') ? (
           <AnimatedTabScreen isActive={activeTab === 'profile'}>
             <ProfileScreen
-              accessToken={session.access_token}
-              initialUser={session.user}
-              userRole={session.user.role}
               penaltiesRefreshKey={profileRefreshKey}
               onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
@@ -383,6 +373,7 @@ export default function App() {
               onPressLogout={handleLogout}
               onPressSwitchAccount={handleSwitchAccount}
               onPressUserManagement={() => handleTabChange('users')}
+              onPressAdminCatalog={() => handleTabChange('catalog')}
               onPressChangePassword={() => setShowChangePassword(true)}
             />
           </AnimatedTabScreen>
@@ -391,8 +382,6 @@ export default function App() {
         {session?.user.role === 'ADMIN' && mountedTabs.has('users') ? (
           <AnimatedTabScreen isActive={activeTab === 'users'}>
             <UserManagementScreen
-              accessToken={session.access_token}
-              currentUserId={session.user.id}
               onPressDesks={handlePressDesks}
               onPressReservations={() => handleTabChange('reservations')}
               onPressPayments={() => handleTabChange('payments')}
@@ -409,7 +398,6 @@ export default function App() {
         {session?.user.role === 'ADMIN' && mountedTabs.has('catalog') ? (
           <AnimatedTabScreen isActive={activeTab === 'catalog'}>
             <AdminCatalogScreen
-              accessToken={session.access_token}
               onPressAdminCatalog={() => handleTabChange('catalog')}
               onPressUserManagement={() => handleTabChange('users')}
               onPressProfile={() => handleTabChange('profile')}
@@ -423,7 +411,6 @@ export default function App() {
       {session ? (
         <ChangePasswordModal
           visible={showChangePassword}
-          accessToken={session.access_token}
           onClose={() => setShowChangePassword(false)}
           onPasswordChanged={() => {
             void endSession({
@@ -442,7 +429,8 @@ export default function App() {
         onClose={() => setSessionError(undefined)}
       />
       <StatusBar style="dark" />
-    </SafeAreaProvider>
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }
 

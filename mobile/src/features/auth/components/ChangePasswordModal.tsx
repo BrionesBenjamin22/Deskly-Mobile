@@ -17,10 +17,10 @@ import { colors } from '../../../theme/colors';
 import { radii, spacing } from '../../../theme/spacing';
 import { AuthField } from './AuthField';
 import { AuthServiceError, changePassword } from '../services/auth.service';
+import { useAuth } from '../context/AuthContext';
 
 type Props = {
   visible: boolean;
-  accessToken: string;
   onClose: () => void;
   onPasswordChanged: () => void;
 };
@@ -88,10 +88,10 @@ type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function ChangePasswordModal({
   visible,
-  accessToken,
   onClose,
   onPasswordChanged,
 }: Props) {
+  const { accessToken } = useAuth();
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<RequestStatus>('idle');

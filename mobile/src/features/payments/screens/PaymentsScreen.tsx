@@ -1,16 +1,26 @@
-import { useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { AppText } from "../../../components/ui/AppText";
 import { BottomTabBar } from "../../../components/ui/BottomTabBar";
+import { useAuth } from "../../auth/context/AuthContext";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ScreenContainer } from "../../../components/ui/ScreenContainer";
 import { StatusModal } from "../../../components/ui/StatusModal";
 import { colors, statusColors } from "../../../theme/colors";
 import { radii, spacing } from "../../../theme/spacing";
-import type { UserRole } from "../../auth/types/auth.types";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 import { DesksFeedbackCard } from "../../desks/components/DesksFeedbackCard";
+import { PaymentQuoteModal } from "../components/PaymentQuoteModal";
 import { usePayments } from "../hooks/usePayments";
 import {
   createPaymentCheckout,
@@ -24,10 +34,10 @@ import type {
   PaymentQuote,
   PaymentReservationItem,
   PaymentStatus,
+  PaymentSummaryFilter,
 } from "../types/payment.types";
 
 type PaymentsScreenProps = {
-  accessToken: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressSettings?: () => void;
@@ -36,7 +46,6 @@ type PaymentsScreenProps = {
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
   onPressChangePassword?: () => void;
-  userRole?: UserRole;
   refreshKey?: number;
 };
 
@@ -58,6 +67,15 @@ const statusLabels: Record<PaymentStatus, string> = {
   REFUNDED: "Reembolsado",
 };
 
+const paymentFilters: Array<{
+  label: string;
+  value: PaymentSummaryFilter;
+}> = [
+  { label: "Todos", value: "ALL" },
+  { label: "Pendientes", value: "PENDING" },
+  { label: "Completados", value: "COMPLETED" },
+];
+
 function formatMoney(minorUnits: number) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -66,13 +84,18 @@ function formatMoney(minorUnits: number) {
 }
 
 export function PaymentsScreen(props: PaymentsScreenProps) {
+  const { accessToken } = useAuth();
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<PaymentSummaryFilter>("ALL");
+  const filterOpacity = useRef(new Animated.Value(1)).current;
   const [localRefresh, setLocalRefresh] = useState(0);
   const { items, totalPages, isLoading, errorMessage, reload } = usePayments(
-    props.accessToken,
+    accessToken,
     page,
     (props.refreshKey ?? 0) + localRefresh,
+    filter,
   );
+  const pullToRefresh = usePullToRefresh(reload);
   const [quote, setQuote] = useState<PaymentQuote | null>(null);
   const [busyReservation, setBusyReservation] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -88,10 +111,21 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
     0,
   );
 
+  useEffect(() => {
+    filterOpacity.setValue(0);
+    const animation = Animated.timing(filterOpacity, {
+      duration: 180,
+      toValue: 1,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [filter, filterOpacity]);
+
   const requestQuote = async (reservationId: string) => {
     setBusyReservation(reservationId);
     try {
-      setQuote(await getPaymentQuote(props.accessToken, reservationId));
+      setQuote(await getPaymentQuote(accessToken, reservationId));
     } catch (error) {
       showError(error);
     } finally {
@@ -113,7 +147,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
       description: "Estamos preparando el checkout. No cierre la aplicacion.",
     });
     try {
-      const checkout = await createPaymentCheckout(props.accessToken, {
+      const checkout = await createPaymentCheckout(accessToken, {
         reservationId: quote.reservationId,
         option,
         idempotencyKey,
@@ -131,7 +165,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
         canContinueInBackground: true,
       });
       const status = await pollPayment(
-        props.accessToken,
+        accessToken,
         checkout.paymentId,
         checkout.expiresAt,
       );
@@ -175,7 +209,18 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
   return (
     <ScreenContainer>
       <View style={styles.layout}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          testID="payments-scroll"
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={() => void pullToRefresh.onRefresh()}
+              refreshing={pullToRefresh.isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
+        >
           <View style={styles.header}>
             <AppText variant="title">Pagos</AppText>
             <AppText
@@ -187,7 +232,7 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
               {items.length === 1 ? "" : "s"}
             </AppText>
           </View>
-          {!isLoading && items.length > 0 ? (
+          {!isLoading && items.length > 0 && filter !== "COMPLETED" ? (
             <View style={styles.statCard}>
               <View style={styles.statLabel}>
                 <Icon name="creditCard" size={16} color={colors.blackOverlay} />
@@ -205,73 +250,102 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
             variant="ghost"
             onPress={() => void reload()}
           />
-          {isLoading ? (
-            <DesksFeedbackCard
-              icon="loader"
-              title="Cargando pagos"
-              description="Consultamos estados confirmados por Deskly."
-            />
-          ) : errorMessage ? (
-            <DesksFeedbackCard
-              icon="circleAlert"
-              title="No pudimos cargar sus pagos"
-              description={errorMessage}
-            />
-          ) : items.length === 0 ? (
-            <DesksFeedbackCard
-              icon="wallet"
-              title="No hay saldos pendientes"
-              description="Sus pagos confirmados y saldos parciales aparecerán aquí."
-            />
-          ) : (
-            items.map((item) => (
-              <PaymentCard
-                key={item.reservationId}
-                item={item}
-                busy={busyReservation === item.reservationId}
-                onQuote={() => void requestQuote(item.reservationId)}
+          <View
+            accessibilityLabel="Filtrar pagos"
+            accessibilityRole="radiogroup"
+            style={styles.filters}
+          >
+            {paymentFilters.map((option) => {
+              const selected = filter === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    setPage(1);
+                    setFilter(option.value);
+                  }}
+                  style={({ pressed }) => [
+                    styles.filter,
+                    selected && styles.filterSelected,
+                    pressed && styles.filterPressed,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    color={selected ? colors.white : colors.primary}
+                    style={styles.filterLabel}
+                  >
+                    {option.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Animated.View style={[styles.results, { opacity: filterOpacity }]}>
+            {isLoading ? (
+              <DesksFeedbackCard
+                icon="loader"
+                title="Cargando pagos"
+                description="Consultamos estados confirmados por Deskly."
               />
-            ))
-          )}
-          {totalPages > 1 ? (
-            <View style={styles.pagination}>
-              <Button
-                title="Anterior"
-                variant="ghost"
-                disabled={page === 1}
-                onPress={() => setPage((value) => Math.max(1, value - 1))}
+            ) : errorMessage ? (
+              <DesksFeedbackCard
+                icon="circleAlert"
+                title="No pudimos cargar sus pagos"
+                description={errorMessage}
               />
-              <AppText variant="caption">
-                Pagina {page} de {totalPages}
-              </AppText>
-              <Button
-                title="Siguiente"
-                variant="ghost"
-                disabled={page >= totalPages}
-                onPress={() =>
-                  setPage((value) => Math.min(totalPages, value + 1))
+            ) : items.length === 0 ? (
+              <DesksFeedbackCard
+                icon="wallet"
+                title={
+                  filter === "COMPLETED"
+                    ? "No hay pagos completados"
+                    : filter === "PENDING"
+                      ? "No hay saldos pendientes"
+                      : "No hay pagos registrados"
+                }
+                description={
+                  filter === "COMPLETED"
+                    ? "Los pagos abonados en su totalidad aparecerán aquí."
+                    : filter === "PENDING"
+                      ? "Las reservas con una seña y saldo restante aparecerán aquí."
+                      : "Sus pagos confirmados y saldos parciales aparecerán aquí."
                 }
               />
-            </View>
-          ) : null}
-          {quote ? (
-            <View style={styles.quote} accessibilityLabel="Cotizacion de pago">
-              <AppText variant="subtitle">Elija una opcion</AppText>
-              {quote.options.map((option) => (
-                <Button
-                  key={option.option}
-                  title={`${option.option === "DEPOSIT" ? "Pagar seña" : "Pagar total"}: ${formatMoney(option.amountMinorUnits)}`}
-                  disabled={busyReservation === quote.reservationId}
-                  onPress={() => void startCheckout(option.option)}
+            ) : (
+              items.map((item) => (
+                <PaymentCard
+                  key={item.reservationId}
+                  item={item}
+                  busy={busyReservation === item.reservationId}
+                  onQuote={() => void requestQuote(item.reservationId)}
                 />
-              ))}
-              <Button
-                title="Cancelar"
-                variant="ghost"
-                onPress={() => setQuote(null)}
-              />
-            </View>
-          ) : null}
+              ))
+            )}
+            {totalPages > 1 ? (
+              <View style={styles.pagination}>
+                <Button
+                  title="Anterior"
+                  variant="ghost"
+                  disabled={page === 1}
+                  onPress={() => setPage((value) => Math.max(1, value - 1))}
+                />
+                <AppText variant="caption">
+                  Pagina {page} de {totalPages}
+                </AppText>
+                <Button
+                  title="Siguiente"
+                  variant="ghost"
+                  disabled={page >= totalPages}
+                  onPress={() =>
+                    setPage((value) => Math.min(totalPages, value + 1))
+                  }
+                />
+              </View>
+            ) : null}
+          </Animated.View>
         </ScrollView>
         <BottomTabBar
           activeTab="payments"
@@ -283,9 +357,15 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
           onPressSwitchAccount={props.onPressSwitchAccount}
           onPressUserManagement={props.onPressUserManagement}
           onPressChangePassword={props.onPressChangePassword}
-          userRole={props.userRole}
         />
       </View>
+      <PaymentQuoteModal
+        quote={quote}
+        busy={Boolean(quote && busyReservation === quote.reservationId)}
+        formatMoney={formatMoney}
+        onSelectOption={(option) => void startCheckout(option)}
+        onClose={() => setQuote(null)}
+      />
       {feedback ? (
         <StatusModal
           visible
@@ -430,16 +510,30 @@ const styles = StyleSheet.create({
   count: {
     fontWeight: "700",
   },
-  card: {
+  filters: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  filter: {
+    alignItems: "center",
     backgroundColor: colors.white,
     borderColor: colors.border,
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    gap: spacing.md,
-    padding: spacing.md,
+    flex: 1,
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
   },
-  quote: {
-    backgroundColor: colors.background,
+  filterSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterPressed: { opacity: 0.8 },
+  filterLabel: { fontWeight: "700" },
+  results: { gap: spacing.md },
+  card: {
+    backgroundColor: colors.white,
     borderColor: colors.border,
     borderRadius: radii.lg,
     borderWidth: 1,

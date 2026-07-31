@@ -42,4 +42,21 @@ describe('RegisterBodyDto', () => {
       'El teléfono debe contener solo números.',
     );
   });
+
+  it.each([
+    ['password1', 'matches'],
+    ['Password', 'matches'],
+    ['Pass1', 'isLength'],
+  ])('rechaza una contraseña que no cumple las reglas', async (password) => {
+    const dto = plainToInstance(RegisterBodyDto, {
+      email: 'member@deskly.test',
+      username: 'member',
+      password,
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].property).toBe('password');
+  });
 });

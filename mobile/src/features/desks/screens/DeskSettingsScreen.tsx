@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { BottomTabBar } from '../../../components/ui/BottomTabBar';
+import { useAuth } from '../../auth/context/AuthContext';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Icon } from '../../../components/ui/Icon';
@@ -13,10 +14,8 @@ import { radii, spacing } from '../../../theme/spacing';
 import { useDeskSettings } from '../hooks/useDeskSettings';
 import { Desk, DeskAmenity, DeskZone, Locality } from '../types/desk.types';
 import { DeskPayload } from '../services/desks.service';
-import { UserRole } from '../../auth/types/auth.types';
 
 type DeskSettingsScreenProps = {
-  accessToken?: string;
   onPressDesks?: () => void;
   onPressReservations?: () => void;
   onPressProfile?: () => void;
@@ -26,7 +25,6 @@ type DeskSettingsScreenProps = {
   onPressSwitchAccount?: () => void;
   onPressUserManagement?: () => void;
   onPressChangePassword?: () => void;
-  userRole?: UserRole;
 };
 
 type DeskFormState = {
@@ -202,10 +200,9 @@ export function DeskSettingsScreen({
   onPressSwitchAccount,
   onPressUserManagement,
   onPressChangePassword,
-  userRole,
   onDeskCreated,
-  accessToken,
 }: DeskSettingsScreenProps) {
+  const { accessToken } = useAuth();
   const {
     amenities,
     clearFeedback,
@@ -776,7 +773,6 @@ export function DeskSettingsScreen({
           onPressSwitchAccount={onPressSwitchAccount}
           onPressUserManagement={onPressUserManagement}
           onPressChangePassword={onPressChangePassword}
-          userRole={userRole}
         />
       </View>
     </ScreenContainer>

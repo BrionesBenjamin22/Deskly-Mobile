@@ -19,12 +19,12 @@ import {
   WorkArea,
 } from '../../desks/types/desk.types';
 import { useAdminCatalog } from '../hooks/useAdminCatalog';
+import { useAuth } from '../../auth/context/AuthContext';
 
 type Category = 'desks' | 'amenities' | 'localities' | 'workAreas';
 type CatalogItem = Desk | DeskAmenity | Locality | WorkArea;
 
 type Props = {
-  accessToken: string;
   onPressAdminCatalog: () => void;
   onPressUserManagement: () => void;
   onPressProfile: () => void;
@@ -68,7 +68,8 @@ function itemName(item: CatalogItem) {
 }
 
 export function AdminCatalogScreen(props: Props) {
-  const catalog = useAdminCatalog(props.accessToken);
+  const { accessToken } = useAuth();
+  const catalog = useAdminCatalog(accessToken);
   const [category, setCategory] = useState<Category | null>(null);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [deleting, setDeleting] = useState<CatalogItem | null>(null);
@@ -640,7 +641,6 @@ export function AdminCatalogScreen(props: Props) {
 
         <BottomTabBar
           activeTab="catalog"
-          userRole="ADMIN"
           onPressAdminCatalog={props.onPressAdminCatalog}
           onPressUserManagement={props.onPressUserManagement}
           onPressProfile={props.onPressProfile}

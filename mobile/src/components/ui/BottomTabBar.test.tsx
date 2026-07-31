@@ -1,10 +1,24 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import {
+  AuthTestProvider,
+  createTestSession,
+} from '../../features/auth/testing/AuthTestProvider';
 import { BottomTabBar } from './BottomTabBar';
 
 describe('BottomTabBar permissions', () => {
+  const renderForRole = (
+    role: 'ADMIN' | 'GESTOR' | 'MIEMBRO',
+    activeTab: 'users' | 'payments' | 'profile',
+  ) =>
+    render(
+      <AuthTestProvider session={createTestSession(role)}>
+        <BottomTabBar activeTab={activeTab} />
+      </AuthTestProvider>,
+    );
+
   it('muestra solo el panel, Gestion de usuarios y Cuenta para administradores', () => {
-    render(<BottomTabBar activeTab="users" userRole="ADMIN" />);
+    renderForRole('ADMIN', 'users');
 
     expect(screen.getByText('Panel')).toBeOnTheScreen();
     expect(screen.getByText('Gestión de usuarios')).toBeOnTheScreen();
@@ -15,7 +29,7 @@ describe('BottomTabBar permissions', () => {
   });
 
   it('muestra solo acciones operativas permitidas para miembros', () => {
-    render(<BottomTabBar activeTab="payments" userRole="MIEMBRO" />);
+    renderForRole('MIEMBRO', 'payments');
 
     expect(screen.getByText('Escritorios')).toBeOnTheScreen();
     expect(screen.getByText('Mis reservas')).toBeOnTheScreen();
@@ -25,8 +39,8 @@ describe('BottomTabBar permissions', () => {
     expect(screen.queryByText('GestiÃ³n de usuarios')).toBeNull();
   });
 
-  it('aplica minimo privilegio cuando el rol no esta disponible', () => {
-    render(<BottomTabBar activeTab="profile" />);
+  it('muestra solo reservas y cuenta para gestores', () => {
+    renderForRole('GESTOR', 'profile');
 
     expect(screen.getByText('Cuenta')).toBeOnTheScreen();
     expect(screen.queryByText('Panel')).toBeNull();
@@ -35,7 +49,7 @@ describe('BottomTabBar permissions', () => {
   });
 
   it('cierra el menu de Cuenta al tocar fuera', () => {
-    render(<BottomTabBar activeTab="users" userRole="ADMIN" />);
+    renderForRole('ADMIN', 'users');
 
     fireEvent.press(screen.getByText('Cuenta'));
     expect(screen.getByText('Mi perfil')).toBeOnTheScreen();

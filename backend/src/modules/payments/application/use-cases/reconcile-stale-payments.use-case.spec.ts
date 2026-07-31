@@ -30,11 +30,13 @@ const payment = (overrides: Record<string, unknown> = {}) =>
 describe('ReconcileStalePaymentsUseCase', () => {
   const repository = {
     listStale: jest.fn(),
+    bindExternalPaymentId: jest.fn(),
     saveStatus: jest.fn(),
   };
   const gateway = {
     provider: 'FAKE' as const,
     getPayment: jest.fn(),
+    findPaymentByExternalReference: jest.fn(),
     refundPayment: jest.fn(),
   };
   const useCase = new ReconcileStalePaymentsUseCase(
@@ -46,6 +48,11 @@ describe('ReconcileStalePaymentsUseCase', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     repository.saveStatus.mockImplementation(async (item) => item);
+    repository.bindExternalPaymentId.mockImplementation(
+      async (_id, _provider, externalPaymentId) =>
+        payment({ externalPaymentId }),
+    );
+    gateway.findPaymentByExternalReference.mockResolvedValue(null);
     gateway.getPayment.mockResolvedValue({
       provider: 'FAKE',
       externalPaymentId: 'external-1',
@@ -97,7 +104,45 @@ describe('ReconcileStalePaymentsUseCase', () => {
       expired: 1,
     });
     expect(gateway.getPayment).not.toHaveBeenCalled();
+    expect(gateway.findPaymentByExternalReference).toHaveBeenCalledWith(
+      'reservation:reservation-1',
+      {
+        externalReference: 'reservation:reservation-1',
+        amountMinorUnits: 45_000,
+        currency: 'ARS',
+      },
+    );
     expect(repository.saveStatus.mock.calls[0][0].status).toBe('EXPIRED');
+  });
+
+  it('recupera por referencia un pago aprobado sin ID externo', async () => {
+    repository.listStale.mockResolvedValue([
+      payment({
+        externalPaymentId: null,
+        expiresAt: new Date('2026-07-21T13:00:00.000Z'),
+      }),
+    ]);
+    gateway.findPaymentByExternalReference.mockResolvedValue({
+      provider: 'FAKE',
+      externalPaymentId: 'external-recovered',
+      externalReference: 'reservation:reservation-1',
+      status: 'APPROVED',
+      amountMinorUnits: 45_000,
+      currency: 'ARS',
+      occurredAt: now,
+    });
+
+    await expect(useCase.execute()).resolves.toMatchObject({
+      scanned: 1,
+      updated: 1,
+      expired: 0,
+    });
+    expect(repository.bindExternalPaymentId).toHaveBeenCalledWith(
+      'payment-1',
+      'FAKE',
+      'external-recovered',
+    );
+    expect(repository.saveStatus.mock.calls[0][0].status).toBe('APPROVED');
   });
 
   it('aplica el estado autoritativo validando referencia, monto y moneda', async () => {

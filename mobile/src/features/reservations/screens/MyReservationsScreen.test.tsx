@@ -1,5 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 
+import {
+  AuthTestProvider,
+  createTestSession,
+} from '../../auth/testing/AuthTestProvider';
 import {
   listReservations,
   ReservationServiceError,
@@ -43,12 +47,21 @@ describe('MyReservationsScreen current rendering states', () => {
     jest.clearAllMocks();
   });
 
+  const renderMemberScreen = () =>
+    render(
+      <AuthTestProvider
+        session={createTestSession('MIEMBRO', {
+          access_token: 'member-token',
+        })}
+      >
+        <MyReservationsScreen />
+      </AuthTestProvider>,
+    );
+
   it('starts the member query with the access token and current parameters', async () => {
     mockedListReservations.mockResolvedValue(buildListResponse([]));
 
-    render(
-      <MyReservationsScreen accessToken="member-token" userRole="MIEMBRO" />,
-    );
+    renderMemberScreen();
 
     await waitFor(() => {
       expect(mockedListReservations).toHaveBeenCalledWith(
@@ -60,12 +73,26 @@ describe('MyReservationsScreen current rendering states', () => {
     expect(mockedListReservations).toHaveBeenCalledTimes(1);
   });
 
+  it('vuelve a consultar las reservas con pull-to-refresh', async () => {
+    mockedListReservations.mockResolvedValue(buildListResponse([]));
+    renderMemberScreen();
+    await waitFor(() =>
+      expect(mockedListReservations).toHaveBeenCalledTimes(1),
+    );
+
+    await act(async () => {
+      await screen
+        .getByTestId('reservations-scroll')
+        .props.refreshControl.props.onRefresh();
+    });
+
+    expect(mockedListReservations).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps the loading feedback visible while the query is pending', () => {
     mockedListReservations.mockReturnValue(new Promise(() => undefined));
 
-    render(
-      <MyReservationsScreen accessToken="member-token" userRole="MIEMBRO" />,
-    );
+    renderMemberScreen();
 
     expect(screen.getByText('Cargando reservas')).toBeOnTheScreen();
   });
@@ -92,9 +119,7 @@ describe('MyReservationsScreen current rendering states', () => {
       ]),
     );
 
-    render(
-      <MyReservationsScreen accessToken="member-token" userRole="MIEMBRO" />,
-    );
+    renderMemberScreen();
 
     expect(await screen.findByText('Escritorio ventana')).toBeOnTheScreen();
     expect(screen.getByText('Escritorio patio')).toBeOnTheScreen();
@@ -109,9 +134,7 @@ describe('MyReservationsScreen current rendering states', () => {
       new ReservationServiceError('Revise su conexiÃ³n e intente nuevamente.'),
     );
 
-    render(
-      <MyReservationsScreen accessToken="member-token" userRole="MIEMBRO" />,
-    );
+    renderMemberScreen();
 
     expect(
       await screen.findByText('Lo sentimos, no pudimos recuperar sus reservas'),
@@ -124,9 +147,7 @@ describe('MyReservationsScreen current rendering states', () => {
   it('shows the empty state when the query has no reservations', async () => {
     mockedListReservations.mockResolvedValue(buildListResponse([]));
 
-    render(
-      <MyReservationsScreen accessToken="member-token" userRole="MIEMBRO" />,
-    );
+    renderMemberScreen();
 
     expect(await screen.findByText(/reservas todav/)).toBeOnTheScreen();
   });
@@ -141,9 +162,7 @@ describe('MyReservationsScreen current rendering states', () => {
       ]),
     );
 
-    render(
-      <MyReservationsScreen accessToken="member-token" userRole="MIEMBRO" />,
-    );
+    renderMemberScreen();
 
     expect(await screen.findByText('Escritorio sin ubicacion')).toBeOnTheScreen();
     expect(screen.queryByText('undefined')).not.toBeOnTheScreen();

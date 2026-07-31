@@ -1,10 +1,17 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 
 import App from './App';
 import {
   clearPersistedSession,
   restorePersistedSession,
 } from './src/features/auth/services/session.service';
+import { replaceRuntimeSession } from './src/features/auth/services/session-runtime';
 
 jest.mock('./src/features/auth/services/session.service', () => ({
   clearPersistedSession: jest.fn(),
@@ -30,8 +37,28 @@ jest.mock('./src/features/auth/components/ChangePasswordModal', () => ({
   ChangePasswordModal: () => null,
 }));
 jest.mock('./src/features/auth/screens/ProfileScreen', () => {
-  const { Text } = require('react-native');
-  return { ProfileScreen: () => <Text>Perfil</Text> };
+  const { Pressable, Text } = require('react-native');
+  return {
+    ProfileScreen: ({
+      onPressAdminCatalog,
+    }: {
+      onPressAdminCatalog: () => void;
+    }) => {
+      const {
+        useAuth,
+      } = require('./src/features/auth/context/AuthContext');
+      const { accessToken } = useAuth();
+
+      return (
+        <>
+          <Text>{accessToken}</Text>
+          <Pressable onPress={onPressAdminCatalog}>
+            <Text>Volver al panel</Text>
+          </Pressable>
+        </>
+      );
+    },
+  };
 });
 jest.mock('./src/features/desks/screens/DeskSettingsScreen', () => {
   const { Text } = require('react-native');
@@ -62,12 +89,19 @@ jest.mock('./src/features/admin/screens/AdminCatalogScreen', () => {
   return {
     AdminCatalogScreen: ({
       onPressLogout,
+      onPressProfile,
     }: {
       onPressLogout: () => void;
+      onPressProfile: () => void;
     }) => (
-      <Pressable onPress={onPressLogout}>
-        <Text>Panel administrativo</Text>
-      </Pressable>
+      <>
+        <Pressable onPress={onPressLogout}>
+          <Text>Panel administrativo</Text>
+        </Pressable>
+        <Pressable onPress={onPressProfile}>
+          <Text>Abrir perfil</Text>
+        </Pressable>
+      </>
     ),
   };
 });
@@ -98,6 +132,7 @@ function deferred<T>() {
 describe('App secure session lifecycle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    replaceRuntimeSession(null);
     clearSessionMock.mockResolvedValue();
   });
 
@@ -136,5 +171,37 @@ describe('App secure session lifecycle', () => {
     await waitFor(() =>
       expect(screen.getByText('Inicio de sesion')).toBeTruthy(),
     );
+  });
+
+  it('permite volver al panel administrativo desde el perfil', async () => {
+    restoreSessionMock.mockResolvedValue(adminSession);
+
+    render(<App />);
+
+    fireEvent.press(await screen.findByText('Abrir perfil'));
+    fireEvent.press(await screen.findByText('Volver al panel'));
+
+    await waitFor(() =>
+      expect(screen.getByText('Panel administrativo')).toBeTruthy(),
+    );
+  });
+
+  it('actualiza el contexto tras renovar la sesion sin cambiar la pantalla activa', async () => {
+    restoreSessionMock.mockResolvedValue(adminSession);
+
+    render(<App />);
+
+    fireEvent.press(await screen.findByText('Abrir perfil'));
+    expect(await screen.findByText('access-token')).toBeTruthy();
+
+    act(() => {
+      replaceRuntimeSession({
+        ...adminSession,
+        access_token: 'renewed-access-token',
+      });
+    });
+
+    expect(await screen.findByText('renewed-access-token')).toBeTruthy();
+    expect(screen.getByText('Volver al panel')).toBeTruthy();
   });
 });

@@ -22,6 +22,11 @@ import {
 } from './infrastructure/gateways/mercado-pago.config';
 import { PrismaPaymentAttemptRepository } from './infrastructure/persistence/prisma-payment-attempt.repository';
 import {
+  PAYMENT_RECONCILIATION_CONFIG,
+  readPaymentReconciliationConfig,
+} from './infrastructure/reconciliation/payment-reconciliation.config';
+import { PaymentReconciliationWorker } from './infrastructure/reconciliation/payment-reconciliation.worker';
+import {
   PaymentsController,
   ReservationPaymentsController,
 } from './interfaces/http/payments.controller';
@@ -47,6 +52,7 @@ import { PaymentReturnsController } from './interfaces/http/payment-returns.cont
     GetPaymentQuoteUseCase,
     ProcessPaymentWebhookUseCase,
     ReconcileStalePaymentsUseCase,
+    PaymentReconciliationWorker,
     SynchronizePaymentAttemptUseCase,
     GetPaymentAttemptUseCase,
     ListReservationPaymentsUseCase,
@@ -55,6 +61,10 @@ import { PaymentReturnsController } from './interfaces/http/payment-returns.cont
     {
       provide: PAYMENT_ATTEMPT_REPOSITORY,
       useClass: PrismaPaymentAttemptRepository,
+    },
+    {
+      provide: PAYMENT_RECONCILIATION_CONFIG,
+      useFactory: readPaymentReconciliationConfig,
     },
     {
       provide: PAYMENT_GATEWAY,

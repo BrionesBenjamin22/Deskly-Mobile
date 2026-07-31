@@ -1346,3 +1346,276 @@ commit_ejecutado:
 Detalle temático:
 
 `ia/entrega-3/refresh-token-deuda-tecnica.md`
+
+---
+
+## 14. Cierre de deuda tecnica: navegacion ADMIN y AuthContext
+
+### E3-24 — Navegacion desde Mi perfil
+
+solicitud:
+
+> Desde una cuenta ADMIN, Mi perfil no permite recorrer las demas pantallas de
+> la Bottom Tab Bar. Verificarlo, corregirlo y ejecutar el commit.
+
+resultado:
+
+- se confirmo que Panel era visible pero no recibia callback;
+- `ProfileScreen` ahora propaga `onPressAdminCatalog`;
+- se agrego la regresion Panel → Mi perfil → Panel;
+- TypeScript, 20 suites con 74 pruebas y export Expo aprobaron.
+
+commit_ejecutado:
+
+`824bbaf fix(mobile): restaurar navegacion admin desde perfil`
+
+### E3-25 — Eliminacion de prop drilling sin cambios funcionales
+
+solicitud:
+
+> Solucionar el prop drilling con un enfoque multiagente para validar, testear,
+> desarrollar y orquestar el flujo. No modificar el comportamiento actual.
+
+resultado:
+
+- se coordinaron auditorias de arquitectura, pruebas y revision final;
+- `AuthProvider` y `useAuth` centralizan sesion, token, usuario y rol;
+- `App.tsx` conserva navegacion, persistencia y ciclo de sesion;
+- las pantallas y la barra dejaron de propagar datos de autenticacion por props;
+- refresh, logout, cambio de cuenta, cambio de contraseña, permisos y tabs
+  mantienen sus contratos;
+- la actualizacion de sesion por runtime conserva la pantalla activa.
+
+validacion:
+
+- TypeScript aprobado;
+- 21 suites y 77 pruebas con cobertura aprobadas;
+- suite final: 21 suites y 78 pruebas aprobadas;
+- `AuthContext` con 100 % de cobertura;
+- export Expo web y build Docker mobile aprobados;
+- servicios Docker con healthchecks aprobados;
+- revision independiente sin regresiones bloqueantes;
+- prueba manual pendiente a cargo del usuario.
+
+Detalle tematico:
+
+`ia/entrega-3/auth-context-prop-drilling.md`
+
+---
+
+### E3-26 — Pull-to-refresh nativo y actualización de deuda técnica
+
+solicitud:
+
+> Implementar pull-to-refresh, corregir la referencia inconsistente, mantener
+> el registro, probar, levantar el proyecto y ejecutar el commit.
+
+resultado:
+
+- se incorporó `RefreshControl` en áreas, escritorios, reservas, pagos y perfil;
+- el hook compartido evita recargas manuales simultáneas;
+- se conservaron los `refreshKey` usados para sincronización entre pantallas;
+- se protegieron las cargas contra respuestas obsoletas;
+- se actualizó la deuda de `AuthContext` y pull-to-refresh a completada;
+- no se modificaron contratos HTTP, permisos, filtros ni navegación.
+
+validación:
+
+- TypeScript aprobado;
+- 5 suites focales y 23 pruebas aprobadas;
+- suite completa: 22 suites y 84 pruebas aprobadas;
+- export Expo web y build Docker mobile aprobados;
+- database, backend y mobile con healthchecks aprobados;
+- backend `/health` respondió 200;
+- Metro reportó `packager-status:running`;
+- `git diff --check` aprobado;
+- entorno levantado para la prueba visual del usuario.
+
+commit_autorizado:
+
+`feat(mobile): incorporar pull-to-refresh nativo`
+
+Detalle temático:
+
+`ia/entrega-3/pull-to-refresh.md`
+
+---
+
+### E3-27 — Autenticacion obligatoria de endpoints funcionales
+
+solicitud:
+
+> Los endpoints deben requerir autenticacion porque el flujo de la pagina es
+> autenticado. Implementar para que no sean accesibles sin sesion.
+
+decision:
+
+- todas las rutas de Desks, catalogo, localidades, areas y disponibilidad
+  requieren `JwtAuthGuard`;
+- las mutaciones conservan `RolesGuard` para `ADMIN` y `GESTOR`;
+- Payments funcional ya estaba protegido;
+- `/webhooks/payments` y `/payments/return` permanecen publicos por ser entradas
+  del proveedor y no formar parte de la navegacion autenticada;
+- `Desk-Settings` se corrige como referencia historica: no es un modulo backend
+  independiente.
+
+implementacion:
+
+- guard JWT y Bearer Auth de Swagger a nivel de los cinco controladores Desks;
+- service mobile alineado para autenticar tambien todas las lecturas mediante
+  la sesion centralizada y conservar refresh automatico;
+- pruebas de metadata y HTTP para impedir acceso anonimo.
+
+validacion:
+
+- prueba focal backend: 1 suite y 20 pruebas aprobadas;
+- backend completo: 52 suites y 312 pruebas aprobadas;
+- E2E HTTP focal: 1 suite y 8 pruebas aprobadas;
+- E2E PostgreSQL limpio: 18 migraciones, 3 suites y 17 pruebas aprobadas;
+- pruebas mobile focales: 2 suites y 4 pruebas aprobadas;
+- mobile completo: 22 suites y 85 pruebas aprobadas;
+- build backend, TypeScript y export Expo web aprobados;
+- Prettier y ESLint focales aprobados;
+- build Docker backend y mobile aprobado;
+- database, backend y mobile con healthchecks aprobados;
+- ocho rutas funcionales verificadas manualmente respondieron `401` sin JWT;
+- `/health` respondio 200 y Metro `packager-status:running`;
+- la deuda tecnica declarada al cierre de E2 queda completada.
+
+mensaje_de_commit_propuesto:
+
+`fix(seguridad): exigir autenticacion en consultas de escritorios`
+
+---
+
+### E3-28 — Confirmacion resiliente de pagos sandbox
+
+solicitud:
+
+> Ejecutar el plan para diagnosticar la falta de confirmacion sandbox. Diferir
+> la simulacion manual y el cierre visual consecuente.
+
+diagnostico:
+
+- la preferencia no enviaba `notification_url`;
+- un pago sin `payment_id` podia expirar sin buscarse por
+  `external_reference`;
+- la conciliacion existia como caso de uso, pero no tenia ejecucion periodica;
+- mobile ya esperaba el estado autoritativo del backend y no confirmaba por el
+  retorno visual.
+
+implementacion:
+
+- validacion estricta de URL HTTPS, origen permitido, ruta y query del webhook;
+- `notification_url` incorporada a cada preferencia de Checkout Pro;
+- busqueda autoritativa por referencia antes de expirar pagos pendientes;
+- worker de conciliacion configurable, con lotes acotados y bloqueo de
+  solapamiento;
+- variables de entorno de ejemplo y documentacion operativa actualizadas;
+- comportamiento mobile preservado.
+
+validacion:
+
+- configuracion y gateway: 2 suites y 37 pruebas aprobadas;
+- conciliacion y worker: 2 suites y 11 pruebas aprobadas;
+- Payments backend: 23 suites y 165 pruebas aprobadas;
+- backend completo: 53 suites y 321 pruebas aprobadas;
+- E2E PostgreSQL: 3 suites y 17 pruebas aprobadas;
+- mobile completo: 22 suites y 85 pruebas aprobadas;
+- build backend, TypeScript, Expo web, Docker, lint, formato y
+  `git diff --check`: aprobados;
+- database, backend y mobile saludables; `/health` 200 y Metro activo.
+
+pendiente_manual:
+
+- ejecutar el pago con cuentas y credenciales de prueba;
+- emitir la notificacion mediante el simulador oficial usando el identificador
+  real;
+- verificar pago `APPROVED`, reserva confirmada y actualizacion visual;
+- cerrar `PAYMENTS-08` y el cierre manual dependiente de `PAYMENTS-07`.
+
+mensajes_de_commit_propuestos:
+
+- `feat(pagos): configurar notificaciones por preferencia`
+- `feat(pagos): automatizar conciliacion de pagos pendientes`
+- `docs(pagos): registrar validacion sandbox pendiente`
+
+---
+
+### E3-29 — Validacion real del webhook de Mercado Pago
+
+resultado:
+
+- se corrigio la firma para usar `data.id` de query segun el contrato oficial;
+- el simulador entrego un POST con firma y request ID validos;
+- ngrok respondio HTTP 200;
+- Deskly correlaciono el pago `170515659197` y conservo `APPROVED`;
+- conciliacion y webhook convergieron sin duplicar la transicion;
+- `PAYMENTS-08` se marco `COMPLETADA`;
+- `PAYMENTS-07` conserva pendientes sus comprobaciones visuales especificas.
+
+validacion_automatizada:
+
+- focal: 2 suites y 34 pruebas aprobadas;
+- Payments: 23 suites y 167 pruebas aprobadas;
+- backend completo: 53 suites y 323 pruebas aprobadas;
+- build backend y `git diff --check` aprobados.
+
+mensaje_de_commit_propuesto:
+
+`fix(pagos): adaptar webhooks al contrato firmado de Mercado Pago`
+
+---
+
+### E3-30 — Modal de saldo y filtros de pagos
+
+resultado:
+
+- `Completar pago` muestra la cotizacion en un modal sin alterar el checkout;
+- se agregaron filtros `Todos`, `Pendientes` y `Completados`;
+- backend aplica el filtro antes de paginar y mobile vuelve a pagina 1;
+- los estados vacios explican el filtro seleccionado;
+- se conservaron importes, idempotencia, polling y navegacion.
+
+validacion:
+
+- focal modal: 1 suite y 5 pruebas;
+- focal filtros backend: 3 suites y 9 pruebas;
+- focal filtros mobile: 3 suites y 12 pruebas;
+- backend completo: 53 suites y 325 pruebas;
+- mobile completo: 22 suites y 87 pruebas;
+- build backend, TypeScript, formato y `git diff --check`: aprobados.
+
+mensajes_de_commit_propuestos:
+
+- `feat(pagos): mostrar opciones de saldo pendiente en modal`
+- `feat(pagos): filtrar pagos pendientes y completados`
+
+---
+
+### E3-31 — Requisitos dinámicos de contraseña
+
+resultado:
+
+- el registro muestra longitud, mayúscula y número mientras sigan pendientes;
+- cada requisito desaparece inmediatamente al cumplirse;
+- frontend y backend validan el mismo contrato de contraseña;
+- login, sesiones, tokens y navegación conservaron su comportamiento.
+
+validación:
+
+- focal backend: 1 suite y 5 pruebas;
+- focal mobile: 2 suites y 5 pruebas;
+- backend completo: 53 suites y 328 pruebas;
+- mobile completo: 24 suites y 92 pruebas;
+- build backend y TypeScript mobile: aprobados.
+
+mensaje_de_commit_propuesto:
+
+`feat(auth): mostrar requisitos dinamicos de contraseña`
+
+ajuste_posterior:
+
+- la guía progresiva también se muestra en el formulario de login;
+- funciona solo como ayuda visual y no exige mayúscula ni número a credenciales existentes;
+- mobile completo: 24 suites y 93 pruebas, más TypeScript aprobado.
