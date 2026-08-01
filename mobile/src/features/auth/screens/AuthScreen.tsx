@@ -302,10 +302,7 @@ export function AuthScreen({
                   setLoginValues((current) => ({ ...current, [field]: value }));
                   setLoginErrors((current) => ({
                     ...current,
-                    [field]:
-                      field === 'password' && value
-                        ? validatePassword(value)
-                        : undefined,
+                    [field]: undefined,
                   }));
                 }}
                 onSubmit={handleLogin}

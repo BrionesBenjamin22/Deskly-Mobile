@@ -19,6 +19,7 @@ import { DateSelector, getDeskDateOptions } from '../components/DateSelector';
 import { DesksFeedbackCard } from '../components/DesksFeedbackCard';
 import { LocalityFilter } from '../components/LocalityFilter';
 import { LocalitySection } from '../components/LocalitySection';
+import { RESERVATION_TIME_OPTIONS } from '../constants/reservation-time-options';
 import {
   DeskServiceError,
   listAvailableWorkAreas,
@@ -41,21 +42,7 @@ type WorkAreasScreenProps = {
   onPressChangePassword?: () => void;
 };
 
-const timeOptions = [
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
-];
+const timeOptions = RESERVATION_TIME_OPTIONS;
 
 function timeToMinutes(value: string) {
   const [hours, minutes] = value.split(':').map(Number);

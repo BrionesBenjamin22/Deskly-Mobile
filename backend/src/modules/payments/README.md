@@ -123,6 +123,12 @@ webhook se haya retrasado.
 aplica antes de paginar para que total, paginas y limite describan el conjunto
 seleccionado.
 
+La sincronizacion del resumen aisla fallos de `PaymentGatewayError` por intento.
+Si Mercado Pago no puede responder o rechaza la consulta de un pago puntual, el
+listado conserva el ultimo estado persistido y continua procesando los demas
+intentos. Los errores internos, de persistencia o de dominio no se ocultan y
+siguen interrumpiendo la operacion.
+
 ## Reglas de negocio
 
 - El miembro se obtiene del JWT y debe ser propietario de la reserva.

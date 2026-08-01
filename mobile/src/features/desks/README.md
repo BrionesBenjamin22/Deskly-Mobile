@@ -4,6 +4,10 @@
 
 Consulta de escritorios disponibles, filtros funcionales por fecha, horario, zona, localidad y area de trabajo, ubicacion interactiva de establecimientos y gestion basica de escritorios desde la pantalla de configuracion.
 
+Las opciones de reserva permiten seleccionar horarios entre `08:00` y `23:00`.
+La hora final debe ser posterior a la inicial, por lo que `23:00` funciona como
+ultimo horario de cierre disponible.
+
 ## Vistas
 
 - `DesksScreen`: lista escritorios disponibles y mantiene el flujo de reserva sobre escritorio concreto.

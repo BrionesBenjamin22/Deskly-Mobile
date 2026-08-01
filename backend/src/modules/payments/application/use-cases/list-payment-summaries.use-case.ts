@@ -1,5 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
+import { PaymentAttempt } from '../../domain/entities/payment-attempt.entity';
+import { PaymentGatewayError } from '../../domain/errors/payment-domain.errors';
 import { PAYMENT_ATTEMPT_REPOSITORY } from '../../domain/ports/payment-attempt-repository.port';
 import type { PaymentAttemptRepositoryPort } from '../../domain/ports/payment-attempt-repository.port';
 import {
@@ -16,6 +18,7 @@ export type PaymentSummaryFilter = 'ALL' | 'PENDING' | 'COMPLETED';
 @Injectable()
 export class ListPaymentSummariesUseCase {
   private readonly pricing = new PaymentPricingPolicy();
+  private readonly logger = new Logger(ListPaymentSummariesUseCase.name);
 
   constructor(
     @Inject(PAYMENT_ATTEMPT_REPOSITORY)
@@ -35,7 +38,7 @@ export class ListPaymentSummariesUseCase {
       candidates.map(async (reservation) => {
         const attempts = await Promise.all(
           reservation.attempts.map((payment) =>
-            this.synchronizePayment.execute(payment),
+            this.synchronizeSafely(payment),
           ),
         );
         const durationMinutes =
@@ -85,5 +88,23 @@ export class ListPaymentSummariesUseCase {
   private toMinutes(value: string): number {
     const [hours, minutes] = value.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  private async synchronizeSafely(
+    payment: PaymentAttempt,
+  ): Promise<PaymentAttempt> {
+    try {
+      return await this.synchronizePayment.execute(payment);
+    } catch (error) {
+      const gatewayError =
+        error instanceof PaymentGatewayError ||
+        (error instanceof Error && error.name === 'PaymentGatewayError');
+      if (!gatewayError) throw error;
+
+      this.logger.warn(
+        `No se pudo sincronizar el pago ${payment.id?.slice(0, 12) ?? 'unknown'}; se conserva el estado persistido.`,
+      );
+      return payment;
+    }
   }
 }

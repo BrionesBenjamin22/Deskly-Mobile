@@ -618,3 +618,39 @@ Cada entrega nueva debe agregar una sección independiente con:
 8. seguridad, infraestructura y documentación;
 9. pendientes transferidos;
 10. skills formales realmente utilizadas.
+
+---
+
+## Ajustes funcionales del 31 de julio de 2026
+
+### Autenticación
+
+- El login acepta credenciales existentes sin imponer reglas de alta.
+- La guía de longitud, mayúscula y número permanece visible.
+- Registro y cambio de contraseña conservan la validación completa.
+
+### Pagos
+
+- El resumen aísla errores de Mercado Pago por intento y conserva el último
+  estado persistido.
+- Un fallo del proveedor ya no impide mostrar los demás pagos.
+- Los errores internos y de persistencia continúan propagándose.
+
+### Administración y perfil
+
+- `Volver al panel` posee un borde visible en el catálogo administrativo.
+- La tarjeta de penalizaciones aparece solo para miembros y no se consulta para
+  gestores.
+
+### Reservas de escritorios
+
+- El rango seleccionable se amplió desde `08:00` hasta `23:00`.
+- Áreas y Escritorios comparten la misma configuración horaria.
+
+### Evidencia
+
+- Backend completo: 53 suites y 331 pruebas aprobadas.
+- Build backend aprobado.
+- Pruebas focalizadas de autenticación, administración, perfil y escritorios
+  aprobadas.
+- TypeScript mobile y `git diff --check` aprobados.
