@@ -1619,3 +1619,107 @@ ajuste_posterior:
 - la guía progresiva también se muestra en el formulario de login;
 - funciona solo como ayuda visual y no exige mayúscula ni número a credenciales existentes;
 - mobile completo: 24 suites y 93 pruebas, más TypeScript aprobado.
+
+---
+
+### E3-32 — Compatibilidad del login con credenciales existentes
+
+resultado:
+
+- el login solo exige que la contraseña esté presente antes de enviarla;
+- longitud, mayúscula y número continúan visibles como ayuda;
+- registro y cambio de contraseña conservan la política completa;
+- no se modificaron contraseñas almacenadas.
+
+validación:
+
+- 2 suites y 7 pruebas mobile aprobadas;
+- TypeScript mobile y `git diff --check` aprobados.
+
+commit:
+
+`f5d3430 fix(auth): permitir credenciales existentes en el login`
+
+---
+
+### E3-33 — Resumen de pagos resiliente ante el proveedor
+
+diagnóstico:
+
+- un `PaymentGatewayError` de un único intento abortaba todo
+  `GET /payments/summary` con HTTP 500;
+- el cálculo, la seña aprobada y el saldo persistido eran coherentes.
+
+resultado:
+
+- cada error del gateway se aísla por intento;
+- se conserva el último estado persistido y se procesan los demás pagos;
+- errores internos, de persistencia y de dominio siguen propagándose;
+- el logging no expone datos sensibles del proveedor.
+
+validación:
+
+- prueba focal: 1 suite y 6 pruebas aprobadas;
+- backend completo: 53 suites y 331 pruebas aprobadas;
+- build backend, lint focalizado y `git diff --check` aprobados.
+
+commit:
+
+`e285f8a fix(pagos): aislar errores del proveedor en el resumen`
+
+---
+
+### E3-34 — Visibilidad del regreso al panel administrativo
+
+resultado:
+
+- `Volver al panel` recibió un borde con color primario y radio institucional;
+- el estilo es local y no altera el botón reutilizable global.
+
+validación:
+
+- 1 suite y 8 pruebas aprobadas;
+- TypeScript mobile y `git diff --check` aprobados.
+
+commit:
+
+`f683067 style(admin): resaltar boton para volver al panel`
+
+---
+
+### E3-35 — Penalizaciones exclusivas del perfil miembro
+
+resultado:
+
+- la tarjeta de penalizaciones se renderiza únicamente para `MIEMBRO`;
+- `GESTOR` no muestra la tarjeta ni consulta `/penalties/me`;
+- los demás datos editables del perfil gestor se conservaron.
+
+validación:
+
+- 1 suite y 2 pruebas aprobadas para `GESTOR` y `MIEMBRO`;
+- TypeScript mobile y `git diff --check` aprobados.
+
+commit:
+
+`0b113e4 fix(perfil): mostrar penalizaciones solo a miembros`
+
+---
+
+### E3-36 — Reservas de escritorios hasta las 23 horas
+
+resultado:
+
+- las opciones horarias se ampliaron de `08:00` a `23:00`;
+- `23:00` es el último cierre y `22:00` el último inicio posible;
+- Escritorios y Áreas consumen una constante compartida;
+- el backend ya aceptaba el rango y no requirió cambios.
+
+validación:
+
+- 3 suites y 11 pruebas aprobadas;
+- TypeScript mobile y `git diff --check` aprobados.
+
+commit:
+
+`4bda4bb feat(escritorios): ampliar reservas hasta las 23 horas`

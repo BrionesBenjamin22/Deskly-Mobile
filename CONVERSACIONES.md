@@ -379,3 +379,16 @@ docs: agregar registro de conversaciones del proyecto
 - Actualizar este registro cuando se complete un nuevo modulo.
 - Mantener sincronizado con documentacion tecnica de `backend` y `mobile`.
 - Agregar resultados de pruebas manuales y tests cuando correspondan a cambios funcionales.
+
+## Actualización de Entrega 3 — 31 de julio de 2026
+
+La bitácora `ia/entrega-3/CONVERSACION.md` registra los ajustes E3-32 a E3-36:
+
+- compatibilidad del login con credenciales existentes y ayuda visual;
+- aislamiento de errores de Mercado Pago por intento en el resumen;
+- borde visible para regresar al panel administrativo;
+- penalizaciones del perfil limitadas al rol `MIEMBRO`;
+- opciones de reserva de escritorios hasta las `23:00`.
+
+Los cambios se distribuyeron en cinco commits funcionales independientes. Los
+archivos locales de seed y demo con datos ficticios quedaron fuera de ellos.
