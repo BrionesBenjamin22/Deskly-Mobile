@@ -29,6 +29,7 @@ import {
 import { DesksFeedbackCard } from "../components/DesksFeedbackCard";
 import { DeskList } from "../components/DeskList";
 import { ReservationBottomSheet } from "../components/ReservationBottomSheet";
+import { RESERVATION_TIME_OPTIONS } from "../constants/reservation-time-options";
 import { useAvailableDesks } from "../hooks/useAvailableDesks";
 import { Desk, DeskZone, Locality, WorkArea } from "../types/desk.types";
 import { listLocalities, listWorkAreas } from "../services/desks.service";
@@ -105,21 +106,7 @@ const zoneOptions: { label: string; value: ZoneFilter }[] = [
 
 const allOption = { label: "Todas", value: "all" };
 
-const timeOptions = [
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-];
+const timeOptions = RESERVATION_TIME_OPTIONS;
 
 function timeToMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
